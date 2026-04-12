@@ -1,0 +1,38 @@
+Property Safe & Motor TLO - External Rule Notes
+
+1. Guest vs External Login
+- Guest = pengguna tanpa login.
+- External Login = pengguna yang sudah login sebagai nasabah/partner external.
+- Keduanya boleh menjalankan self-service sampai pembayaran di prototype.
+- Perbedaan yang sudah dimodelkan di UI:
+  - Guest belum menampilkan fitur akun seperti resume draft atau histori transaksi.
+  - External login diasumsikan bisa dikembangkan ke fitur resume draft dan histori.
+
+2. Camera Failure Rule for External
+- Channel external tidak boleh upload dari galeri.
+- Jika kamera gagal diakses:
+  - tampilkan panduan untuk mengizinkan permission kamera di browser,
+  - sarankan pindah device/browser bila perlu,
+  - arahkan ke assisted flow/internal bila masih gagal.
+
+3. Construction Classification Mapping
+- Input user yang dipakai:
+  - Dinding utama
+  - Struktur / lantai utama
+  - Atap
+  - Sebagian besar bahan mudah terbakar
+- Output klasifikasi:
+  - Kelas 3 jika salah satu kondisi berikut terpenuhi:
+    - dinding = Mayoritas kayu atau bahan yang mudah terbakar
+    - struktur = Mayoritas kayu atau material ringan
+    - atap = Bahan yang mudah terbakar
+    - bahan mudah terbakar = Ya
+  - Kelas 2 jika tidak masuk Kelas 3, tetapi salah satu kondisi berikut terpenuhi:
+    - dinding = Campuran
+    - struktur = Campuran
+    - atap = Sirap atau campuran
+  - Kelas 1 untuk kombinasi selain di atas
+
+4. Contact Term Standard
+- Istilah resmi yang dipakai lintas internal dan external: Kontak di Lokasi
+- Istilah PIC di Lokasi tidak dipakai lagi di UI utama
