@@ -601,13 +601,6 @@ export default function App() {
                 </div>
               ) : null}
             </div>
-            <button
-              type="button"
-              onClick={() => setActiveJourney("brd-property-safe")}
-              className="inline-flex items-center gap-2 rounded-[10px] border border-[#0A4D82]/20 bg-[#F7FAFD] px-4 py-2 text-sm font-semibold text-[#0A4D82] hover:bg-[#EEF5FC]"
-            >
-              Buka BRD Property Safe
-            </button>
           </div>
 
           <SectionShelf icon={Shield} title="Asuransi Kecelakaan Diri" subtitle="Perlindungan biaya pengobatan akibat kecelakaan" items={PERSONAL_PRODUCTS} onOpen={handleOpenJourney} />
