@@ -2288,11 +2288,11 @@ function PartnerConfigStudio({
 
       if (STEP_LIST[stepIndex].id === "clause") {
         return (
-          <div className="space-y-4">
+          <div className="mx-auto max-w-4xl space-y-3">
             <SectionCard title="Rincian Jaminan" subtitle="Klik setiap baris untuk melihat penjelasan detailnya.">
               <div>
                 <div className="mb-4 text-[14px] font-medium text-slate-950">Risiko yang Dijamin</div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {LIFE_GUARD_COVERAGE_ITEMS.filter((item) => item.section === "main").map((item) => (
                     <LifeGuardCoverageCard
                       key={item.id}
@@ -2308,7 +2308,7 @@ function PartnerConfigStudio({
 
               <div className="mt-6">
                 <div className="mb-4 text-[14px] font-medium text-slate-950">Perluasan Jaminan</div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {LIFE_GUARD_COVERAGE_ITEMS.filter((item) => item.section === "extension").map((item) => (
                     <LifeGuardCoverageCard
                       key={item.id}
@@ -2335,43 +2335,43 @@ function PartnerConfigStudio({
                 </div>
               </div>
               <div className="mt-6 overflow-hidden rounded-[18px] border border-[#D9E1EA] bg-white">
-                <div className="flex items-start justify-between gap-4 border-b border-[#D9E1EA] px-5 py-4">
+                <div className="flex items-start justify-between gap-4 border-b border-[#D9E1EA] px-4 py-3.5">
                   <div>
-                    <div className="text-[18px] font-semibold text-slate-950">Klausula</div>
+                    <div className="text-[16px] font-semibold text-slate-950">Klausula</div>
                     <div className="mt-1 text-[12px] text-slate-500">Pilih klausula yang berlaku untuk konfigurasi partner ini.</div>
                   </div>
-                  <div className="rounded-full bg-[#EEF5FB] px-3 py-2 text-[12px] text-[#0A4D82]">
+                  <div className="rounded-full bg-[#EEF5FB] px-3 py-1.5 text-[11px] text-[#0A4D82]">
                     {lifeGuardAdditionalClauseOptions.filter((item) => master.clausePackage.includes(item.title)).length} terpilih
                   </div>
                 </div>
-                <div className="p-4">
-                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+                <div className="p-3.5">
+                  <div className="grid gap-2.5 md:grid-cols-[minmax(0,1fr)_auto_auto]">
                     <div className="relative">
                       <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                       <input
                         value={lifeGuardClauseSearch}
                         onChange={(event) => setLifeGuardClauseSearch(event.target.value)}
                         placeholder="Cari klausula..."
-                        className="h-12 w-full rounded-[14px] border border-[#D9E1EA] bg-white pl-11 pr-4 text-[14px] text-slate-900 outline-none transition focus:border-[#0A4D82]"
+                        className="h-11 w-full rounded-[14px] border border-[#D9E1EA] bg-white pl-11 pr-4 text-[13px] text-slate-900 outline-none transition focus:border-[#0A4D82]"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={selectAllVisibleLifeGuardClauses}
-                      className="h-12 rounded-[14px] border border-[#D9E1EA] bg-white px-5 text-[14px] text-slate-900 transition hover:border-[#BFD3EA] hover:bg-[#F7FAFE]"
+                      className="h-11 rounded-[14px] border border-[#D9E1EA] bg-white px-4 text-[13px] text-slate-900 transition hover:border-[#BFD3EA] hover:bg-[#F7FAFE]"
                     >
                       Pilih Semua Terlihat
                     </button>
                     <button
                       type="button"
                       onClick={resetVisibleLifeGuardClauses}
-                      className="h-12 rounded-[14px] border border-[#D9E1EA] bg-white px-5 text-[14px] text-slate-900 transition hover:border-[#BFD3EA] hover:bg-[#F7FAFE]"
+                      className="h-11 rounded-[14px] border border-[#D9E1EA] bg-white px-4 text-[13px] text-slate-900 transition hover:border-[#BFD3EA] hover:bg-[#F7FAFE]"
                     >
                       Reset Pilihan
                     </button>
                   </div>
                 </div>
-                <div className="max-h-[420px] space-y-2 overflow-y-auto border-t border-[#D9E1EA] px-4 py-3">
+                <div className="max-h-[360px] space-y-2 overflow-y-auto border-t border-[#D9E1EA] px-3.5 py-3">
                   {lifeGuardAdditionalClauseOptions.map((clause) => (
                     <PartnerClauseAccordionRow
                       key={clause.title}
@@ -2414,7 +2414,7 @@ function PartnerConfigStudio({
                 <button
                   type="button"
                   onClick={triggerPolicyPrintTest}
-                  className="inline-flex h-11 items-center justify-center rounded-[14px] border border-[#0A4D82] bg-white px-4 text-sm font-medium text-[#0A4D82] transition hover:bg-[#F7FAFE]"
+                  className="inline-flex h-10 items-center justify-center rounded-[14px] border border-[#0A4D82] bg-white px-4 text-[13px] font-medium text-[#0A4D82] transition hover:bg-[#F7FAFE]"
                 >
                   Test Print Polis
                 </button>
@@ -4484,8 +4484,8 @@ function ChecklistCard({ title, detail, checked, onChange }) {
 
 function LifeGuardCoverageCard({ item, selected, expanded, onSelect, onToggle }) {
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[#BFD3EA] bg-[#F7FAFE]">
-      <div className="flex w-full items-start justify-between gap-4 px-4 py-4 text-left">
+    <div className="overflow-hidden rounded-[14px] border border-[#BFD3EA] bg-[#F7FAFE]">
+      <div className="flex w-full items-start justify-between gap-3 px-3.5 py-3 text-left">
         <div className="flex items-start gap-3">
           <button
             type="button"
@@ -4503,9 +4503,9 @@ function LifeGuardCoverageCard({ item, selected, expanded, onSelect, onToggle })
         </button>
       </div>
       {expanded ? (
-        <div className="border-t border-[#D4E0EF] bg-white px-4 py-4 text-[14px] leading-8 text-slate-700">
+        <div className="border-t border-[#D4E0EF] bg-white px-3.5 py-3 text-[12px] leading-6 text-slate-700">
           <div>{item.description}</div>
-          <div className="mt-3 text-slate-800">{item.note}</div>
+          <div className="mt-2 text-slate-800">{item.note}</div>
         </div>
       ) : null}
     </div>
