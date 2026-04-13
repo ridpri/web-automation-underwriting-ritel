@@ -59,7 +59,7 @@ export const PLATES = [
   "Z - Garut/Tasik/Majalengka",
 ];
 
-export const MOTOR_USAGES = ["Pribadi", "Operasional", "Ojek Online"];
+export const MOTOR_USAGES = ["Pribadi", "Komersial"];
 
 export const MOTOR_EXTENSIONS = [
   {

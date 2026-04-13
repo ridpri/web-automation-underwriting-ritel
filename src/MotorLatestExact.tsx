@@ -1055,20 +1055,18 @@ export default function MotorLatestExact({
                           {String(selected.quote.marketValue || "").trim() && !validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) ? <div className="mt-2 text-xs font-medium text-[#E8A436]">{maxHPText(flowType)}</div> : null}
                         </div>
                         <div>
-                          <FieldLabel label="Penggunaan" helpText={`Penggunaan Pribadi adalah penggunaan kendaraan untuk kepentingan pribadi dan tidak digunakan untuk kegiatan komersial.
-Contoh: kendaraan harian, ke kantor, dan aktivitas keluarga.
+                          <FieldLabel label="Penggunaan" helpText={`Penggunaan Pribadi adalah penggunaan kendaraan untuk kepentingan pribadi pengguna kendaraan.
 
-Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan dalam kegiatan yang menghasilkan imbalan jasa.
-Contoh: ojek online, rental, antar barang, dan kegiatan usaha.`} />
+Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan untuk menerima balas jasa.`} />
                           <SelectInput value={selected.quote.usage} onChange={(value: string) => setAt(flowType, "quote.usage", value)} options={["Pribadi", "Komersial"]} placeholder="Kendaraan ini digunakan untuk apa?" />
                           {selected.quote.usage === "Pribadi" ? (
                             <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                              Penggunaan Pribadi adalah penggunaan kendaraan untuk kepentingan pribadi dan tidak digunakan untuk kegiatan komersial. Contoh: kendaraan harian, ke kantor, dan aktivitas keluarga.
+                              <span className="font-semibold text-slate-800">Penggunaan Pribadi</span> adalah penggunaan kendaraan untuk kepentingan pribadi pengguna kendaraan. Contoh: kendaraan harian, ke kantor, dan aktivitas keluarga.
                             </div>
                           ) : null}
                           {selected.quote.usage === "Komersial" ? (
                             <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                              Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan dalam kegiatan yang menghasilkan imbalan jasa. Contoh: ojek online, rental, antar barang, dan kegiatan usaha.
+                              <span className="font-semibold text-slate-800">Penggunaan Komersial</span> adalah penggunaan kendaraan untuk disewakan atau digunakan untuk menerima balas jasa. Contoh: ojek, rental, antar barang, dan kendaraan operasional usaha.
                             </div>
                           ) : null}
                         </div>
