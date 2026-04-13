@@ -229,10 +229,10 @@ const FIELD_HELPERS = {
   "Plan": "Pilih plan yang berlaku.",
   "Rate Dasar (‰)": "Isi rate dasar.",
   "Rate Premi (â€°)": "Isi rate premi.",
-  "Biaya Admin": "Isi biaya admin bila ada.",
-  "Biaya Polis": "Isi biaya polis bila ada.",
+  "Biaya Admin": "Isi biaya admin.",
+  "Biaya Polis": "Isi biaya polis.",
   "Biaya Materai (Sesuai STAR)": "Isi biaya materai yang berlaku.",
-  "Diskon (%)": "Isi diskon bila ada.",
+  "Diskon (%)": "Isi diskon.",
   "Brokerage / Komisi (%)": "Isi komisi atau brokerage.",
   "Owner / Squad": "Pilih penanggung jawab internal.",
   "Ringkasan Manfaat": "Tulis manfaat utama secara singkat.",
@@ -246,24 +246,24 @@ const FIELD_HELPERS = {
   "Kelas Risiko": "Pilih kelas risiko.",
   "Risk Exposure": "Pilih eksposur risikonya.",
   "Premi": "Isi nilai premi.",
-  "Risiko Sendiri (Deductible)": "Isi risiko sendiri bila ada.",
+  "Risiko Sendiri (Deductible)": "Isi risiko sendiri.",
   "Format Source": "Pilih format sumber data.",
   "Primary Key": "Pilih field kunci utama.",
   "Endpoint / Route": "Isi endpoint atau route.",
   "Sample Payload (JSON)": "Isi contoh payload JSON.",
   "Source Field": "Isi nama field dari sumber data.",
   "Target Core Field": "Pilih field tujuan.",
-  Transform: "Isi aturan ubah format bila perlu.",
+  Transform: "Isi aturan ubah format.",
   "Contoh Nilai": "Isi contoh nilai.",
   "Source of Truth": "Pilih sumber data utama.",
   Editability: "Pilih pihak yang boleh mengubah field ini.",
-  "Default Value": "Isi nilai default bila diperlukan.",
-  "Wajib Saat Realisasi": "Tandai bila wajib saat realisasi.",
+  "Default Value": "Isi nilai default.",
+  "Wajib Saat Realisasi": "Tandai jika wajib saat realisasi.",
   "Panduan untuk Partner / Operasional": "Tulis petunjuk pengisian singkat.",
   Wording: "Pilih wording dasar.",
   "Judul Klausula Tambahan": "Isi judul klausula tambahan.",
   "Deskripsi Klausula Tambahan": "Tulis deskripsi singkat klausula tambahan.",
-  "Daftar QQ Tambahan": "Isi daftar QQ tambahan bila ada.",
+  "Daftar QQ Tambahan": "Isi daftar QQ tambahan.",
   "Daftar PIC": "Pilih PIC yang terkait.",
   "Nama Tertanggung": "Isi nama tertanggung.",
   NPWP: "Isi nomor NPWP.",
@@ -4046,7 +4046,6 @@ function PartnerConfigStudio({
                               className="relative z-10 block w-[140px] shrink-0 snap-start rounded-xl px-1 py-1 md:w-auto md:flex-1 md:shrink md:snap-none cursor-pointer"
                             >
                               <StudioStepNode
-                                step={`LANGKAH ${index + 1}`}
                                 title={step.label}
                                 subtitle={subtitle}
                                 active={active}
@@ -4817,20 +4816,33 @@ function WorkflowRoleStrip({ status }) {
   );
 }
 
-function StudioStepNode({ step, title, subtitle, active, icon }) {
+function StudioStepNode({ title, subtitle, active, icon }) {
   return (
-    <div className="relative flex min-w-0 flex-col items-center text-center">
+    <div
+      className={cls(
+        "relative flex min-w-0 flex-col items-center text-center transition",
+        active
+          ? "rounded-[20px] border border-[#D8E1EA] bg-white px-4 py-4 shadow-sm md:min-h-[128px] md:justify-center"
+          : "px-1 py-2 md:min-h-[128px] md:justify-center"
+      )}
+    >
       <div
         className={cls(
-          "flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white md:h-9 md:w-9",
+          "flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white md:h-11 md:w-11",
           active ? "border-[#0A4D82] text-[#0A4D82] shadow-md shadow-[#0A4D82]/10" : "border-slate-300 text-slate-300"
         )}
       >
         {icon}
       </div>
-      <div className="mt-1.5 text-[9px] font-medium uppercase tracking-[0.14em] text-slate-400 md:mt-2 md:text-[10px] md:tracking-[0.16em]">{step}</div>
-      <div className={cls("mt-0.5 text-[12px] font-medium leading-4 md:text-[14px] md:leading-5", active ? "text-slate-900" : "text-slate-500")}>{title}</div>
-      <div className={cls("mt-0.5 text-[11px] leading-4 md:text-[12px]", active ? "text-[#E8A436]" : "text-slate-400")}>{subtitle}</div>
+      <div className={cls("mt-3 text-[14px] font-bold leading-5 md:text-[16px]", active ? "text-[#041E42]" : "text-[#5F7A99]")}>{title}</div>
+      <div
+        className={cls(
+          "mt-2 rounded-full px-3 py-1 text-[11px] font-medium leading-4",
+          active ? "bg-[#EAF3FF] text-[#0A4D82]" : "border border-[#D8E1EA] bg-white text-[#8EA3BC]"
+        )}
+      >
+        {subtitle}
+      </div>
     </div>
   );
 }

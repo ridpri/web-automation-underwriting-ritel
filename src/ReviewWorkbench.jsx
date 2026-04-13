@@ -32,21 +32,18 @@ const FILTERS = ["Semua", "Perlu Ditindak", "Menunggu Tinjauan", "Perlu Revisi",
 const WORKSPACE_LANES = [
   {
     key: "review",
-    step: "Langkah 1",
     label: "Perlu Saya Tinjau",
     helper: "Dokumen dan validasi",
     icon: ShieldAlert,
   },
   {
     key: "waiting",
-    step: "Langkah 2",
     label: "Menunggu Respons Nasabah",
     helper: "Tindak lanjut dan kelengkapan",
     icon: Clock3,
   },
   {
     key: "ready",
-    step: "Langkah 3",
     label: "Siap Kirim / Bayar",
     helper: "Versi aktif dan final",
     icon: CheckCircle2,
@@ -96,6 +93,7 @@ function WorkspaceRail({ activeLane, onChange, records }) {
             const done = workspaceLaneDone(activeLane, item.key);
             const count = records.filter((record) => matchesWorkspaceLane(record, item.key)).length;
             const showConnector = index < WORKSPACE_LANES.length - 1;
+            const subtitle = active ? "Sedang dibuka" : done ? `${count} selesai` : "Klik untuk buka";
 
             return (
               <React.Fragment key={item.key}>
@@ -104,13 +102,22 @@ function WorkspaceRail({ activeLane, onChange, records }) {
                   onClick={() => onChange(item.key)}
                   className="group relative flex flex-1 flex-col items-center text-center"
                 >
-                  <div className={cls("flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white transition", done ? "border-green-600 text-green-600" : active ? "border-[#0A4D82] text-[#0A4D82]" : "border-slate-300 text-slate-300 group-hover:border-[#0A4D82] group-hover:text-[#0A4D82]")}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{item.step}</div>
-                  <div className={cls("mt-0.5 text-[14px] font-bold transition", active || done ? "text-slate-900" : "text-slate-500 group-hover:text-slate-900")}>{item.label}</div>
-                  <div className={cls("mt-0.5 text-[12px] transition", active ? "text-[#E8A436]" : done ? "text-green-600" : "text-slate-400 group-hover:text-[#E8A436]")}>
-                    {active ? "Sedang dibuka" : done ? `${count} transaksi selesai` : item.helper}
+                  <div
+                    className={cls(
+                      "relative flex w-full flex-col items-center text-center transition",
+                      active
+                        ? "rounded-[20px] border border-[#D8E1EA] bg-white px-4 py-4 shadow-sm md:min-h-[128px] md:justify-center"
+                        : "px-1 py-2 md:min-h-[128px] md:justify-center"
+                    )}
+                  >
+                    <div className={cls("flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white transition", done ? "border-green-600 text-green-600" : active ? "border-[#0A4D82] text-[#0A4D82]" : "border-slate-300 text-slate-300 group-hover:border-[#0A4D82] group-hover:text-[#0A4D82]")}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className={cls("mt-3 text-[14px] font-bold leading-5 transition md:text-[16px]", active || done ? "text-[#041E42]" : "text-[#5F7A99] group-hover:text-[#041E42]")}>{item.label}</div>
+                    <div className={cls("mt-2 rounded-full px-3 py-1 text-[11px] font-medium leading-4 transition", active ? "bg-[#EAF3FF] text-[#0A4D82]" : done ? "border border-emerald-200 bg-white text-emerald-700" : "border border-[#D8E1EA] bg-white text-[#8EA3BC] group-hover:text-[#0A4D82]")}>
+                      {subtitle}
+                    </div>
+                    {!active && !done ? <div className="mt-2 text-[11px] leading-4 text-[#8EA3BC]">{item.helper}</div> : null}
                   </div>
                 </button>
                 {showConnector ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
