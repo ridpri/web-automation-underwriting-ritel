@@ -982,7 +982,7 @@ function ClaimsView({ claims, policies, onOpenUpload, onOpenReport }) {
         )}
       </SectionCard>
 
-      <aside className="space-y-4 xl:sticky xl:top-24">
+      <aside className="space-y-4 self-start xl:sticky xl:top-24">
         <SummaryPanel>
           <SummaryRows
             items={[
@@ -1224,7 +1224,7 @@ function PoliciesView({ policies, claims, billingItems, selectedPolicyId, setSel
         ) : null}
       </div>
 
-      <aside className="space-y-4 xl:sticky xl:top-24">
+      <aside className="space-y-4 self-start xl:sticky xl:top-24">
         <SummaryPanel>
           <SummaryRows
             items={[

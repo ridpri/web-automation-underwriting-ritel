@@ -1017,19 +1017,19 @@ export default function MotorLatestExact({
               <div className="mx-auto mt-7 max-w-4xl rounded-2xl bg-white p-4 shadow-2xl shadow-black/15 md:p-5">
                 <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-4 py-4 md:px-5 md:py-5">
                   <div className="flex flex-col gap-6 md:flex-row md:gap-5">
-                    <StepNode step="LANGKAH 1" title="Simulasi Premi" subtitle={step === 1 ? "Dalam proses" : "Selesai"} active={step === 1} icon={<Building2 className="h-4 w-4" />} />
+                    <StepNode step="LANGKAH 1" title="Simulasi Premi" subtitle={step === 1 ? "Dalam proses" : "Selesai"} active={step === 1} icon={<Building2 className="h-4 w-4" />} onClick={() => setStep(1)} />
                     <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-                    <StepNode step="LANGKAH 2" title="Isi Data" subtitle={step === 2 ? "Dalam proses" : step > 2 ? "Selesai" : "Tertunda"} active={step === 2} icon={<FileText className="h-4 w-4" />} />
+                    <StepNode step="LANGKAH 2" title="Isi Data" subtitle={step === 2 ? "Dalam proses" : step > 2 ? "Selesai" : "Tertunda"} active={step === 2} icon={<FileText className="h-4 w-4" />} onClick={showPremiumDetails ? () => setStep(2) : undefined} />
                     <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-                    <StepNode step="LANGKAH 3" title="Pembayaran" subtitle={step === 3 ? "Dalam proses" : "Tertunda"} active={step === 3} icon={<Wallet className="h-4 w-4" />} />
+                    <StepNode step="LANGKAH 3" title="Pembayaran" subtitle={step === 3 ? "Dalam proses" : "Tertunda"} active={step === 3} icon={<Wallet className="h-4 w-4" />} onClick={step > 1 ? () => setStep(3) : undefined} />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mx-auto max-w-[1280px] px-4 pb-12 md:px-6">
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className={cls("mx-auto px-4 pb-12 md:px-6", step > 1 || showPremiumDetails ? "max-w-[1280px]" : "max-w-4xl")}>
+            <div className={cls("grid gap-5", step > 1 || showPremiumDetails ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
               <div className="space-y-5">
                 {step === 1 ? (
                   <>
@@ -1052,13 +1052,19 @@ export default function MotorLatestExact({
                           <TextInput value={selected.quote.plateRegion} onChange={(value: string) => setAt(flowType, "quote.plateRegion", value)} placeholder={`Cari contoh: ${PLATES[0]}`} icon={<MapPin className="h-4 w-4" />} listId={`${flowType}-plate-list`} />
                           <datalist id={`${flowType}-plate-list`}>{PLATES.map((p) => <option key={p} value={p} />)}</datalist>
                         </div>
+                        {flowType === "motor" ? (
+                          <div>
+                            <FieldLabel label="Merek / Tipe Motor" />
+                            <TextInput value={selected.quote.vehicleName} onChange={(value: string) => setAt(flowType, "quote.vehicleName", value)} placeholder="Masukkan merek dan tipe motor" icon={<Search className="h-4 w-4" />} />
+                          </div>
+                        ) : null}
                         <div>
                           <FieldLabel label="Tahun Pembuatan Kendaraan" helpText="Sesuai tahun pembuatan/manufacture year pada STNK." />
                           <SelectInput value={selected.quote.year} onChange={(value: string) => setAt(flowType, "quote.year", value)} options={getYearOptions(flowType)} placeholder="Kendaraan ini dibuat tahun berapa?" />
                         </div>
                         <div>
                           <FieldLabel label="Harga Pertanggungan" helpText="Harga pertanggungan sebaiknya mencerminkan harga sebenarnya kendaraan sesaat sebelum kerugian atau kerusakan. Jika lebih rendah dari harga sebenarnya, penyelesaian klaim dapat diperhitungkan secara proporsional sebelum pengurangan risiko sendiri." />
-                          <TextInput value={selected.quote.marketValue ? formatRupiah(Number(String(selected.quote.marketValue).replace(/[^0-9]/g, ""))) : ""} onChange={(value: string) => setAt(flowType, "quote.marketValue", String(value).replace(/[^0-9]/g, ""))} placeholder="Contoh: Rp180.000.000" inputMode="numeric" />
+                          <TextInput value={selected.quote.marketValue ? formatRupiah(Number(String(selected.quote.marketValue).replace(/[^0-9]/g, ""))) : ""} onChange={(value: string) => setAt(flowType, "quote.marketValue", String(value).replace(/[^0-9]/g, ""))} placeholder="Contoh: 180.000.000" inputMode="numeric" />
                           {String(selected.quote.marketValue || "").trim() && !validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) ? <div className="mt-2 text-xs font-medium text-[#E8A436]">{maxHPText(flowType)}</div> : null}
                         </div>
                         <div>
@@ -1524,7 +1530,7 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
                 ) : null}
               </div>
 
-              {step > 1 || showPremiumDetails ? <aside className="h-fit rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg lg:sticky lg:top-24">
+              {step > 1 || showPremiumDetails ? <aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg md:sticky md:top-24">
                 <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-[18px] font-bold"><FileText className="h-5 w-5" />Ringkasan</div><ChevronDown className="h-5 w-5 text-white/80" /></div>
                 <div className="mt-4 border-t border-white/15 pt-3.5">
                   <SummaryRow label="Produk" value={flowType === "motor" ? "Total Loss Kendaraan - Motor" : flowType === "carComp" ? "Kendaraan Roda 4 - Comprehensive" : "Total Loss Kendaraan - Mobil"} />
