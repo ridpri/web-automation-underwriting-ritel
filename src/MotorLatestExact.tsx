@@ -1092,7 +1092,7 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
                             <div className="mt-1 text-sm text-slate-500">Klik setiap baris untuk melihat penjelasan detailnya.</div>
                             <div className="mt-4 text-[18px] font-bold tracking-tight text-slate-900">Risiko yang Dijamin</div>
                             <div className="mt-3 space-y-2.5">
-                              <AccordionRiskRow itemIcon={Shield} title={mainCoverTitle(flowType)} premium={formatRupiah(calc.mainPremium)} summary={mainCoverText(flowType)} detail={flowType === "carComp" ? `Premi utama sebelum loading usia: ${formatRupiah((calc as any).baseMainPremium || 0)} | Loading usia: ${formatRupiah((calc as any).ageLoadingAmount || 0)}` : ""} deductible={mainDeductibleText(flowType, selected.quote.vehicleType)} alwaysIncluded expanded={!!expandedRows.main} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, main: !prev.main }))} />
+                    <AccordionRiskRow itemIcon={Shield} title={mainCoverTitle(flowType)} premium={formatRupiah(calc.mainPremium)} summary={mainCoverText(flowType)} detail="" deductible={mainDeductibleText(flowType, selected.quote.vehicleType)} alwaysIncluded expanded={!!expandedRows.main} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, main: !prev.main }))} />
                             </div>
                           </div>
                           <div>
