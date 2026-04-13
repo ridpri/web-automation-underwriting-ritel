@@ -126,7 +126,7 @@ export default function PropertyExternalPrototype({ onExit, entryMode = "guest",
   const [ktpUploaded, setKtpUploaded] = useState(false);
   const [rows, setRows] = useState([{ id: "obj-1", type: "", amount: "", note: "" }]);
   const [guarantees, setGuarantees] = useState({ riot: false, flood: false, tsfwd: false, earthquake: false });
-  const [expanded, setExpanded] = useState({ fire: true, riot: false, flood: false, tsfwd: false, earthquake: false, exclusions: productVariant === "property-all-risk" });
+  const [expanded, setExpanded] = useState({ fire: true, riot: false, flood: false, tsfwd: false, earthquake: false, exclusions: false });
   const [form, setForm] = useState({ propertyType: "", occupancy: "", location: "", wall: "", structure: "", roof: "", flammable: "", customerType: "", identity: "", phone: "", email: "" });
   const [uw, setUw] = useState({ idNumber: "", contactOnLocation: "", ownership: "", startDate: today, endDate: addYear(today), fireProtection: "", claimHistory: "" });
   const [uploads, setUploads] = useState({ frontView: false, sideRightView: false, sideLeftView: false });

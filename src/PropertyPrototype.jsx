@@ -1309,7 +1309,7 @@ export default function PropertyStepOneFrontendCompact({
   const [helpRequestSent, setHelpRequestSent] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedGuarantees, setSelectedGuarantees] = useState({ riot: false, flood: false, tsfwd: false, earthquake: false });
-  const [expandedRows, setExpandedRows] = useState({ fire: true, riot: false, flood: false, tsfwd: false, earthquake: false, exclusions: productVariant === "property-all-risk", optionalUw: false });
+  const [expandedRows, setExpandedRows] = useState({ fire: true, riot: false, flood: false, tsfwd: false, earthquake: false, exclusions: false, optionalUw: false });
   const [floorCount, setFloorCount] = useState("");
   const [form, setForm] = useState({
     identity: "",
