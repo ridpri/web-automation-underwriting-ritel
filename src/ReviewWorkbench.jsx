@@ -147,7 +147,9 @@ function WorkspaceRail({ activeLane, onChange, records }) {
                     <div className={cls("mt-2 rounded-full px-3 py-1 text-[11px] font-medium leading-4 transition", active ? "bg-[#EAF3FF] text-[#0A4D82]" : done ? "border border-emerald-200 bg-white text-emerald-700" : "border border-[#D8E1EA] bg-white text-[#8EA3BC] group-hover:text-[#0A4D82]")}>
                       {subtitle}
                     </div>
-                    {!active && !done ? <div className="mt-2 text-[11px] leading-4 text-[#8EA3BC]">{item.helper}</div> : null}
+                    <div className={cls("mt-2 text-[13px] leading-5 transition", active || done ? "text-[#8EA3BC]" : "text-[#8EA3BC] group-hover:text-[#5F7A99]")}>
+                      {item.helper}
+                    </div>
                   </div>
                 </button>
                 {showConnector ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
