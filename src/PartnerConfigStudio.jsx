@@ -416,6 +416,41 @@ const LIFE_GUARD_ADDITIONAL_CLAUSE_LIBRARY = [
   { title: "Klausul Risiko Mengendarai Sepeda Motor dan Sejenisnya", lob: "Kendaraan Bermotor" },
   { title: "Klausul Usia", lob: "Kecelakaan Diri" },
 ];
+
+const WORDING_OPTION_META = {
+  PSAKDI: "Wording utama berbahasa Indonesia untuk perlindungan kecelakaan diri.",
+  "PSAKDI Bilingual": "Wording utama dua bahasa untuk partner yang membutuhkan dokumen bilingual.",
+};
+
+const CLAUSE_DESCRIPTIONS = {
+  "Klausula 72 Jam": "Mengatur ketentuan pelaporan atau pemberitahuan dalam batas waktu yang disepakati.",
+  "Klausula Kehamilan": "Mengatur batasan atau ketentuan perlindungan yang berkaitan dengan kehamilan.",
+  "Klausula Kesehatan": "Mengatur ketentuan kesehatan awal atau kondisi yang harus diperhatikan sebelum perlindungan aktif.",
+  "Klausul Kegiatan Olahraga": "Menambahkan ketentuan untuk aktivitas olahraga sesuai kesepakatan partner.",
+  "Klausula Kegiatan Olahraga": "Menambahkan ketentuan untuk aktivitas olahraga sesuai kesepakatan partner.",
+  "Klausula Pembayaran Premi": "Menjelaskan ketentuan pembayaran premi dan kapan perlindungan mulai berlaku.",
+  "Klausul Pembayaran Premi": "Menjelaskan ketentuan pembayaran premi dan kapan perlindungan mulai berlaku.",
+  "Klausula Pengecualian Kecelakaan Selama Ibadah": "Menjelaskan batasan risiko tertentu selama kegiatan ibadah bila dibutuhkan oleh partner.",
+  "Klausul Pengecualian Kecelakaan Selama Ibadah": "Menjelaskan batasan risiko tertentu selama kegiatan ibadah bila dibutuhkan oleh partner.",
+  "Klausula Penumpang Pesawat Terbang Non Reguler": "Mengatur perlindungan untuk perjalanan udara non-reguler sesuai kebutuhan produk.",
+  "Klausul Penumpang Pesawat Terbang Non Reguler": "Mengatur perlindungan untuk perjalanan udara non-reguler sesuai kebutuhan produk.",
+  "Klausula Usia": "Mengatur batas usia masuk dan ketentuan usia peserta yang dapat ditanggung.",
+  "Klausul Usia": "Mengatur batas usia masuk dan ketentuan usia peserta yang dapat ditanggung.",
+  "Klausula Masa Berlaku Pertanggungan": "Menjelaskan masa berlaku perlindungan sesuai periode yang disepakati.",
+  "Klausul Masa Berlaku Pertanggungan": "Menjelaskan masa berlaku perlindungan sesuai periode yang disepakati.",
+  "Klausula Pelaporan dan Kelengkapan Dokumen Klaim": "Mengatur tata cara pelaporan klaim dan dokumen yang perlu disiapkan.",
+  "Klausul Pelaporan dan Kelengkapan Dokumen Klaim": "Mengatur tata cara pelaporan klaim dan dokumen yang perlu disiapkan.",
+  "Klausula Pengecualian Risiko Mengendarai Sepeda Motor": "Menjelaskan pembatasan risiko saat peserta mengendarai sepeda motor.",
+  "Klausul Pengecualian Risiko Mengendarai Sepeda Motor": "Menjelaskan pembatasan risiko saat peserta mengendarai sepeda motor.",
+  "Klausula Risiko Mengendarai Sepeda Motor dan Sejenisnya": "Mengatur perluasan atau penyesuaian perlindungan untuk risiko sepeda motor dan sejenisnya.",
+  "Klausul Risiko Mengendarai Sepeda Motor dan Sejenisnya": "Mengatur perluasan atau penyesuaian perlindungan untuk risiko sepeda motor dan sejenisnya.",
+  "Wilayah Indonesia Saja": "Membatasi perlindungan agar hanya berlaku untuk perjalanan atau aktivitas di wilayah Indonesia.",
+  "Data Realisasi Dapat Diunggah Massal": "Mengatur bahwa data realisasi peserta dapat diunggah sekaligus sesuai format partner.",
+};
+
+function getClauseDescription(label, fallback = "Klausula ini akan ikut sebagai pengaturan default pada konfigurasi partner.") {
+  return CLAUSE_DESCRIPTIONS[label] || fallback;
+}
 const LIFE_GUARD_COVERAGE_ITEMS = [
   {
     id: "main-accident",
@@ -1028,6 +1063,7 @@ function createBlankConfig(family = "group-pa") {
         insuredCode: "",
         partnerCode: "",
         acquisitionCode: "110 - PS Perusahaan",
+        phoneNumber: "",
         ownerEmail: "",
         correspondenceEmail: "",
         insuredName: "",
@@ -1133,6 +1169,7 @@ const SEED_CONFIGS = [
         insuredCode: "009281",
         partnerCode: "PABS",
         acquisitionCode: "110 - PS Perusahaan",
+        phoneNumber: "081234567890",
         ownerEmail: "pa.ops@jasindo.co.id",
         correspondenceEmail: "admin@lifeguard.co.id",
         insuredName: "PT LIFE GUARD INDONESIA",
@@ -1254,6 +1291,7 @@ const SEED_CONFIGS = [
         insuredCode: "009281",
         partnerCode: "MOMO",
         acquisitionCode: "110 - PS Perusahaan",
+        phoneNumber: "081234567891",
         ownerEmail: "admin@momotrip.co.id",
         correspondenceEmail: "admin@momotrip.co.id",
         insuredName: "PT MOMOTRIP AXIA INDONESIA",
@@ -1355,6 +1393,7 @@ const SEED_CONFIGS = [
         insuredCode: "007451",
         partnerCode: "GNS",
         acquisitionCode: "300 - Broker",
+        phoneNumber: "081234567892",
         ownerEmail: "property.ops@jasindo.co.id",
         startDate: "2026-02-01",
         endDate: "2027-01-31",
@@ -1459,6 +1498,7 @@ function PartnerConfigStudio({
   const [catalogSearch, setCatalogSearch] = useState(urlState.catalogSearch || cached?.catalogSearch || "");
   const [toast, setToast] = useState("");
   const [lifeGuardExpanded, setLifeGuardExpanded] = useState("main-accident");
+  const [partnerClauseExpanded, setPartnerClauseExpanded] = useState("wording:PSAKDI");
   const [lifeGuardClauseSearch, setLifeGuardClauseSearch] = useState("");
   const role = controlledRole || roleState;
 
@@ -2016,76 +2056,80 @@ function PartnerConfigStudio({
     const isLifeGuard = selectedConfig.family === "group-pa";
     const isTripTravelGuard = ["health-group", "travel-group"].includes(selectedConfig.family);
     const lifeGuardComputed = isLifeGuard ? getLifeGuardComputed(master) : null;
+    const insuredLookupValue = blueprint.insuredCode || blueprint.insuredName || "";
+    const hasInsuredLookup = Boolean(insuredLookupValue.trim());
 
     if (isLifeGuard) {
       if (STEP_LIST[stepIndex].id === "general") {
         return (
           <div className="space-y-4">
-            <SectionCard title="Informasi Umum">
+            <SectionCard title="Informasi Nasabah">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2 rounded-[18px] border border-[#BFDBFE] bg-[#F4F9FE] p-4">
-                  <FormField label="Kode Tertanggung" required>
-                    <TextInput
-                      value={blueprint.insuredCode}
-                      onChange={(value) => patchSection("blueprint", { insuredCode: onlyDigits(value) })}
-                      className="border-[#BFDBFE] text-[#0A4D82]"
-                    />
-                  </FormField>
-                </div>
-                <FormField label="Nama Tertanggung">
-                  <TextInput
-                    value={blueprint.insuredName || ""}
-                    onChange={(value) => patchSection("blueprint", { insuredName: value })}
-                    disabled
-                    className="uppercase"
-                  />
-                </FormField>
-                <FormField label="NPWP">
-                  <TextInput
-                    value={blueprint.npwp || ""}
-                    onChange={(value) => patchSection("blueprint", { npwp: value })}
-                    disabled
-                  />
-                </FormField>
                 <div className="md:col-span-2">
-                  <FormField label="Alamat Korespondensi">
-                    <TextAreaInput
-                      rows={3}
-                      value={blueprint.address || ""}
-                      onChange={(value) => patchSection("blueprint", { address: value })}
-                      disabled
-                    />
+                  <FormField label="Nama / CIF" required helper="Ketik nama untuk mencari data CIF, atau lanjutkan sebagai nasabah baru.">
+                    <div className="relative">
+                      <UserRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <TextInput
+                        value={insuredLookupValue}
+                        onChange={(value) => patchSection("blueprint", {
+                          insuredCode: value,
+                          insuredName: onlyDigits(value) ? blueprint.insuredName : value.toUpperCase(),
+                        })}
+                        placeholder="Masukkan nama nasabah atau kode CIF"
+                        className="pl-11"
+                      />
+                    </div>
                   </FormField>
                 </div>
-                <FormField label="Email Korespondensi" required>
-                  <TextInput
-                    type="email"
-                    value={blueprint.correspondenceEmail || blueprint.ownerEmail || ""}
-                    onChange={(value) => patchSection("blueprint", { correspondenceEmail: value, ownerEmail: value })}
-                  />
-                </FormField>
-                <FormField label="Daftar PIC">
-                  <SelectInput
-                    value={blueprint.picList || ""}
-                    onChange={(value) => patchSection("blueprint", { picList: value })}
-                    options={["", ...LIFE_GUARD_PIC_OPTIONS]}
-                    renderLabel={(value) => value || "-- Pilih --"}
-                  />
-                </FormField>
-                <FormField label="Kode Akuisisi" required>
-                  <SelectInput
-                    value={blueprint.acquisitionCode}
-                    onChange={(value) => patchSection("blueprint", { acquisitionCode: value })}
-                    options={LIFE_GUARD_ACQUISITION_OPTIONS}
-                  />
-                </FormField>
-                <FormField label="Nomor Polis Induk / Nomor PKS" required>
+                {hasInsuredLookup ? (
+                  <>
+                    <FormField label="Nomor Handphone" required>
+                      <TextInput
+                        value={blueprint.phoneNumber || ""}
+                        onChange={(value) => patchSection("blueprint", { phoneNumber: value })}
+                        placeholder="08xxxxxxxxxx"
+                      />
+                    </FormField>
+                    <FormField label="Alamat Email" required>
+                      <TextInput
+                        type="email"
+                        value={blueprint.correspondenceEmail || blueprint.ownerEmail || ""}
+                        onChange={(value) => patchSection("blueprint", { correspondenceEmail: value, ownerEmail: value })}
+                        placeholder="nama@email.com"
+                      />
+                    </FormField>
+                    <FormField label="NPWP">
+                      <TextInput
+                        value={blueprint.npwp || ""}
+                        onChange={(value) => patchSection("blueprint", { npwp: value })}
+                        placeholder="Masukkan NPWP"
+                      />
+                    </FormField>
+                    <div className="md:col-span-2">
+                      <FormField label="Alamat">
+                        <TextAreaInput
+                          rows={3}
+                          value={blueprint.address || ""}
+                          onChange={(value) => patchSection("blueprint", { address: value })}
+                          placeholder="Masukkan alamat nasabah"
+                        />
+                      </FormField>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Polis Induk">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField label="Nomor Polis Induk / PKS" required>
                   <TextInput
                     value={master.masterPolicyNo}
                     onChange={(value) => {
                       patchSection("master", { masterPolicyNo: value });
                       patchSection("blueprint", { agreementNo: value });
                     }}
+                    placeholder="Masukkan nomor polis induk atau PKS"
                   />
                 </FormField>
                 <div className="md:col-span-2">
@@ -2094,25 +2138,24 @@ function PartnerConfigStudio({
                       rows={2}
                       value={blueprint.qqTambahan || ""}
                       onChange={(value) => patchSection("blueprint", { qqTambahan: value })}
+                      placeholder="Isi jika ada tambahan QQ yang perlu tercetak di polis."
                     />
                   </FormField>
                 </div>
-                <FormField label="Mulai Pertanggungan" required>
+                <FormField label="Mulai Berlaku PKS / Polis Induk" required>
                   <TextInput
                     type="date"
                     value={blueprint.startDate}
                     onChange={(value) => patchSection("blueprint", { startDate: value })}
                   />
                 </FormField>
-                <FormField label="Akhir Pertanggungan" required>
-                  <TextInput
-                    type="date"
-                    value={blueprint.endDate}
-                    onChange={(value) => patchSection("blueprint", { endDate: value })}
-                  />
-                </FormField>
-                <div className="md:col-span-2 rounded-[18px] border border-dashed border-[#BFDBFE] bg-slate-50 px-5 py-6 text-center text-sm text-slate-500">
-                  Unggah Dokumen PKS & Lampiran
+                <div className="md:col-span-2">
+                  <div className="rounded-[18px] border border-dashed border-[#BFDBFE] bg-slate-50 px-5 py-6 text-center text-sm text-slate-500">
+                    <div className="flex items-center justify-center gap-2 text-[#0A4D82]">
+                      <Upload className="h-4 w-4" />
+                      <span>Unggah Dokumen PKS atau Polis Induk</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </SectionCard>
@@ -2123,83 +2166,100 @@ function PartnerConfigStudio({
       if (STEP_LIST[stepIndex].id === "object") {
         return (
           <div className="space-y-4">
-            <SectionCard
-              title="Obyek Pertanggungan"
-              action={<div className="rounded-full bg-[#FFF7ED] px-3 py-1 text-xs font-medium text-[#C26B17]">Preview premi: Rp {formatRupiah(lifeGuardComputed.premiumMin)}</div>}
-            >
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <FormField label="Jenis Pertanggungan" required>
-                    <SelectInput
-                      value={master.coverageType || LIFE_GUARD_COVERAGE_OPTIONS[0]}
-                      onChange={(value) => patchSection("master", { coverageType: value, productCode: value.split(" - ")[0], productName: value })}
-                      options={LIFE_GUARD_COVERAGE_OPTIONS}
-                    />
-                  </FormField>
+            <SectionCard title="Obyek Pertanggungan" subtitle="Isi berurutan mulai dari jenis pertanggungan, santunan, lalu premi.">
+              <div className="space-y-4">
+                <div className="rounded-[18px] border border-[#D9E1EA] bg-[#F7FAFE] p-4">
+                  <div className="mb-4 text-[14px] font-semibold text-slate-950">Produk & profil risiko</div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="md:col-span-2">
+                      <FormField label="Jenis Pertanggungan" required helper="">
+                        <SelectInput
+                          value={master.coverageType || LIFE_GUARD_COVERAGE_OPTIONS[0]}
+                          onChange={(value) => patchSection("master", { coverageType: value, productCode: value.split(" - ")[0], productName: value })}
+                          options={LIFE_GUARD_COVERAGE_OPTIONS}
+                        />
+                      </FormField>
+                    </div>
+                    <FormField label="Mata Uang" required helper="">
+                      <SelectInput
+                        value={master.currencyCode || LIFE_GUARD_CURRENCY_OPTIONS[0]}
+                        onChange={(value) => patchSection("master", { currencyCode: value })}
+                        options={LIFE_GUARD_CURRENCY_OPTIONS}
+                      />
+                    </FormField>
+                    <FormField label="Kelas Risiko" required helper="">
+                      <SelectInput value={master.riskClass || "Kelas III"} onChange={(value) => patchSection("master", { riskClass: value })} options={["Kelas I", "Kelas II", "Kelas III", "Kelas IV", "Single Rate"]} />
+                    </FormField>
+                    <FormField label="Eksposur Risiko" required helper="">
+                      <SelectInput value={master.riskExposure || "Tersebar"} onChange={(value) => patchSection("master", { riskExposure: value })} options={["Tersebar", "Terlokalisir"]} />
+                    </FormField>
+                    <FormField label="Batasan Usia Peserta" required helper="">
+                      <div className="grid grid-cols-[1fr_24px_1fr] items-center gap-2">
+                        <TextInput value={master.ageMin || ""} onChange={(value) => patchSection("master", { ageMin: onlyDigits(value) })} placeholder="Usia minimum" />
+                        <div className="text-center text-sm text-slate-400">-</div>
+                        <TextInput value={master.ageMax || ""} onChange={(value) => patchSection("master", { ageMax: onlyDigits(value) })} placeholder="Usia maksimum" />
+                      </div>
+                    </FormField>
+                  </div>
                 </div>
-                <FormField label="Batasan Usia Peserta" required>
-                  <div className="grid grid-cols-[1fr_24px_1fr] items-center gap-2">
-                    <TextInput value={master.ageMin || ""} onChange={(value) => patchSection("master", { ageMin: onlyDigits(value) })} />
-                    <div className="text-center text-sm text-slate-400">-</div>
-                    <TextInput value={master.ageMax || ""} onChange={(value) => patchSection("master", { ageMax: onlyDigits(value) })} />
+
+                <div className="rounded-[18px] border border-[#D9E1EA] bg-[#F7FAFE] p-4">
+                  <div className="mb-4 text-[14px] font-semibold text-slate-950">Santunan & validasi</div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField label="Kriteria Validasi Santunan" required helper="">
+                      <SelectInput
+                        value={master.npCriteria || "antara"}
+                        onChange={(value) => patchSection("master", { npCriteria: value })}
+                        options={["setara", "antara", "lebih_besar", "kurang_dari"]}
+                        renderLabel={(value) =>
+                          value === "setara" ? "Setara dengan" : value === "antara" ? "Antara (Min & Maks)" : value === "lebih_besar" ? "Lebih besar dari" : "Kurang dari"
+                        }
+                      />
+                    </FormField>
+                    <FormField label="NP Meninggal Dunia (A)" required helper="">
+                      <div className="grid grid-cols-[1fr_24px_1fr] items-center gap-2">
+                        <CurrencyInput value={master.npAMin || ""} onChange={(value) => patchSection("master", { npAMin: value })} />
+                        <div className="text-center text-sm text-slate-400">-</div>
+                        <CurrencyInput value={master.npAMax || ""} onChange={(value) => patchSection("master", { npAMax: value })} />
+                      </div>
+                    </FormField>
+                    <FormField label="NP Cacat Tetap (B)" helper="">
+                      <div className="flex items-center gap-3">
+                        <TextInput value={master.npBPercent || "100"} onChange={(value) => patchSection("master", { npBPercent: onlyDigits(value) })} className="max-w-[120px] text-center" />
+                        <div className="rounded-xl border border-[#D9E1EA] bg-white px-3 py-3 text-sm text-[#0A4D82]">{lifeGuardComputed.npBText}</div>
+                      </div>
+                    </FormField>
+                    <FormField label="NP Pengobatan (C)" helper="">
+                      <div className="flex items-center gap-3">
+                        <TextInput value={master.npCPercent || "10"} onChange={(value) => patchSection("master", { npCPercent: onlyDigits(value) })} className="max-w-[120px] text-center" />
+                        <div className="rounded-xl border border-[#D9E1EA] bg-white px-3 py-3 text-sm text-[#0A4D82]">{lifeGuardComputed.npCText}</div>
+                      </div>
+                    </FormField>
                   </div>
-                </FormField>
-                <FormField label="Kriteria Validasi Santunan" required>
-                  <SelectInput
-                    value={master.npCriteria || "antara"}
-                    onChange={(value) => patchSection("master", { npCriteria: value })}
-                    options={["setara", "antara", "lebih_besar", "kurang_dari"]}
-                    renderLabel={(value) =>
-                      value === "setara" ? "Setara dengan" : value === "antara" ? "Antara (Min & Maks)" : value === "lebih_besar" ? "Lebih besar dari" : "Kurang dari"
-                    }
-                  />
-                </FormField>
-                <FormField label="Mata Uang" required>
-                  <SelectInput
-                    value={master.currencyCode || LIFE_GUARD_CURRENCY_OPTIONS[0]}
-                    onChange={(value) => patchSection("master", { currencyCode: value })}
-                    options={LIFE_GUARD_CURRENCY_OPTIONS}
-                  />
-                </FormField>
-                <FormField label="NP Meninggal Dunia (A)" required>
-                  <div className="grid grid-cols-[1fr_24px_1fr] items-center gap-2">
-                    <CurrencyInput value={master.npAMin || ""} onChange={(value) => patchSection("master", { npAMin: value })} />
-                    <div className="text-center text-sm text-slate-400">-</div>
-                    <CurrencyInput value={master.npAMax || ""} onChange={(value) => patchSection("master", { npAMax: value })} />
+                </div>
+
+                <div className="rounded-[18px] border border-[#D9E1EA] bg-[#F7FAFE] p-4">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="text-[14px] font-semibold text-slate-950">Premi & ketentuan</div>
+                    <div className="rounded-full bg-[#FFF7ED] px-3 py-1 text-xs font-medium text-[#C26B17]">Preview premi: Rp {formatRupiah(lifeGuardComputed.premiumMin)}</div>
                   </div>
-                </FormField>
-                <FormField label="NP Cacat Tetap (B)">
-                  <div className="flex items-center gap-3">
-                    <TextInput value={master.npBPercent || "100"} onChange={(value) => patchSection("master", { npBPercent: onlyDigits(value) })} className="max-w-[120px] text-center" />
-                    <div className="rounded-xl border border-[#D9E1EA] bg-[#F4F9FE] px-3 py-3 text-sm text-[#0A4D82]">{lifeGuardComputed.npBText}</div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField label="Rate Premi (‰)" helper="">
+                      <TextInput value={master.baseRate || ""} onChange={(value) => patchSection("master", { baseRate: value })} className="max-w-[180px]" />
+                    </FormField>
+                    <FormField label="Estimasi Premi" required helper="">
+                      <div className="grid grid-cols-[1fr_24px_1fr] items-center gap-2">
+                        <CurrencyInput value={formatNumber(lifeGuardComputed.premiumMin)} onChange={() => {}} disabled />
+                        <div className="text-center text-sm text-slate-400">-</div>
+                        <CurrencyInput value={formatNumber(lifeGuardComputed.premiumMax)} onChange={() => {}} disabled />
+                      </div>
+                    </FormField>
+                    <div className="md:col-span-2">
+                      <FormField label="Biaya Sendiri saat Klaim" helper="">
+                        <TextAreaInput rows={2} value={master.deductible || ""} onChange={(value) => patchSection("master", { deductible: value })} placeholder="Isi jika ada biaya sendiri saat klaim." />
+                      </FormField>
+                    </div>
                   </div>
-                </FormField>
-                <FormField label="NP Pengobatan (C)">
-                  <div className="flex items-center gap-3">
-                    <TextInput value={master.npCPercent || "10"} onChange={(value) => patchSection("master", { npCPercent: onlyDigits(value) })} className="max-w-[120px] text-center" />
-                    <div className="rounded-xl border border-[#D9E1EA] bg-[#F4F9FE] px-3 py-3 text-sm text-[#0A4D82]">{lifeGuardComputed.npCText}</div>
-                  </div>
-                </FormField>
-                <FormField label="Kelas Risiko" required>
-                  <SelectInput value={master.riskClass || "Kelas III"} onChange={(value) => patchSection("master", { riskClass: value })} options={["Kelas I", "Kelas II", "Kelas III", "Kelas IV", "Single Rate"]} />
-                </FormField>
-                <FormField label="Risk Exposure" required>
-                  <SelectInput value={master.riskExposure || "Tersebar"} onChange={(value) => patchSection("master", { riskExposure: value })} options={["Tersebar", "Terlokalisir"]} />
-                </FormField>
-                <FormField label="Rate Premi (â€°)">
-                  <TextInput value={master.baseRate || ""} onChange={(value) => patchSection("master", { baseRate: value })} className="max-w-[160px]" />
-                </FormField>
-                <FormField label="Premi" required>
-                  <div className="grid grid-cols-[1fr_24px_1fr] items-center gap-2">
-                    <CurrencyInput value={formatNumber(lifeGuardComputed.premiumMin)} onChange={() => {}} disabled />
-                    <div className="text-center text-sm text-slate-400">-</div>
-                    <CurrencyInput value={formatNumber(lifeGuardComputed.premiumMax)} onChange={() => {}} disabled />
-                  </div>
-                </FormField>
-                <div className="md:col-span-2">
-                  <FormField label="Risiko Sendiri (Deductible)">
-                    <TextAreaInput rows={2} value={master.deductible || ""} onChange={(value) => patchSection("master", { deductible: value })} />
-                  </FormField>
                 </div>
               </div>
             </SectionCard>
@@ -2245,45 +2305,40 @@ function PartnerConfigStudio({
 
               <div className="mt-6 border-t border-[#E6EDF5] pt-6">
                 <div className="mb-4 text-[14px] font-medium text-slate-950">Wording</div>
-                <div className="grid gap-6 md:grid-cols-2">
-                <div className="rounded-[16px] border border-[#BFD3EA] bg-[#F7FAFE] p-4">
-                  <div className="grid gap-3">
-                    {["PSAKDI", "PSAKDI Bilingual"].map((wording) => (
+                <div className="space-y-3">
+                  {["PSAKDI", "PSAKDI Bilingual"].map((wording) => (
+                    <PartnerClauseAccordionRow
+                      key={wording}
+                      title={wording}
+                      subtitle="Pilih salah satu wording utama"
+                      detail={WORDING_OPTION_META[wording]}
+                      selected={(master.wordingType || "PSAKDI") === wording}
+                      expanded={partnerClauseExpanded === `wording:${wording}`}
+                      onSelect={() => patchSection("master", { wordingType: wording })}
+                      onToggle={() => setPartnerClauseExpanded((prev) => (prev === `wording:${wording}` ? "" : `wording:${wording}`))}
+                      icon={FileSpreadsheet}
+                    />
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <PartnerClauseNoteCard title="Tambah klausula">
+                    <div className="grid gap-3">
+                      <FormField label="Judul Klausula Tambahan">
+                        <TextInput value={master.additionalClauseTitle || ""} onChange={(value) => patchSection("master", { additionalClauseTitle: value })} />
+                      </FormField>
+                      <FormField label="Deskripsi Klausula Tambahan">
+                        <TextAreaInput rows={5} value={master.additionalClauseDescription || ""} onChange={(value) => patchSection("master", { additionalClauseDescription: value })} />
+                      </FormField>
                       <button
-                        key={wording}
                         type="button"
-                        onClick={() => patchSection("master", { wordingType: wording })}
-                        className={cls(
-                          "rounded-[14px] border px-4 py-3 text-left text-sm transition",
-                          (master.wordingType || "PSAKDI") === wording
-                            ? "border-[#0A4D82] bg-white text-[#0A4D82]"
-                            : "border-[#D9E1EA] bg-white text-slate-700"
-                        )}
+                        onClick={addLifeGuardCustomClause}
+                        className="inline-flex h-11 items-center justify-center rounded-[14px] border border-[#0A4D82] bg-[#0A4D82] px-4 text-sm text-white transition hover:bg-[#083D66]"
                       >
-                        {wording}
+                        Tambah Klausula
                       </button>
-                    ))}
-                  </div>
+                    </div>
+                  </PartnerClauseNoteCard>
                 </div>
-                <div className="rounded-[16px] border border-[#BFD3EA] bg-[#F7FAFE] p-4">
-                  <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Tambah Klausula</div>
-                  <div className="grid gap-3">
-                  <FormField label="Judul Klausula Tambahan">
-                    <TextInput value={master.additionalClauseTitle || ""} onChange={(value) => patchSection("master", { additionalClauseTitle: value })} />
-                  </FormField>
-                  <FormField label="Deskripsi Klausula Tambahan">
-                    <TextAreaInput rows={5} value={master.additionalClauseDescription || ""} onChange={(value) => patchSection("master", { additionalClauseDescription: value })} />
-                  </FormField>
-                  <button
-                    type="button"
-                    onClick={addLifeGuardCustomClause}
-                    className="inline-flex h-11 items-center justify-center rounded-[14px] border border-[#0A4D82] bg-[#0A4D82] px-4 text-sm text-white transition hover:bg-[#083D66]"
-                  >
-                    Tambah Klausula
-                  </button>
-                  </div>
-                </div>
-              </div>
               </div>
               <div className="mt-6 overflow-hidden rounded-[18px] border border-[#D9E1EA] bg-white">
                 <div className="flex items-start justify-between gap-4 border-b border-[#D9E1EA] px-5 py-4">
@@ -2324,20 +2379,17 @@ function PartnerConfigStudio({
                 </div>
                 <div className="max-h-[420px] space-y-3 overflow-y-auto border-t border-[#D9E1EA] px-4 py-4">
                   {lifeGuardAdditionalClauseOptions.map((clause) => (
-                    <button
+                    <PartnerClauseAccordionRow
                       key={clause.title}
-                      type="button"
-                      onClick={() => toggleClause(clause.title)}
-                      className="flex w-full items-start gap-3 rounded-[16px] border border-[#E6EDF5] bg-white px-4 py-4 text-left transition hover:border-[#BFD3EA] hover:bg-[#F9FBFE]"
-                    >
-                      <div className={cls("mt-0.5 flex h-5 w-5 items-center justify-center rounded border", master.clausePackage.includes(clause.title) ? "border-[#0A4D82] bg-[#EAF3FF] text-[#0A4D82]" : "border-slate-300 bg-white text-transparent")}>
-                        {master.clausePackage.includes(clause.title) ? <Check className="h-3.5 w-3.5" /> : null}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[14px] text-slate-950">{clause.title}</div>
-                        <div className="mt-1 text-[12px] text-slate-500">{clause.lob}</div>
-                      </div>
-                    </button>
+                      title={clause.title}
+                      subtitle={clause.lob}
+                      detail={getClauseDescription(clause.title, "Klausula ini dapat diaktifkan sesuai kebutuhan produk partner dan akan ikut dalam package default.")}
+                      selected={master.clausePackage.includes(clause.title)}
+                      expanded={partnerClauseExpanded === `life-guard:${clause.title}`}
+                      onSelect={() => toggleClause(clause.title)}
+                      onToggle={() => setPartnerClauseExpanded((prev) => (prev === `life-guard:${clause.title}` ? "" : `life-guard:${clause.title}`))}
+                      icon={FileCode2}
+                    />
                   ))}
                   {lifeGuardAdditionalClauseOptions.length === 0 ? (
                     <div className="rounded-[16px] border border-dashed border-[#D9E1EA] bg-[#FAFCFE] px-4 py-8 text-center text-[13px] text-slate-500">
@@ -2545,58 +2597,42 @@ function PartnerConfigStudio({
       if (STEP_LIST[stepIndex].id === "clause") {
         return (
           <div className="space-y-4">
-            <SectionCard title="Wording & Klausul">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="rounded-[16px] border border-[#BFD3EA] bg-[#F7FAFE] p-4">
-                  <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Wording</div>
-                  <div className="grid gap-3">
-                    {["PSAKDI", "PSAKDI Bilingual"].map((wording) => (
-                      <button
-                        key={wording}
-                        type="button"
-                        onClick={() => patchSection("master", { wordingType: wording })}
-                        className={cls(
-                          "rounded-[14px] border px-4 py-3 text-left text-sm transition",
-                          (master.wordingType || "PSAKDI") === wording
-                            ? "border-[#0A4D82] bg-white text-[#0A4D82]"
-                            : "border-[#D9E1EA] bg-white text-slate-700"
-                        )}
-                      >
-                        {wording}
-                      </button>
-                    ))}
-                  </div>
+            <SectionCard title="Wording & Klausul" subtitle="Klik setiap baris untuk melihat penjelasan detailnya.">
+              <div>
+                <div className="mb-4 text-[14px] font-medium text-slate-950">Wording</div>
+                <div className="space-y-3">
+                  {["PSAKDI", "PSAKDI Bilingual"].map((wording) => (
+                    <PartnerClauseAccordionRow
+                      key={wording}
+                      title={wording}
+                      subtitle="Pilih salah satu wording utama"
+                      detail={WORDING_OPTION_META[wording]}
+                      selected={(master.wordingType || "PSAKDI") === wording}
+                      expanded={partnerClauseExpanded === `trip-wording:${wording}`}
+                      onSelect={() => patchSection("master", { wordingType: wording })}
+                      onToggle={() => setPartnerClauseExpanded((prev) => (prev === `trip-wording:${wording}` ? "" : `trip-wording:${wording}`))}
+                      icon={FileSpreadsheet}
+                    />
+                  ))}
                 </div>
-                <div className="rounded-[16px] border border-[#BFD3EA] bg-[#F7FAFE] p-4">
-                  <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Klausul yang Berlaku</div>
-                  <div className="grid gap-3">
-                    {TRIP_TRAVEL_CLAUSE_OPTIONS.map((clause) => {
-                      const active = (master.clausePackage || []).includes(clause);
-                      return (
-                        <button
-                          key={clause}
-                          type="button"
-                          onClick={() => toggleClause(clause)}
-                          className={cls(
-                            "flex items-center gap-3 rounded-[14px] border px-4 py-3 text-left text-sm transition",
-                            active
-                              ? "border-[#0A4D82] bg-white text-[#0A4D82]"
-                              : "border-[#D9E1EA] bg-white text-slate-700"
-                          )}
-                        >
-                          <div
-                            className={cls(
-                              "flex h-4 w-4 items-center justify-center rounded border",
-                              active ? "border-[#0A4D82] bg-[#EAF3FF] text-[#0A4D82]" : "border-slate-300 bg-white text-transparent"
-                            )}
-                          >
-                            <Check className="h-3 w-3" />
-                          </div>
-                          <span>{clause}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+              </div>
+
+              <div className="mt-6">
+                <div className="mb-4 text-[14px] font-medium text-slate-950">Klausul yang Berlaku</div>
+                <div className="space-y-3">
+                  {TRIP_TRAVEL_CLAUSE_OPTIONS.map((clause) => (
+                    <PartnerClauseAccordionRow
+                      key={clause}
+                      title={clause}
+                      subtitle="Aktif bila dipilih untuk package partner"
+                      detail={getClauseDescription(clause)}
+                      selected={(master.clausePackage || []).includes(clause)}
+                      expanded={partnerClauseExpanded === `trip-clause:${clause}`}
+                      onSelect={() => toggleClause(clause)}
+                      onToggle={() => setPartnerClauseExpanded((prev) => (prev === `trip-clause:${clause}` ? "" : `trip-clause:${clause}`))}
+                      icon={FileCode2}
+                    />
+                  ))}
                 </div>
               </div>
             </SectionCard>
@@ -2986,72 +3022,61 @@ function PartnerConfigStudio({
         <div className="space-y-4">
           <SectionCard
             title="Wording & Klausul"
-            subtitle="Istilah dan susunan wording dikembalikan ke format portal asli: wording utama, klausul, lalu subjectivity tambahan."
+            subtitle="Klik setiap baris untuk melihat penjelasan detailnya."
           >
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <div className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Tipe Wording</div>
-                <div className="grid gap-3">
-                  {["PSAKDI", "PSAKDI Bilingual"].map((wording) => {
-                    const active = (master.wordingType || "PSAKDI") === wording;
-                    return (
-                      <button
-                        key={wording}
-                        type="button"
-                        onClick={() => patchSection("master", { wordingType: wording })}
-                        className={cls(
-                          "rounded-[14px] border px-4 py-3 text-left text-sm font-bold transition",
-                          active ? "border-[#0A4D82] bg-[#F4F9FE] text-[#0A4D82]" : "border-[#D9E1EA] bg-white text-slate-700"
-                        )}
-                      >
-                        {wording}
-                      </button>
-                    );
-                  })}
-                </div>
+            <div>
+              <div className="mb-4 text-[14px] font-medium text-slate-950">Wording</div>
+              <div className="space-y-3">
+                {["PSAKDI", "PSAKDI Bilingual"].map((wording) => {
+                  const active = (master.wordingType || "PSAKDI") === wording;
+                  return (
+                    <PartnerClauseAccordionRow
+                      key={wording}
+                      title={wording}
+                      subtitle="Pilih salah satu wording utama"
+                      detail={WORDING_OPTION_META[wording]}
+                      selected={active}
+                      expanded={partnerClauseExpanded === `generic-wording:${wording}`}
+                      onSelect={() => patchSection("master", { wordingType: wording })}
+                      onToggle={() => setPartnerClauseExpanded((prev) => (prev === `generic-wording:${wording}` ? "" : `generic-wording:${wording}`))}
+                      icon={FileSpreadsheet}
+                    />
+                  );
+                })}
               </div>
+            </div>
 
-              <div>
-                <div className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Klausul Tambahan / Subjectivity</div>
+            <div className="mt-6">
+              <div className="mb-4 text-[14px] font-medium text-slate-950">Klausul yang Berlaku</div>
+              <div className="space-y-3">
+              {CLAUSE_LIBRARY.map((clause) => {
+                const active = master.clausePackage.includes(clause);
+                return (
+                  <PartnerClauseAccordionRow
+                    key={clause}
+                    title={fixDisplayText(clause)}
+                    subtitle="Aktif bila dipilih untuk package partner"
+                    detail={getClauseDescription(clause)}
+                    selected={active}
+                    expanded={partnerClauseExpanded === `generic-clause:${clause}`}
+                    onSelect={() => toggleClause(clause)}
+                    onToggle={() => setPartnerClauseExpanded((prev) => (prev === `generic-clause:${clause}` ? "" : `generic-clause:${clause}`))}
+                    icon={FileCode2}
+                  />
+                );
+              })}
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <PartnerClauseNoteCard title="Klausul tambahan / subjectivity">
                 <TextAreaInput
                   rows={6}
                   value={master.additionalClauses || ""}
                   onChange={(value) => patchSection("master", { additionalClauses: value })}
                   placeholder="Masukkan klausul tambahan, subjectivity, atau catatan wording khusus."
                 />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 md:grid-cols-2">
-              {CLAUSE_LIBRARY.map((clause) => {
-                const active = master.clausePackage.includes(clause);
-                return (
-                  <button
-                    key={clause}
-                    type="button"
-                    onClick={() => toggleClause(clause)}
-                    className={cls(
-                      "flex items-start gap-3 rounded-[14px] border p-4 text-left transition",
-                      active ? "border-[#0A4D82] bg-[#F4F9FE]" : "border-[#D9E1EA] bg-white"
-                    )}
-                  >
-                    <div
-                      className={cls(
-                        "mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2",
-                        active ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300 bg-white"
-                      )}
-                    >
-                      {active ? <Check className="h-3.5 w-3.5" /> : null}
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">{fixDisplayText(clause)}</div>
-                      <div className="mt-1 text-xs leading-5 text-slate-500">
-                        Klausula ini akan ikut sebagai package default saat konfigurasi direalisasikan.
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+              </PartnerClauseNoteCard>
             </div>
           </SectionCard>
         </div>
@@ -3990,7 +4015,7 @@ function PartnerConfigStudio({
                       className="inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 focus-visible:ring-4 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A4D82]"
                     >
                       <ArrowLeft className="h-4 w-4" />
-                      Kembali ke Produk
+                      Kembali ke Daftar Konfigurasi
                     </button>
                     {typeof onExit === "function" ? (
                       <button
@@ -4451,6 +4476,58 @@ function LifeGuardCoverageCard({ item, selected, expanded, onSelect, onToggle })
           <div className="mt-3 text-slate-800">{item.note}</div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function PartnerClauseAccordionRow({
+  title,
+  subtitle,
+  detail,
+  selected,
+  onSelect,
+  expanded,
+  onToggle,
+  icon: Icon = FileCode2,
+}) {
+  return (
+    <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
+      <div className="flex items-center gap-3 px-3.5 py-3">
+        <button
+          type="button"
+          onClick={onSelect}
+          className={cls(
+            "flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+            selected ? "border-[#0A4D82] bg-[#EAF3FF] text-[#0A4D82]" : "border-slate-300 bg-white text-transparent"
+          )}
+        >
+          {selected ? <Check className="h-3.5 w-3.5" /> : null}
+        </button>
+        <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[#0A4D82]">
+              <Icon className="h-4 w-4 shrink-0" />
+              <div className="truncate text-[15px] font-semibold">{title}</div>
+            </div>
+            <div className="mt-0.5 text-[12px] text-slate-500">{subtitle}</div>
+          </div>
+          <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
+        </button>
+      </div>
+      {expanded ? (
+        <div className="border-t border-[#D6E0EA] px-3.5 py-3">
+          <div className="text-[13px] leading-6 text-slate-700">{detail}</div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PartnerClauseNoteCard({ title, children }) {
+  return (
+    <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE] p-4">
+      <div className="mb-3 text-[14px] font-semibold text-[#0A4D82]">{title}</div>
+      {children}
     </div>
   );
 }
