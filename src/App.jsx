@@ -513,6 +513,9 @@ export default function App() {
                   <Home className="h-4 w-4" aria-hidden="true" />
                   Masuk
                 </button>
+                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
+                  <span aria-hidden="true" className="text-[15px] leading-none">🔔</span>
+                </button>
                 {accountMenuOpen ? (
                   <div id="guest-account-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
                     <button
@@ -545,6 +548,9 @@ export default function App() {
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
                   <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{activeSessionName}</span>
                   <ChevronDown className={cls("h-4 w-4 text-slate-500 transition", accountMenuOpen && "rotate-180")} aria-hidden="true" />
+                </button>
+                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
+                  <span aria-hidden="true" className="text-[15px] leading-none">🔔</span>
                 </button>
                 {accountMenuOpen ? (
                   <div id="account-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">

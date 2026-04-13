@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
+  Bell,
   Binary,
   Building2,
   Check,
@@ -4389,6 +4390,9 @@ function AppProductHeader({
             </span>
             <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{sessionName}</span>
             <ChevronDown className="h-4 w-4 text-slate-500" />
+          </button>
+          <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
+            <Bell className="h-4 w-4" />
           </button>
           <div id="partner-account-menu">
             <UserPillMenu open={accountMenuOpen} items={accountMenuItems} />

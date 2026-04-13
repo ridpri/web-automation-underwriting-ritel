@@ -3,6 +3,7 @@ import { createEmptyDocumentCheck, createLocationEvidence, createPhotoEvidence, 
 import {
   AlertTriangle,
   ArrowLeft,
+  Bell,
   Building2,
   Camera,
   CameraOff,
@@ -1652,6 +1653,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           </div>
           <div className="relative flex items-center gap-4 text-white">
             <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{sessionName}{helpRequestSent ? <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" /> : null}</button>
+            <button type="button" aria-label="Lihat notifikasi" className="hidden h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white hover:bg-white/15 sm:inline-flex"><Bell className="h-4 w-4" /></button>
             <UserMenu
               open={showUserMenu}
               items={[
