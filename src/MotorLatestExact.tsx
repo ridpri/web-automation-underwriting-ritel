@@ -610,9 +610,9 @@ function deductibleText(flowType: FlowType, vehicleType: string, itemId: string)
 
 function mainCoverText(flowType: FlowType) {
   if (flowType === "carComp") {
-    return "Menjamin kerugian atau kerusakan pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari.";
+    return "Menjamin kerugian atau kerusakan pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tidak dipotong risiko sendiri.";
   }
-  return "Menjamin kerugian total pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan mencapai sedikitnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari.";
+  return "Menjamin kerugian total pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan mencapai sedikitnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tidak dipotong risiko sendiri.";
 }
 
 function mainCoverTitle(flowType: FlowType) {
