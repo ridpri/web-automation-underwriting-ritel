@@ -1532,7 +1532,7 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
                 ) : null}
               </div>
 
-              {step > 1 || showPremiumDetails ? <aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg md:sticky md:top-24">
+              {step > 1 || showPremiumDetails ? <aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg md:sticky md:top-32">
                 <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-[18px] font-bold"><FileText className="h-5 w-5" />Ringkasan</div><ChevronDown className="h-5 w-5 text-white/80" /></div>
                 <div className="mt-4 border-t border-white/15 pt-3.5">
                   <SummaryRow label="Produk" value={flowType === "motor" ? "Total Loss Kendaraan - Motor" : flowType === "carComp" ? "Kendaraan Roda 4 - Comprehensive" : "Total Loss Kendaraan - Mobil"} />
