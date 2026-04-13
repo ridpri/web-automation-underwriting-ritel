@@ -82,6 +82,36 @@ function AuditFeedRow({ item }) {
   );
 }
 
+function WorkbenchSection({ title, subtitle, action, children, className = "" }) {
+  return (
+    <section className={cls("rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 md:p-6", className)}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-[15px] font-semibold leading-6 text-[#041E42] md:text-[16px]">{title}</div>
+          {subtitle ? <div className="mt-1 max-w-3xl text-[14px] leading-6 text-[#5F7A99]">{subtitle}</div> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
+}
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cls(
+        "inline-flex rounded-full px-4 py-2 text-sm font-semibold transition",
+        active ? "bg-[#0A4D82] text-white" : "bg-[#F1F5F9] text-slate-600 hover:bg-slate-200",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 function WorkspaceRail({ activeLane, onChange, records }) {
   return (
     <div className="mx-auto max-w-3xl rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:max-w-4xl md:p-5">
@@ -185,10 +215,7 @@ export default function ReviewWorkbench({
               <ArrowLeft className="h-4 w-4" />
               Kembali
             </button>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#F5A623]" />
-              Status
-            </div>
+            <div className="h-[48px] w-[120px] shrink-0 opacity-0" aria-hidden="true" />
           </div>
 
           <div className="mx-auto mt-8 max-w-[900px] text-center text-white md:mt-10">
@@ -201,126 +228,124 @@ export default function ReviewWorkbench({
       </section>
 
       <div className="mx-auto max-w-[1280px] px-4 py-6 md:px-6 md:py-8">
-        <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-slate-200 md:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              {FILTERS.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setActiveFilter(item)}
-                  className={cls(
-                    "inline-flex rounded-full px-4 py-2 text-sm font-semibold",
-                    activeFilter === item ? "bg-[#0A4D82] text-white" : "bg-[#F1F5F9] text-slate-600 hover:bg-slate-200",
-                  )}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-            <div className="flex w-full items-center gap-3 lg:max-w-[420px]">
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Cari nomor, nama, produk, atau penanggung jawab"
-                  className="h-11 w-full rounded-xl border border-[#D9E1EA] bg-white pl-10 pr-3 text-sm text-slate-700 outline-none focus:border-[#0A4D82]"
-                />
+        <div className="space-y-6">
+          <WorkbenchSection title="Antrean internal" subtitle="Cari dan pilih transaksi yang ingin dipantau atau ditinjau.">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {FILTERS.map((item) => (
+                  <FilterChip key={item} active={activeFilter === item} onClick={() => setActiveFilter(item)}>
+                    {item}
+                  </FilterChip>
+                ))}
               </div>
-              <button type="button" className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#D9E1EA] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                <Filter className="h-4 w-4" />
-                Filter
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <div className="space-y-3">
-              {filtered.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setSelectedId(item.id)}
-                  className={cls(
-                    "w-full rounded-[20px] border p-4 text-left transition",
-                    selected?.id === item.id ? "border-[#0A4D82] bg-[#F8FBFE] shadow-sm" : "border-[#D8E1EA] bg-white hover:bg-slate-50",
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8EA3BC]">{item.id}</div>
-                      <div className="mt-2 text-[15px] font-semibold leading-6 text-[#041E42] md:text-[16px]">{item.product}</div>
-                    </div>
-                    <span className={cls("inline-flex rounded-full border px-3 py-1 text-xs font-semibold", toneClasses(item.status))}>{displayWorkbenchStatus(item.status)}</span>
-                  </div>
-                  <div className="mt-3 grid gap-2 text-[14px] leading-6 text-[#5F7A99] sm:grid-cols-2">
-                    <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Tertanggung</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.customer}</div></div>
-                    <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Penanggung jawab</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.owner}</div></div>
-                    <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Alasan</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.reason || "-"}</div></div>
-                    <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Aktivitas terakhir</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.lastActivity}</div></div>
-                  </div>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Cari nomor, nama, produk, atau penanggung jawab"
+                    className="h-11 w-full rounded-xl border border-[#D9E1EA] bg-white pl-10 pr-3 text-sm text-slate-700 outline-none focus:border-[#0A4D82]"
+                  />
+                </div>
+                <button type="button" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D9E1EA] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  <Filter className="h-4 w-4" />
+                  Filter
                 </button>
-              ))}
+              </div>
             </div>
+          </WorkbenchSection>
+
+          <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
+            <WorkbenchSection title="Daftar transaksi" subtitle="Transaksi yang sesuai dengan filter aktif.">
+              <div className="space-y-3">
+                {filtered.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedId(item.id)}
+                    className={cls(
+                      "w-full rounded-[20px] border bg-white p-4 text-left shadow-sm transition",
+                      selected?.id === item.id ? "border-[#0A4D82] bg-[#F8FBFE]" : "border-[#D8E1EA] hover:bg-slate-50",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8EA3BC]">{item.id}</div>
+                        <div className="mt-2 text-[15px] font-semibold leading-6 text-[#041E42] md:text-[16px]">{item.product}</div>
+                      </div>
+                      <span className={cls("inline-flex rounded-full border px-3 py-1 text-xs font-semibold", toneClasses(item.status))}>{displayWorkbenchStatus(item.status)}</span>
+                    </div>
+                    <div className="mt-3 grid gap-2 text-[14px] leading-6 text-[#5F7A99] sm:grid-cols-2">
+                      <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Tertanggung</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.customer}</div></div>
+                      <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Penanggung jawab</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.owner}</div></div>
+                      <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Alasan</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.reason || "-"}</div></div>
+                      <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Aktivitas terakhir</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.lastActivity}</div></div>
+                    </div>
+                  </button>
+                ))}
+                {!filtered.length ? (
+                  <div className="rounded-[24px] border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
+                    {emptyMessage}
+                  </div>
+                ) : null}
+              </div>
+            </WorkbenchSection>
 
             {selected ? (
-              <div className="rounded-[24px] border border-[#D8E1EA] bg-[#F8FBFE] p-5">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{selected.version}</span>
-                      <span className={cls("inline-flex rounded-full border px-3 py-1 text-xs font-semibold", toneClasses(selected.status))}>{displayWorkbenchStatus(selected.status)}</span>
-                      <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{displayWorkbenchChannel(selected.channel)}</span>
+              <div className="space-y-6">
+                <WorkbenchSection
+                  title="Ringkasan transaksi"
+                  subtitle="Lihat konteks utama transaksi sebelum membuka alur detailnya."
+                  action={
+                    <button type="button" onClick={() => onOpenJourney(selected)} className="inline-flex h-11 items-center justify-center rounded-xl bg-[#F5A623] px-4 text-sm font-semibold text-white hover:brightness-105">
+                      Buka Transaksi
+                    </button>
+                  }
+                >
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{selected.version}</span>
+                        <span className={cls("inline-flex rounded-full border px-3 py-1 text-xs font-semibold", toneClasses(selected.status))}>{displayWorkbenchStatus(selected.status)}</span>
+                        <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{displayWorkbenchChannel(selected.channel)}</span>
+                      </div>
+                      <div className="mt-3 text-[28px] font-black tracking-tight text-slate-900">{selected.product}</div>
+                      <div className="mt-2 text-[14px] leading-6 text-[#5F7A99]">{selected.notes}</div>
                     </div>
-                    <div className="mt-3 text-[28px] font-black tracking-tight text-slate-900">{selected.product}</div>
-                    <div className="mt-2 text-[14px] leading-6 text-[#5F7A99]">{selected.notes}</div>
                   </div>
-                  <button type="button" onClick={() => onOpenJourney(selected)} className="inline-flex h-11 items-center justify-center rounded-xl bg-[#F5A623] px-4 text-sm font-semibold text-white hover:brightness-105">
-                    Buka Transaksi
-                  </button>
-                </div>
 
-                <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Tertanggung</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.customer}</div></div>
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Penanggung jawab</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.owner}</div></div>
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">SLA</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.sla}</div></div>
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Berlaku sampai</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.validUntil}</div></div>
-                </div>
+                  <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Tertanggung</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.customer}</div></div>
+                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Penanggung jawab</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.owner}</div></div>
+                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">SLA</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.sla}</div></div>
+                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Berlaku sampai</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.validUntil}</div></div>
+                  </div>
+                </WorkbenchSection>
 
-                <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4">
-                  <div className="flex items-center gap-2 text-[15px] font-semibold leading-6 text-[#041E42]">
-                      <Clock3 className="h-4 w-4 text-[#0A4D82]" />
-                      Linimasa
-                    </div>
-                    <div className="mt-4 space-y-4">
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+                  <WorkbenchSection title="Linimasa" subtitle="Pantau update terakhir pada transaksi ini.">
+                    <div className="space-y-4">
                       {selected.timeline.map((item, index) => (
                         <AuditFeedRow key={`${item.at}-${index}`} item={item} />
                       ))}
                     </div>
-                  </div>
+                  </WorkbenchSection>
 
-                  <div className="space-y-4">
-                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4">
-                      <div className="flex items-center gap-2 text-[15px] font-semibold leading-6 text-[#041E42]">
-                        <ShieldAlert className="h-4 w-4 text-[#0A4D82]" />
-                        Alasan Tinjauan
-                      </div>
-                      <div className="mt-3 rounded-xl border border-[#D8E1EA] bg-slate-50 p-3 text-[14px] leading-6 text-[#041E42]">{selected.reason || "Belum ada alasan tinjauan yang aktif."}</div>
+                  <div className="space-y-6">
+                    <WorkbenchSection title="Alasan Tinjauan" subtitle="Fokus review aktif untuk transaksi ini.">
+                      <div className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3 text-[14px] leading-6 text-[#041E42]">{selected.reason || "Belum ada alasan tinjauan yang aktif."}</div>
                       {selected.flags?.length ? <div className="mt-3 space-y-2">{selected.flags.map((flag) => <div key={flag} className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3 text-[14px] leading-6 text-[#041E42]">{flag}</div>)}</div> : null}
-                    </div>
-                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4">
-                      <div className="flex items-center gap-2 text-[15px] font-semibold leading-6 text-[#041E42]">
-                        <FileText className="h-4 w-4 text-[#0A4D82]" />
-                        Langkah Berikutnya
-                      </div>
-                      <div className="mt-3 space-y-2 text-[14px] leading-6 text-[#5F7A99]">
+                    </WorkbenchSection>
+
+                    <WorkbenchSection title="Langkah Berikutnya" subtitle="Tindakan yang biasanya perlu diperhatikan sebelum lanjut.">
+                      <div className="space-y-2 text-[14px] leading-6 text-[#5F7A99]">
                         <div className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3">Pastikan versi aktif masih berlaku sebelum mengarahkan calon tertanggung ke pembayaran.</div>
                         <div className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3">Setiap perubahan material harus membentuk revisi baru dan menjadikan versi lama hanya sebagai riwayat.</div>
                         <div className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3">Jika ada data dokumen yang tidak cocok, arahkan transaksi ke Menunggu Tinjauan Internal atau Perlu Revisi.</div>
                       </div>
-                    </div>
+                    </WorkbenchSection>
+
                     <div className="rounded-2xl bg-[#0A4D82] p-4 text-sm text-white shadow-sm">
                       <div className="flex items-start gap-2">
                         {selected.status === "Siap Bayar" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
@@ -330,11 +355,7 @@ export default function ReviewWorkbench({
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="rounded-[24px] border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-                {emptyMessage}
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
