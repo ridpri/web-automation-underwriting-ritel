@@ -3979,8 +3979,8 @@ function PartnerConfigStudio({
                         const Icon = step.icon;
                         const active = stepIndex === index;
                         const done = stepIndex > index || Boolean(stepState[index]?.done && !active);
-                        const subtitle = active ? "Dalam proses" : done ? "Selesai" : "Tertunda";
-                        const canOpen = index <= maxUnlockedStep;
+                        const subtitle = active ? "Dalam proses" : done ? "Selesai" : "Bisa dibuka";
+                        const canOpen = true;
                         return (
                           <React.Fragment key={step.id}>
                             {index > 0 ? <div className="pointer-events-none hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
@@ -3989,8 +3989,7 @@ function PartnerConfigStudio({
                               onClick={() => {
                                 if (canOpen) setStepIndex(index);
                               }}
-                              disabled={!canOpen}
-                              className={cls("relative z-10 block w-[140px] shrink-0 snap-start rounded-xl px-1 py-1 md:w-auto md:flex-1 md:shrink md:snap-none", canOpen ? "cursor-pointer" : "cursor-not-allowed opacity-60")}
+                              className="relative z-10 block w-[140px] shrink-0 snap-start rounded-xl px-1 py-1 md:w-auto md:flex-1 md:shrink md:snap-none cursor-pointer"
                             >
                               <StudioStepNode
                                 step={`LANGKAH ${index + 1}`}
