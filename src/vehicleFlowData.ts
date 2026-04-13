@@ -9,21 +9,21 @@ export const PRODUCTS = [
     id: "motor",
     title: "Kendaraan Bermotor Roda 2 - TLO",
     category: "Kendaraan Bermotor",
-    subtitle: "Perlindungan motor untuk risiko kehilangan total dan pencurian.",
+    subtitle: "Perlindungan motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     gradient: "from-slate-700 via-slate-600 to-slate-500",
   },
   {
     id: "carComp",
     title: "Kendaraan Bermotor Roda 4 - Comprehensive",
     category: "Kendaraan Bermotor",
-    subtitle: "Perlindungan mobil untuk risiko kerusakan dan kehilangan.",
+    subtitle: "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran.",
     gradient: "from-sky-800 via-sky-700 to-sky-600",
   },
   {
     id: "carTlo",
     title: "Kendaraan Bermotor Roda 4 - TLO",
     category: "Kendaraan Bermotor",
-    subtitle: "Perlindungan mobil untuk risiko kehilangan total dan pencurian.",
+    subtitle: "Perlindungan mobil untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     gradient: "from-slate-900 via-slate-800 to-slate-700",
   },
 ] as const;
@@ -162,17 +162,17 @@ export const THEFT_BY_OWN_DRIVER_RATE = 0.001;
 export const AMBULANCE_PREMIUM = 50000;
 
 export const EXT_INFO: Record<string, string> = {
-  tpl: "Menjamin tanggung jawab hukum Tertanggung atas kematian, cidera badan, biaya perawatan/pengobatan, serta kerugian atau kerusakan harta benda milik penumpang atau pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin Polis.",
+  tpl: "Jika dicantumkan dalam Ikhtisar Pertanggungan, menjamin tanggung jawab hukum Tertanggung atas kematian, cedera badan, biaya perawatan atau pengobatan, serta kerugian atau kerusakan harta benda milik penumpang atau pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis.",
   srcc: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa senjata api, revolusi tanpa senjata api, serta penjarahan yang terjadi dalam peristiwa tersebut.",
   ts: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, atau sabotase.",
-  flood: "Menjamin kerugian atau kerusakan akibat banjir, angin topan, badai, hujan es, genangan air, dan/atau tanah longsor yang secara langsung mengenai kendaraan.",
+  flood: "Menjamin kerugian atau kerusakan yang secara langsung disebabkan oleh banjir, angin topan, badai, hujan es, genangan air, atau tanah longsor yang mengenai kendaraan.",
   quake: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh gempa bumi, tsunami, dan/atau letusan gunung berapi.",
-  driverPa: "Menjamin cidera badan, kematian, dan/atau biaya pengobatan pengemudi yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin Polis.",
-  passengerPa: "Menjamin cidera badan, kematian, dan/atau biaya pengobatan penumpang yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin Polis.",
+  driverPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan pengemudi yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
+  passengerPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan penumpang yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
   equipment: "Perlengkapan tambahan adalah aksesori atau perangkat non-standar yang bukan bawaan pabrik dan ingin ikut dijamin bersama kendaraan.",
-  ambulance: "Menjamin biaya ambulance per kejadian akibat kecelakaan dari risiko yang dijamin Polis, sampai batas maksimum sesuai Ikhtisar Pertanggungan.",
+  ambulance: "Menjamin biaya ambulans per kejadian akibat kecelakaan dari risiko yang dijamin polis, sampai batas maksimum sesuai Ikhtisar Pertanggungan.",
   authorizedWorkshop: "Memberikan fasilitas perbaikan di bengkel resmi sesuai merek kendaraan atau bengkel setara dengan persetujuan Penanggung.",
-  theftByOwnDriver: "Menjamin risiko pencurian yang dilakukan oleh supir yang dipekerjakan Tertanggung, sepanjang memenuhi syarat masa kerja minimum sesuai ketentuan Polis.",
+  theftByOwnDriver: "Menjamin risiko pencurian yang dilakukan oleh pengemudi yang dipekerjakan Tertanggung, sepanjang memenuhi syarat masa kerja minimum sesuai ketentuan polis.",
 };
 
 export const CONSENT_SECTIONS = [

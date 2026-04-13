@@ -62,21 +62,21 @@ const PRODUCTS = [
     id: "motor",
     title: "Kendaraan Bermotor Roda 2 - TLO",
     category: "Kendaraan Bermotor",
-    subtitle: "Perlindungan motor untuk risiko kehilangan total dan pencurian.",
+    subtitle: "Perlindungan motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     gradient: "from-slate-700 via-slate-600 to-slate-500",
   },
   {
     id: "carComp",
     title: "Kendaraan Bermotor Roda 4 - Comprehensive",
     category: "Kendaraan Bermotor",
-    subtitle: "Perlindungan mobil untuk risiko kerusakan dan kehilangan.",
+    subtitle: "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran.",
     gradient: "from-sky-800 via-sky-700 to-sky-600",
   },
   {
     id: "carTlo",
     title: "Kendaraan Bermotor Roda 4 - TLO",
     category: "Kendaraan Bermotor",
-    subtitle: "Perlindungan mobil untuk risiko kehilangan total dan pencurian.",
+    subtitle: "Perlindungan mobil untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     gradient: "from-slate-900 via-slate-800 to-slate-700",
   },
 ] as const;
@@ -215,17 +215,17 @@ const THEFT_BY_OWN_DRIVER_RATE = 0.001;
 const AMBULANCE_PREMIUM = 50000;
 
 const EXT_INFO: Record<string, string> = {
-  tpl: "Menjamin tanggung jawab hukum Tertanggung atas kematian, cidera badan, biaya perawatan/pengobatan, serta kerugian atau kerusakan harta benda milik penumpang atau pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin Polis.",
+  tpl: "Jika dicantumkan dalam Ikhtisar Pertanggungan, menjamin tanggung jawab hukum Tertanggung atas kematian, cedera badan, biaya perawatan atau pengobatan, serta kerugian atau kerusakan harta benda milik penumpang atau pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis.",
   srcc: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa senjata api, revolusi tanpa senjata api, serta penjarahan yang terjadi dalam peristiwa tersebut.",
   ts: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, atau sabotase.",
-  flood: "Menjamin kerugian atau kerusakan akibat banjir, angin topan, badai, hujan es, genangan air, dan/atau tanah longsor yang secara langsung mengenai kendaraan.",
+  flood: "Menjamin kerugian atau kerusakan yang secara langsung disebabkan oleh banjir, angin topan, badai, hujan es, genangan air, atau tanah longsor yang mengenai kendaraan.",
   quake: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh gempa bumi, tsunami, dan/atau letusan gunung berapi.",
-  driverPa: "Menjamin cidera badan, kematian, dan/atau biaya pengobatan pengemudi yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin Polis.",
-  passengerPa: "Menjamin cidera badan, kematian, dan/atau biaya pengobatan penumpang yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin Polis.",
+  driverPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan pengemudi yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
+  passengerPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan penumpang yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
   equipment: "Perlengkapan tambahan adalah aksesori atau perangkat non-standar yang bukan bawaan pabrik dan ingin ikut dijamin bersama kendaraan.",
-  ambulance: "Menjamin biaya ambulance per kejadian akibat kecelakaan dari risiko yang dijamin Polis, sampai batas maksimum sesuai Ikhtisar Pertanggungan.",
+  ambulance: "Menjamin biaya ambulans per kejadian akibat kecelakaan dari risiko yang dijamin polis, sampai batas maksimum sesuai Ikhtisar Pertanggungan.",
   authorizedWorkshop: "Memberikan fasilitas perbaikan di bengkel resmi sesuai merek kendaraan atau bengkel setara dengan persetujuan Penanggung.",
-  theftByOwnDriver: "Menjamin risiko pencurian yang dilakukan oleh supir yang dipekerjakan Tertanggung, sepanjang memenuhi syarat masa kerja minimum sesuai ketentuan Polis.",
+  theftByOwnDriver: "Menjamin risiko pencurian yang dilakukan oleh pengemudi yang dipekerjakan Tertanggung, sepanjang memenuhi syarat masa kerja minimum sesuai ketentuan polis.",
 };
 const CONSENT_SECTIONS = [
   {
@@ -611,18 +611,18 @@ function deductibleText(flowType: FlowType, vehicleType: string, itemId: string)
 
 function mainCoverText(flowType: FlowType) {
   if (flowType === "carComp") {
-    return "Menjamin kerugian atau kerusakan sebagian maupun total pada kendaraan. Untuk kerugian sebagian, ganti rugi didasarkan pada biaya perbaikan yang layak atau harga suku cadang berikut biaya pemasangan yang layak. Menjamin kehilangan kendaraan karena pencurian yang tidak ditemukan dalam 60 hari.";
+    return "Menjamin kerugian atau kerusakan pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari.";
   }
-  return "Menjamin kerugian total pada kendaraan apabila biaya perbaikan mencapai atau melebihi 75% dari harga pertanggungan sesaat sebelum terjadinya kerugian. Menjamin kehilangan kendaraan karena pencurian yang tidak ditemukan dalam 60 hari sejak tanggal kejadian.";
+  return "Menjamin kerugian total pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan mencapai sedikitnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari.";
 }
 
 function mainCoverTitle(flowType: FlowType) {
-  if (flowType === "carComp") return "Jaminan Comprehensive";
-  return "Jaminan Utama - TLO";
+  if (flowType === "carComp") return "Jaminan Utama - Comprehensive";
+  return "Jaminan Utama - Total Loss Only (TLO)";
 }
 
 function secondaryMainCoverText(flowType: FlowType) {
-  return "Menjamin kehilangan kendaraan karena pencurian yang tidak ditemukan dalam 60 hari.";
+  return "Menjamin kehilangan kendaraan karena pencurian bila kendaraan tidak ditemukan dalam 60 hari.";
 }
 
 function mainDeductibleText(flowType: FlowType, vehicleType: string) {
@@ -1007,7 +1007,7 @@ export default function MotorLatestExact({
               <div className="mt-6 text-center text-white">
                 <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Selamat datang kembali, {userName}</div>
                 <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{flowType === "motor" ? "Asuransi Motor TLO" : flowType === "carComp" ? "Asuransi Mobil Comprehensive" : "Asuransi Mobil TLO"}</h1>
-                <p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{flowType === "motor" ? "Perlindungan sepeda motor untuk risiko kehilangan total dan pencurian sesuai ketentuan polis yang berlaku." : flowType === "carComp" ? "Perlindungan mobil untuk risiko kerusakan maupun kehilangan sesuai ketentuan polis yang berlaku." : "Perlindungan mobil untuk risiko kehilangan total dan pencurian sesuai ketentuan polis yang berlaku."}</p>
+<p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{flowType === "motor" ? "Perlindungan sepeda motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran." : flowType === "carComp" ? "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran." : "Perlindungan mobil untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran."}</p>
               </div>
               <div className="mx-auto mt-7 max-w-4xl rounded-2xl bg-white p-4 shadow-2xl shadow-black/15 md:p-5">
                 <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-4 py-4 md:px-5 md:py-5">
