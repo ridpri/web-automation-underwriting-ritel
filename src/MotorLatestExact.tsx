@@ -1089,9 +1089,11 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
                           Sistem mengenali kendaraan ini sebagai <span className="font-semibold text-slate-700">{selectedPassengerCarMeta?.category}</span> dengan jenis bahan bakar <span className="font-semibold text-slate-700">{selectedPassengerCarMeta?.fuelType}</span>.
                         </div>
                       ) : null}
-                      <div className="mt-5 flex justify-end">
-                        <button type="button" disabled={!validateMaxHP(flowType, Number(selected.quote.marketValue || 0))} onClick={() => setShowPremiumDetails(true)} className="flex items-center gap-2 rounded-xl bg-[#F5A623] px-5 py-3 text-sm font-bold text-white shadow-sm hover:brightness-105"><Wallet className="h-4 w-4" />CEK PREMI</button>
-                      </div>
+                      {!showPremiumDetails ? (
+                        <div className="mt-5 flex justify-end">
+                          <button type="button" disabled={!validateMaxHP(flowType, Number(selected.quote.marketValue || 0))} onClick={() => setShowPremiumDetails(true)} className="flex items-center gap-2 rounded-xl bg-[#F5A623] px-5 py-3 text-sm font-bold text-white shadow-sm hover:brightness-105"><Wallet className="h-4 w-4" />CEK PREMI</button>
+                        </div>
+                      ) : null}
                     </ActionCard>
 
                     {showPremiumDetails ? (
