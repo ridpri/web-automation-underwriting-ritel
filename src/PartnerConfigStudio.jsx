@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  Accessibility,
   BadgeCheck,
   Bell,
   Binary,
@@ -18,6 +19,7 @@ import {
   Home,
   Filter,
   Globe2,
+  HeartPulse,
   Landmark,
   Layers3,
   Link2,
@@ -35,6 +37,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Stethoscope,
   TriangleAlert,
   Upload,
   UserRound,
@@ -272,9 +275,9 @@ const FIELD_HELPERS = {
   "Email Korespondensi": "Isi email korespondensi.",
   "Mulai Pertanggungan": "Isi tanggal mulai pertanggungan.",
   "Akhir Pertanggungan": "Isi tanggal akhir pertanggungan.",
-  "Analisa Maker (ROM)": "Isi catatan dari maker.",
-  "Analisa Reviewer (Admin UDW)": "Isi catatan dari reviewer.",
-  "Analisa Persetujuan (HO)": "Isi catatan persetujuan.",
+  "Analisa Maker (ROM)": "",
+  "Analisa Reviewer (Admin UDW)": "",
+  "Analisa Persetujuan (HO)": "",
   "Maker Note": "Isi catatan maker.",
   "Checker Note": "Isi catatan reviewer.",
   "Approval Note": "Isi catatan persetujuan.",
@@ -468,6 +471,7 @@ const LIFE_GUARD_COVERAGE_ITEMS = [
     id: "main-accident",
     section: "main",
     title: "Meninggal Dunia",
+    icon: ShieldCheck,
     clauseLabel: "Meninggal Dunia karena Kecelakaan",
     description: "Menjamin santunan bila Tertanggung meninggal dunia sebagai akibat langsung dari kecelakaan yang dijamin polis.",
     note: "Santunan juga dapat diberikan bila Tertanggung hilang akibat kecelakaan dan tidak ditemukan sekurang-kurangnya 60 hari. Hak santunan mengikuti Jaminan A yang tercantum pada ikhtisar.",
@@ -477,6 +481,7 @@ const LIFE_GUARD_COVERAGE_ITEMS = [
     id: "main-disability",
     section: "main",
     title: "Cacat Tetap Total atau Sebagian",
+    icon: Accessibility,
     clauseLabel: "Cacat Tetap Total / Sebagian",
     description: "Menjamin santunan bila Tertanggung mengalami cacat tetap sebagai akibat langsung dari kecelakaan yang dijamin polis.",
     note: "Jaminan ini mencakup cacat tetap keseluruhan dan cacat tetap sebagian. Besarnya santunan mengikuti Jaminan B dan penetapan dokter sesuai kondisi cacat tetap.",
@@ -486,6 +491,7 @@ const LIFE_GUARD_COVERAGE_ITEMS = [
     id: "main-medical",
     section: "main",
     title: "Biaya Perawatan atau Pengobatan",
+    icon: Stethoscope,
     clauseLabel: "Biaya Pengobatan Akibat Kecelakaan",
     description: "Menjamin penggantian biaya perawatan atau pengobatan untuk pemulihan sakit atau cedera yang timbul langsung dari kecelakaan yang dijamin polis.",
     note: "Penggantian mengikuti biaya yang benar-benar dikeluarkan dan tidak melebihi Jaminan C pada ikhtisar. Kuitansi pengobatan alternatif tidak termasuk.",
@@ -1508,13 +1514,6 @@ function PartnerConfigStudio({
           },
         },
         {
-          label: "Antrean Internal",
-          onClick: () => {
-            setHeaderAccountMenuOpen(false);
-            if (typeof onOpenQueue === "function") onOpenQueue();
-          },
-        },
-        {
           label: "Konfigurasi Partner",
           onClick: () => {
             if (typeof onOpenPartnerConfig === "function") {
@@ -2226,6 +2225,21 @@ function PartnerConfigStudio({
           <div className="space-y-4">
             <SectionCard title="Obyek Pertanggungan" subtitle="Isi berurutan mulai dari jenis pertanggungan, santunan, lalu premi.">
               <div className="space-y-4">
+                <div>
+                  <div className="mb-4 text-[14px] font-medium text-slate-950">Rincian Jaminan</div>
+                  <div className="space-y-2">
+                    {LIFE_GUARD_COVERAGE_ITEMS.filter((item) => item.section === "main").map((item) => (
+                      <LifeGuardCoverageCard
+                        key={item.id}
+                        item={item}
+                        selected={master.clausePackage.includes(item.clauseLabel)}
+                        expanded={lifeGuardExpanded === item.id}
+                        onSelect={() => toggleClause(item.clauseLabel)}
+                        onToggle={() => setLifeGuardExpanded((prev) => (prev === item.id ? "" : item.id))}
+                      />
+                    ))}
+                  </div>
+                </div>
                 <div className="rounded-[18px] border border-[#D9E1EA] bg-[#F7FAFE] p-4">
                   <div className="mb-4 text-[14px] font-semibold text-slate-950">Produk & profil risiko</div>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -2325,24 +2339,8 @@ function PartnerConfigStudio({
       if (STEP_LIST[stepIndex].id === "clause") {
         return (
           <div className="mx-auto max-w-4xl space-y-3">
-            <SectionCard title="Rincian Jaminan" subtitle="Klik setiap baris untuk melihat penjelasan detailnya.">
+            <SectionCard title="Wording">
               <div>
-                <div className="mb-4 text-[14px] font-medium text-slate-950">Risiko yang Dijamin</div>
-                <div className="space-y-2">
-                  {LIFE_GUARD_COVERAGE_ITEMS.filter((item) => item.section === "main").map((item) => (
-                    <LifeGuardCoverageCard
-                      key={item.id}
-                      item={item}
-                      selected={master.clausePackage.includes(item.clauseLabel)}
-                      expanded={lifeGuardExpanded === item.id}
-                      onSelect={() => toggleClause(item.clauseLabel)}
-                      onToggle={() => setLifeGuardExpanded((prev) => (prev === item.id ? "" : item.id))}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-6 border-t border-[#E6EDF5] pt-6">
                 <div className="mb-4 text-[14px] font-medium text-slate-950">Wording</div>
                 <SelectInput
                   value={master.wordingType || "PSAKDI"}
@@ -2354,7 +2352,9 @@ function PartnerConfigStudio({
                   {WORDING_OPTION_META[master.wordingType || "PSAKDI"]}
                 </div>
               </div>
-              <div className="mt-6 overflow-hidden rounded-[18px] border border-[#D9E1EA] bg-white">
+            </SectionCard>
+            <SectionCard title="Klausula">
+              <div className="overflow-hidden rounded-[18px] border border-[#D9E1EA] bg-white">
                 <div className="flex items-start justify-between gap-4 border-b border-[#D9E1EA] px-4 py-3.5">
                   <div>
                     <div className="text-[16px] font-semibold text-slate-950">Klausula</div>
@@ -2448,28 +2448,48 @@ function PartnerConfigStudio({
         return (
           <div className="space-y-4">
             <SectionCard title="Ringkasan">
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField label="Biaya Polis" required>
-                  <CurrencyInput value={master.adminFee || ""} onChange={(value) => patchSection("master", { adminFee: value })} />
-                </FormField>
-                <FormField label="Biaya Materai (Sesuai STAR)">
-                  <TextInput value={master.stampDuty || "Sesuai STAR"} onChange={(value) => patchSection("master", { stampDuty: value })} disabled />
-                </FormField>
-                <FormField label="Diskon (%)">
-                  <TextInput value={master.discountPercent || "0"} onChange={(value) => patchSection("master", { discountPercent: onlyDigits(value) })} />
-                </FormField>
-                <FormField label="Brokerage / Komisi (%)">
-                  <TextInput value={master.commissionPercent || "15"} onChange={(value) => patchSection("master", { commissionPercent: onlyDigits(value) })} />
-                </FormField>
-              </div>
-              <div className="mt-6 grid gap-4 md:grid-cols-3">
-                <SmallDataCard label="Limit Meninggal (A)" value={lifeGuardComputed.npAText} />
-                <SmallDataCard label="Jangka Waktu" value={`${blueprint.startDate || "-"} s/d ${blueprint.endDate || "-"}`} />
-                <SmallDataCard label="Rate Premi (â€°)" value={master.baseRate || "-"} />
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField label="Biaya Polis" required>
+                      <CurrencyInput value={master.adminFee || ""} onChange={(value) => patchSection("master", { adminFee: value })} />
+                    </FormField>
+                    <FormField label="Biaya Materai (Sesuai STAR)">
+                      <TextInput value={master.stampDuty || "Sesuai STAR"} onChange={(value) => patchSection("master", { stampDuty: value })} disabled />
+                    </FormField>
+                    <FormField label="Diskon (%)">
+                      <TextInput value={master.discountPercent || "0"} onChange={(value) => patchSection("master", { discountPercent: onlyDigits(value) })} />
+                    </FormField>
+                    <FormField label="Brokerage / Komisi (%)">
+                      <TextInput value={master.commissionPercent || "15"} onChange={(value) => patchSection("master", { commissionPercent: onlyDigits(value) })} />
+                    </FormField>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <SmallDataCard label="Limit Meninggal (A)" value={lifeGuardComputed.npAText} />
+                    <SmallDataCard label="Jangka Waktu" value={`${blueprint.startDate || "-"} s/d ${blueprint.endDate || "-"}`} />
+                    <SmallDataCard label="Rate Premi (‰)" value={master.baseRate || "-"} />
+                  </div>
+                </div>
+                <ReviewSummaryCard
+                  infoRows={[
+                    { label: "Penerima Manfaat", value: `${blueprint.insuredName || "-"}${blueprint.qqTambahan ? ` ${blueprint.qqTambahan}` : ""}` },
+                    { label: "Nomor Polis Induk / PKS", value: master.masterPolicyNo || "-" },
+                    { label: "Jenis Produk", value: master.coverageType || "-" },
+                    { label: "Kelas Risiko", value: master.riskClass || "-" },
+                  ]}
+                  premiumRows={[
+                    { label: "Biaya Polis", value: master.adminFee ? `Rp ${formatRupiah(master.adminFee)}` : "-" },
+                    { label: "Biaya Materai", value: master.stampDuty || "Sesuai STAR" },
+                    { label: "Brokerage / Komisi", value: `${master.commissionPercent || "15"}%` },
+                  ]}
+                  totalLabel="Estimasi Premi"
+                  totalValue={`${lifeGuardComputed.currencyCode} ${formatRupiah(lifeGuardComputed.premiumMin)} - ${formatRupiah(lifeGuardComputed.premiumMax)}`}
+                  pendingItems={reviewPendingItems}
+                />
               </div>
             </SectionCard>
 
-            <SectionCard title="Tinjauan Konfigurasi T&C">
+            <SectionCard title="Tinjauan Konfigurasi">
               <div className="grid gap-4 md:grid-cols-2">
                 <SmallDataCard label="Penerima Manfaat" value={`${blueprint.insuredName || "-"}${blueprint.qqTambahan ? ` ${blueprint.qqTambahan}` : ""}`} />
                 <SmallDataCard label="Nomor Polis Induk / PKS" value={master.masterPolicyNo || "-"} />
@@ -2481,7 +2501,7 @@ function PartnerConfigStudio({
                 <SmallDataCard label="Batasan Usia" value={`${master.ageMin || "-"} - ${master.ageMax || "-"} Thn`} />
                 <SmallDataCard label="Kelas Risiko" value={master.riskClass || "-"} />
                 <SmallDataCard label="Risk Exposure" value={master.riskExposure || "-"} />
-                <SmallDataCard label="Rate Premi (â€°)" value={master.baseRate || "-"} />
+                <SmallDataCard label="Rate Premi (‰)" value={master.baseRate || "-"} />
                 <SmallDataCard label="Premi" value={`${lifeGuardComputed.currencyCode} ${formatRupiah(lifeGuardComputed.premiumMin)} - ${formatRupiah(lifeGuardComputed.premiumMax)}`} />
               </div>
             </SectionCard>
@@ -2489,21 +2509,19 @@ function PartnerConfigStudio({
             <SectionCard title="Analisa Internal">
               <div className="grid gap-4 md:grid-cols-3">
                 <FormField label="Analisa Maker (ROM)">
-                  <TextAreaInput value={review.makerNote} onChange={(value) => patchSection("review", { makerNote: value })} />
+                  <TextAreaInput value={review.makerNote} onChange={(value) => patchSection("review", { makerNote: value })} placeholder="Isi catatan maker." />
                 </FormField>
                 <FormField label="Analisa Reviewer (Admin UDW)">
-                  <TextAreaInput value={review.checkerNote} onChange={(value) => patchSection("review", { checkerNote: value })} />
+                  <TextAreaInput value={review.checkerNote} onChange={(value) => patchSection("review", { checkerNote: value })} placeholder="Isi catatan reviewer." />
                 </FormField>
                 <FormField label="Analisa Persetujuan (HO)">
-                  <TextAreaInput value={review.approvalNote} onChange={(value) => patchSection("review", { approvalNote: value })} />
+                  <TextAreaInput value={review.approvalNote} onChange={(value) => patchSection("review", { approvalNote: value })} placeholder="Isi catatan persetujuan." />
                 </FormField>
               </div>
               <div className="mt-5">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-sm font-medium text-slate-900">Yang Masih Perlu Dilengkapi</div>
-                  {reviewPendingItems.length === 0 ? (
-                    <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">Konfigurasi siap diproses ke tahap berikutnya.</div>
-                  ) : (
+                  {reviewPendingItems.length > 0 ? (
                     <div className="mt-3 space-y-3">
                       {reviewPendingItems.map((item) => (
                         <div key={item} className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
@@ -2512,7 +2530,7 @@ function PartnerConfigStudio({
                         </div>
                       ))}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </SectionCard>
@@ -2714,23 +2732,43 @@ function PartnerConfigStudio({
         return (
           <div className="space-y-4">
             <SectionCard title="Ringkasan">
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField label="Biaya Polis" required>
-                  <CurrencyInput value={master.adminFee || ""} onChange={(value) => patchSection("master", { adminFee: value })} />
-                </FormField>
-                <FormField label="Biaya Materai (Sesuai STAR)">
-                  <TextInput value={master.stampDuty || "Sesuai STAR"} onChange={(value) => patchSection("master", { stampDuty: value })} disabled />
-                </FormField>
-                <FormField label="Diskon (%)">
-                  <TextInput value={master.discountPercent || "0"} onChange={(value) => patchSection("master", { discountPercent: onlyDigits(value) })} />
-                </FormField>
-                <FormField label="Brokerage / Komisi (%)">
-                  <TextInput value={master.commissionPercent || "15"} onChange={(value) => patchSection("master", { commissionPercent: onlyDigits(value) })} />
-                </FormField>
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField label="Biaya Polis" required>
+                      <CurrencyInput value={master.adminFee || ""} onChange={(value) => patchSection("master", { adminFee: value })} />
+                    </FormField>
+                    <FormField label="Biaya Materai (Sesuai STAR)">
+                      <TextInput value={master.stampDuty || "Sesuai STAR"} onChange={(value) => patchSection("master", { stampDuty: value })} disabled />
+                    </FormField>
+                    <FormField label="Diskon (%)">
+                      <TextInput value={master.discountPercent || "0"} onChange={(value) => patchSection("master", { discountPercent: onlyDigits(value) })} />
+                    </FormField>
+                    <FormField label="Brokerage / Komisi (%)">
+                      <TextInput value={master.commissionPercent || "15"} onChange={(value) => patchSection("master", { commissionPercent: onlyDigits(value) })} />
+                    </FormField>
+                  </div>
+                </div>
+                <ReviewSummaryCard
+                  infoRows={[
+                    { label: "Nama Tertanggung", value: blueprint.insuredName || "-" },
+                    { label: "Nomor Polis Induk / PKS", value: master.masterPolicyNo || "-" },
+                    { label: "Jenis Produk", value: master.coverageType || "-" },
+                    { label: "Wording", value: master.wordingType || "-" },
+                  ]}
+                  premiumRows={[
+                    { label: "Biaya Polis", value: master.adminFee ? `Rp ${formatRupiah(master.adminFee)}` : "-" },
+                    { label: "Biaya Materai", value: master.stampDuty || "Sesuai STAR" },
+                    { label: "Brokerage / Komisi", value: `${master.commissionPercent || "15"}%` },
+                  ]}
+                  totalLabel="Ringkasan Pertanggungan"
+                  totalValue={master.coverageType || "-"}
+                  pendingItems={reviewPendingItems}
+                />
               </div>
             </SectionCard>
 
-            <SectionCard title="Tinjauan Konfigurasi T&C">
+            <SectionCard title="Tinjauan Konfigurasi">
               <div className="grid gap-4 md:grid-cols-2">
                 <SmallDataCard label="Nama Tertanggung" value={blueprint.insuredName || "-"} />
                 <SmallDataCard label="Nomor Polis Induk / PKS" value={master.masterPolicyNo || "-"} />
@@ -2744,13 +2782,13 @@ function PartnerConfigStudio({
             <SectionCard title="Analisa Internal">
               <div className="grid gap-4 md:grid-cols-3">
                 <FormField label="Analisa Maker (ROM)">
-                  <TextAreaInput value={review.makerNote} onChange={(value) => patchSection("review", { makerNote: value })} />
+                  <TextAreaInput value={review.makerNote} onChange={(value) => patchSection("review", { makerNote: value })} placeholder="Isi catatan maker." />
                 </FormField>
                 <FormField label="Analisa Reviewer (Admin UDW)">
-                  <TextAreaInput value={review.checkerNote} onChange={(value) => patchSection("review", { checkerNote: value })} />
+                  <TextAreaInput value={review.checkerNote} onChange={(value) => patchSection("review", { checkerNote: value })} placeholder="Isi catatan reviewer." />
                 </FormField>
                 <FormField label="Analisa Persetujuan (HO)">
-                  <TextAreaInput value={review.approvalNote} onChange={(value) => patchSection("review", { approvalNote: value })} />
+                  <TextAreaInput value={review.approvalNote} onChange={(value) => patchSection("review", { approvalNote: value })} placeholder="Isi catatan persetujuan." />
                 </FormField>
               </div>
             </SectionCard>
@@ -3323,21 +3361,21 @@ function PartnerConfigStudio({
                 <TextAreaInput
                   value={review.makerNote}
                   onChange={(value) => patchSection("review", { makerNote: value })}
-                  placeholder="Catatan maker"
+                  placeholder="Isi catatan maker."
                 />
               </FormField>
               <FormField label="Analisa Reviewer (Admin UDW)">
                 <TextAreaInput
                   value={review.checkerNote}
                   onChange={(value) => patchSection("review", { checkerNote: value })}
-                  placeholder="Catatan checker"
+                  placeholder="Isi catatan reviewer."
                 />
               </FormField>
               <FormField label="Analisa Persetujuan (HO)">
                 <TextAreaInput
                   value={review.approvalNote}
                   onChange={(value) => patchSection("review", { approvalNote: value })}
-                  placeholder="Catatan approval"
+                  placeholder="Isi catatan persetujuan."
                 />
               </FormField>
             </div>
@@ -3345,11 +3383,7 @@ function PartnerConfigStudio({
               <div className="mt-5">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-sm font-bold text-slate-900">Yang Masih Perlu Dilengkapi</div>
-                  {pendingItems.length === 0 ? (
-                    <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
-              Konfigurasi siap diproses ke tahap berikutnya.
-                    </div>
-                ) : (
+                  {pendingItems.length > 0 ? (
                   <div className="mt-3 space-y-3">
                     {pendingItems.map((item) => (
                       <div key={item} className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
@@ -3358,7 +3392,7 @@ function PartnerConfigStudio({
                       </div>
                     ))}
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           </SectionCard>
@@ -3586,11 +3620,7 @@ function PartnerConfigStudio({
             </div>
           }
         >
-          {reviewPendingItems.length === 0 ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
-              Blueprint siap dipublikasikan dan siap jadi sumber kebenaran untuk channel partner / internal.
-            </div>
-          ) : (
+          {reviewPendingItems.length > 0 ? (
             <div className="space-y-3">
               {reviewPendingItems.map((item) => (
                 <div key={item} className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
@@ -3599,7 +3629,7 @@ function PartnerConfigStudio({
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
         </SectionCard>
 
         <SectionCard
@@ -3988,6 +4018,16 @@ function PartnerConfigStudio({
           </div>
         ) : (
           <div className="pb-52 lg:pb-8">
+            <AppProductHeader
+              sessionName={sessionName}
+              sessionRoleLabel={sessionRoleLabel}
+              accountInitials={accountMeta.initials}
+              onHome={exitToShell}
+              accountMenuOpen={headerAccountMenuOpen}
+              onToggleAccountMenu={() => setHeaderAccountMenuOpen((current) => !current)}
+              accountMenuItems={accountMenuItems}
+            />
+
             <header className="relative overflow-hidden bg-[#0A4D82] pb-7 md:pb-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.20),transparent_28%),radial-gradient(circle_at_80%_25%,rgba(255,255,255,0.14),transparent_24%),radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.12),transparent_24%)]" />
               <div className="absolute inset-0 bg-gradient-to-b from-[#0A4D82]/60 to-[#0A4D82]/75" />
@@ -4002,15 +4042,6 @@ function PartnerConfigStudio({
                       <ArrowLeft className="h-4 w-4" />
                       Kembali ke Daftar Konfigurasi
                     </button>
-                    {typeof onExit === "function" ? (
-                      <button
-                        type="button"
-                        onClick={exitToShell}
-                        className="inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 focus-visible:ring-4 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A4D82]"
-                      >
-                        Beranda
-                      </button>
-                    ) : null}
                   </div>
 
                 </div>
@@ -4062,14 +4093,14 @@ function PartnerConfigStudio({
               </div>
             </header>
 
-            <main className="mx-auto max-w-7xl px-4 py-5 md:px-6">
+            <main className="mx-auto max-w-4xl px-4 py-5 md:px-6">
               <div className="min-w-0">
                 <div>{renderStep()}</div>
               </div>
             </main>
 
             <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
-              <div className="mx-auto max-w-7xl">
+              <div className="mx-auto max-w-4xl">
                 <div className="w-full">
                   <div className="space-y-2.5">
                     <button
@@ -4252,16 +4283,16 @@ function SummaryPanel({ config, primaryLabel = "ISI DATA", secondaryLabel = "KEM
 
       <div className="mt-3.5 rounded-[14px] bg-[#FFF4E1] px-4 py-3.5 text-[#A35E00]">
         <div className="text-[14px] font-medium">Yang masih perlu dilengkapi</div>
-        <div className="mt-2.5 space-y-2.5">
-          {(pending.length ? pending : ["Belum ada data tambahan yang perlu dilengkapi."])
-            .slice(0, 4)
-            .map((item) => (
+        {pending.length ? (
+          <div className="mt-2.5 space-y-2.5">
+            {pending.slice(0, 4).map((item) => (
               <div key={item} className="flex items-start gap-2 text-[12px] leading-5">
                 <TriangleAlert className="mt-1 h-4 w-4 shrink-0" />
                 <div>{item}</div>
               </div>
             ))}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-3.5 space-y-2.5">
@@ -4319,6 +4350,52 @@ function SummarySheet({ open, onClose, config, primaryLabel, secondaryLabel, onP
           primaryDisabled={primaryDisabled}
         />
       </div>
+    </div>
+  );
+}
+
+function ReviewSummaryCard({ infoRows = [], premiumRows = [], totalLabel = "Estimasi Premi", totalValue = "-", pendingItems = [] }) {
+  return (
+    <div className="overflow-hidden rounded-[20px] bg-[#0A4D82] p-3.5 text-white shadow-[0_14px_32px_rgba(15,23,42,0.18)]">
+      <div className="flex items-center gap-3 px-1.5 py-1">
+        <FileSpreadsheet className="h-5 w-5" />
+        <div className="text-[15px] font-semibold">Ringkasan</div>
+      </div>
+      <div className="mt-2.5 border-t border-white/15 pt-2.5">
+        {infoRows.map((item) => (
+          <div key={item.label} className="mt-1.5 flex items-start justify-between gap-3 text-[12px] leading-5 text-white">
+            <div className="min-w-0 flex-1">{item.label}</div>
+            <div className="shrink-0 text-right font-medium">{fixDisplayText(item.value)}</div>
+          </div>
+        ))}
+      </div>
+      {premiumRows.length ? (
+        <div className="mt-3.5 border-t border-white/15 pt-2.5">
+          {premiumRows.map((item) => (
+            <div key={item.label} className="mt-1.5 flex items-start justify-between gap-3 text-[12px] leading-5 text-white">
+              <div className="min-w-0 flex-1">{item.label}</div>
+              <div className="shrink-0 text-right font-medium">{fixDisplayText(item.value)}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <div className="mt-3.5 rounded-[14px] bg-white/10 px-4 py-3.5">
+        <div className="text-[12px] text-white/75">{totalLabel}</div>
+        <div className="mt-2 text-right text-[28px] font-bold leading-none">{fixDisplayText(totalValue)}</div>
+      </div>
+      {pendingItems.length ? (
+        <div className="mt-3.5 rounded-[14px] bg-[#FFF4E1] px-4 py-3.5 text-[#A35E00]">
+          <div className="text-[14px] font-medium">Yang masih perlu dilengkapi</div>
+          <div className="mt-2.5 space-y-2.5">
+            {pendingItems.slice(0, 4).map((item) => (
+              <div key={item} className="flex items-start gap-2 text-[12px] leading-5">
+                <TriangleAlert className="mt-1 h-4 w-4 shrink-0" />
+                <div>{fixDisplayText(item)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -4452,6 +4529,7 @@ function ChecklistCard({ title, detail, checked, onChange }) {
 }
 
 function LifeGuardCoverageCard({ item, selected, expanded, onSelect, onToggle }) {
+  const Icon = item.icon || HeartPulse;
   return (
     <div className="overflow-hidden rounded-[14px] border border-[#BFD3EA] bg-[#F7FAFE]">
       <div className="flex w-full items-start justify-between gap-3 px-3.5 py-3 text-left">
@@ -4464,7 +4542,10 @@ function LifeGuardCoverageCard({ item, selected, expanded, onSelect, onToggle })
             {selected ? <Check className="h-3.5 w-3.5" /> : null}
           </button>
           <button type="button" onClick={onToggle} className="text-left">
-            <div className="text-[14px] font-medium text-[#0A4D82]">{item.title}</div>
+            <div className="flex items-center gap-2 text-[#0A4D82]">
+              <Icon className="h-[15px] w-[15px] shrink-0" />
+              <div className="text-[14px] font-medium">{item.title}</div>
+            </div>
           </button>
         </div>
         <button type="button" onClick={onToggle}>
@@ -4472,7 +4553,7 @@ function LifeGuardCoverageCard({ item, selected, expanded, onSelect, onToggle })
         </button>
       </div>
       {expanded ? (
-        <div className="border-t border-[#D4E0EF] bg-white px-3.5 py-3 text-[12px] leading-6 text-slate-700">
+        <div className="border-t border-[#D4E0EF] bg-white px-3.5 py-3 text-[12px] leading-5 text-slate-700">
           <div>{item.description}</div>
           <div className="mt-2 text-slate-800">{item.note}</div>
         </div>
@@ -4613,10 +4694,17 @@ function FormField({ label, required, helper, children }) {
   return (
     <label className="block">
       <div className="mb-2">
-        <div className="text-[12px] font-medium text-slate-700">
+        <div className="flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-slate-700">
           {label}
           {required ? <span className="text-[#E66A1E]"> *</span> : null}
-          {helperText ? <span className="ml-1.5 text-[11px] font-normal text-[#5E7BA6]">• {helperText}</span> : null}
+          {helperText ? (
+            <span
+              title={helperText}
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[#BFD0E0] text-[10px] font-semibold text-[#5E7BA6]"
+            >
+              !
+            </span>
+          ) : null}
         </div>
       </div>
       {children}

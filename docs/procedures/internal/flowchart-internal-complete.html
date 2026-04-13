@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flowchart Prosedur Entri Internal Property Safe</title>
+    <style>
+      :root {
+        --paper-width: 1123px;
+        --paper-height: 794px;
+        --line: #2c2c2c;
+        --blue: #79b7e3;
+        --gray: #dddddd;
+        --node-blue: #d7e5f4;
+        --node-orange: #f6b37a;
+        --node-terminal: #cfe0f6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #dcdcdc;
+        color: #111827;
+      }
+
+      .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 18px;
+        background: rgba(255, 255, 255, 0.96);
+        border-bottom: 1px solid #c8c8c8;
+      }
+
+      .toolbar button {
+        border: 1px solid #b7b7b7;
+        background: #fff;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .toolbar button:hover {
+        background: #f3f4f6;
+      }
+
+      .toolbar .hint {
+        font-size: 14px;
+        color: #4b5563;
+      }
+
+      .viewport {
+        overflow: auto;
+        padding: 28px;
+      }
+
+      .stack {
+        width: fit-content;
+        margin: 0 auto;
+        transform-origin: top center;
+      }
+
+      .paper {
+        position: relative;
+        width: var(--paper-width);
+        min-height: var(--paper-height);
+        margin: 0 auto 24px;
+        background: #fff;
+        border: 1px solid #bdbdbd;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+      }
+
+      .page-head {
+        position: relative;
+        padding: 18px 34px 8px;
+      }
+
+      .page-head .label {
+        text-align: center;
+        font-size: 16px;
+        font-weight: 700;
+        color: #7a7a7a;
+        margin-bottom: 10px;
+      }
+
+      .page-head .logo {
+        position: absolute;
+        right: 38px;
+        top: 10px;
+        font-size: 28px;
+        color: #7a7a7a;
+      }
+
+      .diagram-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+
+      .canvas-wrap {
+        padding: 0 26px 16px;
+      }
+
+      .page-footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        padding: 0 34px 18px;
+        color: #6b7280;
+        font-size: 14px;
+      }
+
+      .page-no {
+        min-width: 40px;
+        padding: 4px 12px;
+        text-align: center;
+        background: #69b7e8;
+        color: #fff;
+        font-weight: 700;
+      }
+
+      svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .small {
+        font-size: 10px;
+      }
+
+      .medium {
+        font-size: 11px;
+      }
+
+      .lane-head {
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .title {
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .node-text {
+        font-size: 11px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <button type="button" data-zoom="0.8">80%</button>
+      <button type="button" data-zoom="1">100%</button>
+      <button type="button" data-zoom="1.2">120%</button>
+      <button type="button" id="fit-width">Fit Width</button>
+      <div class="hint">Setiap halaman dibatasi seperti A4. Flow yang tidak muat dilanjutkan ke halaman berikutnya.</div>
+    </div>
+
+    <div class="viewport" id="viewport">
+      <div class="stack" id="stack">
+        <section class="paper">
+          <div class="page-head">
+            <div class="label">PROSEDUR PENGGUNAAN</div>
+            <div class="logo">&#10227;</div>
+          </div>
+
+          <div class="canvas-wrap">
+            <div class="diagram-title">001/PRC/WAU/2026/001 - Proses Entri Internal Property Safe</div>
+
+            <svg viewBox="0 0 1068 620" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrow-1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#222" />
+                </marker>
+              </defs>
+
+              <rect x="8" y="8" width="1050" height="42" fill="#79b7e3" stroke="#2c2c2c" stroke-width="1.2" />
+              <text x="28" y="23" class="medium">
+                <tspan x="28" dy="0">Nama Proses</tspan>
+                <tspan dx="14">:</tspan>
+                <tspan dx="8">Proses Entri Internal Property Safe</tspan>
+                <tspan x="28" dy="13">Group</tspan>
+                <tspan dx="43">:</tspan>
+                <tspan dx="8">Group Underwriting Ritel</tspan>
+                <tspan x="28" dy="13">Direktorat</tspan>
+                <tspan dx="24">:</tspan>
+                <tspan dx="8">Direktorat Operasional</tspan>
+              </text>
+
+              <rect x="8" y="50" width="1050" height="540" fill="#fff" stroke="#2c2c2c" stroke-width="1.2" />
+              <rect x="8" y="50" width="1050" height="30" fill="#dddddd" stroke="#2c2c2c" stroke-width="1.2" />
+
+              <line x1="258" y1="50" x2="258" y2="590" stroke="#2c2c2c" stroke-width="1" />
+              <line x1="572" y1="50" x2="572" y2="590" stroke="#2c2c2c" stroke-width="1" />
+              <line x1="712" y1="50" x2="712" y2="590" stroke="#2c2c2c" stroke-width="1" />
+              <line x1="886" y1="50" x2="886" y2="590" stroke="#2c2c2c" stroke-width="1" />
+              <line x1="8" y1="80" x2="1058" y2="80" stroke="#2c2c2c" stroke-width="1" />
+
+              <text x="133" y="69" text-anchor="middle" class="lane-head">Penjelasan</text>
+              <text x="415" y="69" text-anchor="middle" class="lane-head">Group Underwriting</text>
+              <text x="642" y="69" text-anchor="middle" class="lane-head">Pihak Ketiga</text>
+              <text x="799" y="69" text-anchor="middle" class="lane-head">Keterangan</text>
+              <text x="972" y="69" text-anchor="middle" class="lane-head">Risiko &amp; SLA</text>
+
+              <rect x="24" y="180" width="224" height="58" fill="#fff" stroke="#666" />
+              <text x="34" y="198" class="small">
+                <tspan x="34" dy="0">1. Membuka Web Automation dengan peran Internal</tspan>
+                <tspan x="34" dy="13">lalu memilih produk Property Safe.</tspan>
+              </text>
+
+              <rect x="24" y="250" width="224" height="54" fill="#fff" stroke="#666" />
+              <text x="34" y="268" class="small">
+                <tspan x="34" dy="0">2. Kondisi, data minimum simulasi premi lengkap</tspan>
+                <tspan x="34" dy="13">atau tidak lengkap.</tspan>
+              </text>
+
+              <rect x="24" y="318" width="224" height="84" fill="#fff" stroke="#666" />
+              <text x="34" y="336" class="small">
+                <tspan x="34" dy="0">3a. Melengkapi data minimum sebelum proses</tspan>
+                <tspan x="34" dy="13">dilanjutkan.</tspan>
+                <tspan x="34" dy="18">3b. Menjalankan Cek Premi dan menampilkan hasil</tspan>
+                <tspan x="34" dy="13">simulasi awal.</tspan>
+              </text>
+
+              <rect x="24" y="416" width="224" height="58" fill="#fff" stroke="#666" />
+              <text x="34" y="434" class="small">
+                <tspan x="34" dy="0">4. Menentukan tindak lanjut setelah premi tampil:</tspan>
+                <tspan x="34" dy="13">kirim indikasi atau lanjut ke Isi Data.</tspan>
+              </text>
+
+              <rect x="24" y="488" width="224" height="82" fill="#fff" stroke="#666" />
+              <text x="34" y="506" class="small">
+                <tspan x="34" dy="0">5a. Mengirim indikasi ke calon tertanggung melalui</tspan>
+                <tspan x="34" dy="13">link, WhatsApp, atau email.</tspan>
+                <tspan x="34" dy="18">5b. Melanjutkan transaksi ke Isi Data, lalu masuk</tspan>
+                <tspan x="34" dy="13">ke antrean kerja internal.</tspan>
+              </text>
+
+              <rect x="362" y="92" width="74" height="28" rx="14" ry="14" fill="#fff" stroke="#2c2c2c" stroke-width="1.2" />
+              <text x="399" y="110" text-anchor="middle" class="title">Mulai</text>
+
+              <polygon points="350,142 450,142 450,184 435,178 435,184 350,184" fill="#f6b37a" stroke="#2c2c2c" stroke-width="1.2" />
+              <text x="399" y="160" text-anchor="middle" class="small">
+                <tspan x="399" dy="0">Pilih Produk</tspan>
+                <tspan x="399" dy="12">Property Safe</tspan>
+              </text>
+
+              <rect x="383" y="204" width="34" height="46" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+              <text x="400" y="231" text-anchor="middle" class="node-text">1</text>
+
+              <polygon points="400,276 430,306 400,336 370,306" fill="#fff" stroke="#2c2c2c" stroke-width="1.2" />
+              <text x="400" y="310" text-anchor="middle" class="node-text">2</text>
+
+              <rect x="318" y="366" width="34" height="44" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+              <text x="335" y="392" text-anchor="middle" class="node-text">3a</text>
+
+              <rect x="448" y="366" width="34" height="44" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+              <text x="465" y="392" text-anchor="middle" class="node-text">3b</text>
+
+              <polygon points="400,450 430,480 400,510 370,480" fill="#fff" stroke="#2c2c2c" stroke-width="1.2" />
+              <text x="400" y="484" text-anchor="middle" class="node-text">4</text>
+
+              <rect x="336" y="534" width="34" height="44" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+              <text x="353" y="560" text-anchor="middle" class="node-text">5a</text>
+
+              <rect x="446" y="534" width="34" height="44" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+              <text x="463" y="560" text-anchor="middle" class="node-text">5b</text>
+
+              <line x1="399" y1="120" x2="399" y2="142" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+              <line x1="399" y1="184" x2="399" y2="204" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+              <line x1="399" y1="250" x2="399" y2="276" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+
+              <line x1="370" y1="306" x2="335" y2="306" stroke="#222" stroke-width="1.3" />
+              <line x1="335" y1="306" x2="335" y2="366" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+              <text x="270" y="294" class="small">Tidak Lengkap</text>
+
+              <line x1="430" y1="306" x2="465" y2="306" stroke="#222" stroke-width="1.3" />
+              <line x1="465" y1="306" x2="465" y2="366" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+              <text x="472" y="294" class="small">Lengkap</text>
+
+              <line x1="465" y1="410" x2="465" y2="432" stroke="#222" stroke-width="1.3" />
+              <line x1="465" y1="432" x2="400" y2="432" stroke="#222" stroke-width="1.3" />
+              <line x1="400" y1="432" x2="400" y2="450" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+
+              <line x1="370" y1="480" x2="353" y2="480" stroke="#222" stroke-width="1.3" />
+              <line x1="353" y1="480" x2="353" y2="534" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+              <text x="343" y="470" class="small">Indikasi</text>
+
+              <line x1="430" y1="480" x2="463" y2="480" stroke="#222" stroke-width="1.3" />
+              <line x1="463" y1="480" x2="463" y2="534" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+              <text x="468" y="470" class="small">Isi Data</text>
+
+              <polygon points="286,590 350,590 342,618 294,618" fill="#cfe0f6" stroke="#666" stroke-width="1.2" />
+              <text x="318" y="605" text-anchor="middle" class="small">AKS 1</text>
+
+              <polygon points="384,590 448,590 440,618 392,618" fill="#cfe0f6" stroke="#666" stroke-width="1.2" />
+              <text x="416" y="605" text-anchor="middle" class="small">AKS 2</text>
+
+              <polygon points="482,590 546,590 538,618 490,618" fill="#cfe0f6" stroke="#666" stroke-width="1.2" />
+              <text x="514" y="605" text-anchor="middle" class="small">AKS 3</text>
+
+              <line x1="335" y1="578" x2="335" y2="590" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+              <line x1="353" y1="578" x2="353" y2="578" stroke="#222" stroke-width="1.3" />
+              <line x1="353" y1="578" x2="416" y2="578" stroke="#222" stroke-width="1.3" />
+              <line x1="416" y1="578" x2="416" y2="590" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+              <line x1="463" y1="578" x2="514" y2="578" stroke="#222" stroke-width="1.3" />
+              <line x1="514" y1="578" x2="514" y2="590" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-1)" />
+
+              <rect x="600" y="360" width="90" height="72" fill="#fff" stroke="#666" />
+              <text x="610" y="380" class="small">
+                <tspan x="610" dy="0">Calon</tspan>
+                <tspan x="610" dy="13">tertanggung</tspan>
+                <tspan x="610" dy="13">menerima</tspan>
+                <tspan x="610" dy="13">indikasi dan</tspan>
+                <tspan x="610" dy="13">membuka link</tspan>
+              </text>
+
+              <rect x="728" y="340" width="142" height="86" fill="#fff" stroke="#666" />
+              <text x="736" y="358" class="small">
+                <tspan x="736" dy="0">Dapat berupa:</tspan>
+                <tspan x="736" dy="13">Data CIF / nasabah</tspan>
+                <tspan x="736" dy="13">Jenis bangunan</tspan>
+                <tspan x="736" dy="13">Penggunaan bangunan</tspan>
+                <tspan x="736" dy="13">Kelas konstruksi</tspan>
+                <tspan x="736" dy="13">Lokasi dan nilai obyek</tspan>
+              </text>
+
+              <rect x="728" y="446" width="142" height="74" fill="#fff" stroke="#666" />
+              <text x="736" y="464" class="small">
+                <tspan x="736" dy="0">Kirim indikasi dipakai untuk</tspan>
+                <tspan x="736" dy="13">membuka penawaran awal,</tspan>
+                <tspan x="736" dy="13">membagi link, dan memberi</tspan>
+                <tspan x="736" dy="13">akses lanjutan.</tspan>
+              </text>
+
+              <rect x="900" y="166" width="138" height="70" fill="#fff" stroke="#666" />
+              <text x="908" y="184" class="small">
+                <tspan x="908" dy="0">Kegiatan 1:</tspan>
+                <tspan x="908" dy="13">Salah peran / salah produk</tspan>
+                <tspan x="908" dy="13">(Risiko Operasional)</tspan>
+                <tspan x="908" dy="13">SLA: validasi saat transaksi dibuka</tspan>
+              </text>
+
+              <rect x="900" y="294" width="138" height="96" fill="#fff" stroke="#666" />
+              <text x="908" y="312" class="small">
+                <tspan x="908" dy="0">Kegiatan 2-4:</tspan>
+                <tspan x="908" dy="13">Data minimum tidak lengkap</tspan>
+                <tspan x="908" dy="13">atau hasil simulasi belum akurat</tspan>
+                <tspan x="908" dy="13">(Risiko Operasional)</tspan>
+                <tspan x="908" dy="13">Tindak lanjut bisa terlambat</tspan>
+                <tspan x="908" dy="13">jika keputusan belum jelas</tspan>
+              </text>
+
+              <rect x="900" y="430" width="138" height="96" fill="#fff" stroke="#666" />
+              <text x="908" y="448" class="small">
+                <tspan x="908" dy="0">Kegiatan 5a-5b:</tspan>
+                <tspan x="908" dy="13">Link indikasi salah kirim atau</tspan>
+                <tspan x="908" dy="13">transaksi tidak segera masuk</tspan>
+                <tspan x="908" dy="13">ke antrean internal</tspan>
+                <tspan x="908" dy="13">(Risiko Operasional)</tspan>
+                <tspan x="908" dy="13">SLA: follow up awal transaksi</tspan>
+              </text>
+            </svg>
+          </div>
+
+          <div class="page-footer">
+            <span>PROSEDUR UNDERWRITING</span>
+            <span class="page-no">19</span>
+          </div>
+        </section>
+
+        <section class="paper">
+          <div class="page-head">
+            <div class="label">PROSEDUR PENGGUNAAN</div>
+            <div class="logo">&#10227;</div>
+          </div>
+
+          <div class="canvas-wrap">
+            <div class="diagram-title">001/PRC/WAU/2026/001 - Proses Entri Internal Property Safe</div>
+
+            <svg viewBox="0 0 1068 620" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrow-2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#222" />
+                </marker>
+              </defs>
+
+              <rect x="8" y="8" width="1050" height="42" fill="#79b7e3" stroke="#2c2c2c" stroke-width="1.2" />
+              <text x="28" y="23" class="medium">
+                <tspan x="28" dy="0">Nama Proses</tspan>
+                <tspan dx="14">:</tspan>
+                <tspan dx="8">Proses Entri Internal Property Safe</tspan>
+                <tspan x="28" dy="13">Group</tspan>
+                <tspan dx="43">:</tspan>
+                <tspan dx="8">Group Underwriting Ritel</tspan>
+                <tspan x="28" dy="13">Direktorat</tspan>
+                <tspan dx="24">:</tspan>
+                <tspan dx="8">Direktorat Operasional</tspan>
+              </text>
+
+              <rect x="8" y="50" width="1050" height="540" fill="#fff" stroke="#2c2c2c" stroke-width="1.2" />
+              <rect x="8" y="50" width="1050" height="30" fill="#dddddd" stroke="#2c2c2c" stroke-width="1.2" />
+
+              <line x1="258" y1="50" x2="258" y2="590" stroke="#2c2c2c" stroke-width="1" />
+              <line x1="572" y1="50" x2="572" y2="590" stroke="#2c2c2c" stroke-width="1" />
+              <line x1="712" y1="50" x2="712" y2="590" stroke="#2c2c2c" stroke-width="1" />
+              <line x1="886" y1="50" x2="886" y2="590" stroke="#2c2c2c" stroke-width="1" />
+              <line x1="8" y1="80" x2="1058" y2="80" stroke="#2c2c2c" stroke-width="1" />
+
+              <text x="133" y="69" text-anchor="middle" class="lane-head">Penjelasan</text>
+              <text x="415" y="69" text-anchor="middle" class="lane-head">Group Underwriting</text>
+              <text x="642" y="69" text-anchor="middle" class="lane-head">Pihak Ketiga</text>
+              <text x="799" y="69" text-anchor="middle" class="lane-head">Keterangan</text>
+              <text x="972" y="69" text-anchor="middle" class="lane-head">Risiko &amp; SLA</text>
+
+              <rect x="24" y="156" width="224" height="54" fill="#fff" stroke="#666" />
+              <text x="34" y="174" class="small">
+                <tspan x="34" dy="0">6. Kondisi transaksi hasil AKS 1, AKS 2, atau AKS 3</tspan>
+                <tspan x="34" dy="13">dipantau pada antrean kerja internal.</tspan>
+              </text>
+
+              <rect x="24" y="226" width="224" height="72" fill="#fff" stroke="#666" />
+              <text x="34" y="244" class="small">
+                <tspan x="34" dy="0">7. Internal menilai apakah transaksi perlu revisi,</tspan>
+                <tspan x="34" dy="13">lengkapi ulang, atau dapat diteruskan ke review</tspan>
+                <tspan x="34" dy="13">internal lanjutan.</tspan>
+              </text>
+
+              <rect x="24" y="314" width="224" height="58" fill="#fff" stroke="#666" />
+              <text x="34" y="332" class="small">
+                <tspan x="34" dy="0">8. Jika data belum memadai, transaksi dikembalikan</tspan>
+                <tspan x="34" dy="13">untuk dilengkapi oleh internal atau nasabah.</tspan>
+              </text>
+
+              <rect x="24" y="388" width="224" height="72" fill="#fff" stroke="#666" />
+              <text x="34" y="406" class="small">
+                <tspan x="34" dy="0">9. Jika data lengkap, transaksi diteruskan ke review</tspan>
+                <tspan x="34" dy="13">internal berikutnya dan siap diproses lebih lanjut</tspan>
+                <tspan x="34" dy="13">sesuai kewenangan underwriting.</tspan>
+              </text>
+
+              <rect x="24" y="476" width="224" height="80" fill="#fff" stroke="#666" />
+              <text x="34" y="494" class="small">
+                <tspan x="34" dy="0">10. Hasil akhir monitoring: transaksi selesai,</tspan>
+                <tspan x="34" dy="13">menunggu respons pihak terkait, atau masuk</tspan>
+                <tspan x="34" dy="13">ke proses underwriting tahap berikutnya.</tspan>
+              </text>
+
+              <polygon points="292,90 356,90 348,118 300,118" fill="#cfe0f6" stroke="#666" stroke-width="1.2" />
+              <text x="324" y="105" text-anchor="middle" class="small">AKS 1</text>
+
+              <polygon points="382,90 446,90 438,118 390,118" fill="#cfe0f6" stroke="#666" stroke-width="1.2" />
+              <text x="414" y="105" text-anchor="middle" class="small">AKS 2</text>
+
+              <polygon points="472,90 536,90 528,118 480,118" fill="#cfe0f6" stroke="#666" stroke-width="1.2" />
+              <text x="504" y="105" text-anchor="middle" class="small">AKS 3</text>
+
+              <polygon points="414,154 444,184 414,214 384,184" fill="#fff" stroke="#2c2c2c" stroke-width="1.2" />
+              <text x="414" y="188" text-anchor="middle" class="node-text">6</text>
+
+              <polygon points="414,250 444,280 414,310 384,280" fill="#fff" stroke="#2c2c2c" stroke-width="1.2" />
+              <text x="414" y="284" text-anchor="middle" class="node-text">7</text>
+
+              <rect x="334" y="352" width="34" height="44" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+              <text x="351" y="378" text-anchor="middle" class="node-text">8</text>
+
+              <rect x="478" y="352" width="34" height="44" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+              <text x="495" y="378" text-anchor="middle" class="node-text">9</text>
+
+              <polygon points="414,448 444,478 414,508 384,478" fill="#fff" stroke="#2c2c2c" stroke-width="1.2" />
+              <text x="414" y="482" text-anchor="middle" class="node-text">10</text>
+
+              <polygon points="300,548 388,548 380,578 308,578" fill="#cfe0f6" stroke="#666" stroke-width="1.2" />
+              <text x="344" y="565" text-anchor="middle" class="small">Lengkapi Ulang</text>
+
+              <polygon points="448,548 536,548 528,578 456,578" fill="#cfe0f6" stroke="#666" stroke-width="1.2" />
+              <text x="492" y="565" text-anchor="middle" class="small">Lanjut Review</text>
+
+              <line x1="324" y1="118" x2="324" y2="136" stroke="#222" stroke-width="1.3" />
+              <line x1="414" y1="118" x2="414" y2="154" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-2)" />
+              <line x1="504" y1="118" x2="504" y2="136" stroke="#222" stroke-width="1.3" />
+              <line x1="324" y1="136" x2="504" y2="136" stroke="#222" stroke-width="1.3" />
+
+              <line x1="414" y1="214" x2="414" y2="250" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-2)" />
+
+              <line x1="384" y1="280" x2="351" y2="280" stroke="#222" stroke-width="1.3" />
+              <line x1="351" y1="280" x2="351" y2="352" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-2)" />
+              <text x="308" y="270" class="small">Revisi</text>
+
+              <line x1="444" y1="280" x2="495" y2="280" stroke="#222" stroke-width="1.3" />
+              <line x1="495" y1="280" x2="495" y2="352" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-2)" />
+              <text x="500" y="270" class="small">Lanjut</text>
+
+              <line x1="351" y1="396" x2="351" y2="548" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-2)" />
+              <line x1="495" y1="396" x2="495" y2="448" stroke="#222" stroke-width="1.3" />
+              <line x1="495" y1="448" x2="414" y2="448" stroke="#222" stroke-width="1.3" />
+              <line x1="414" y1="448" x2="414" y2="448" stroke="#222" stroke-width="1.3" />
+
+              <line x1="414" y1="508" x2="492" y2="508" stroke="#222" stroke-width="1.3" />
+              <line x1="492" y1="508" x2="492" y2="548" stroke="#222" stroke-width="1.3" marker-end="url(#arrow-2)" />
+              <text x="500" y="498" class="small">Selesai tahap ini</text>
+
+              <rect x="602" y="238" width="90" height="62" fill="#fff" stroke="#666" />
+              <text x="610" y="256" class="small">
+                <tspan x="610" dy="0">Respons dan status</tspan>
+                <tspan x="610" dy="13">nasabah dipantau</tspan>
+                <tspan x="610" dy="13">dari antrean kerja</tspan>
+              </text>
+
+              <rect x="602" y="360" width="90" height="62" fill="#fff" stroke="#666" />
+              <text x="610" y="378" class="small">
+                <tspan x="610" dy="0">Nasabah atau</tspan>
+                <tspan x="610" dy="13">internal memberi</tspan>
+                <tspan x="610" dy="13">perbaikan data</tspan>
+              </text>
+
+              <rect x="728" y="160" width="142" height="70" fill="#fff" stroke="#666" />
+              <text x="736" y="178" class="small">
+                <tspan x="736" dy="0">AKS 1: lanjutan dari 5a</tspan>
+                <tspan x="736" dy="13">AKS 2: lanjutan dari 5b</tspan>
+                <tspan x="736" dy="13">AKS 3: antrean kerja</tspan>
+                <tspan x="736" dy="13">siap ditinjau internal</tspan>
+              </text>
+
+              <rect x="728" y="264" width="142" height="74" fill="#fff" stroke="#666" />
+              <text x="736" y="282" class="small">
+                <tspan x="736" dy="0">Ruang Kerja dan Tinjauan</tspan>
+                <tspan x="736" dy="13">Internal dipakai untuk</tspan>
+                <tspan x="736" dy="13">menilai apakah transaksi</tspan>
+                <tspan x="736" dy="13">lanjut atau revisi.</tspan>
+              </text>
+
+              <rect x="728" y="374" width="142" height="74" fill="#fff" stroke="#666" />
+              <text x="736" y="392" class="small">
+                <tspan x="736" dy="0">Jika revisi, data dikembalikan</tspan>
+                <tspan x="736" dy="13">ke pihak yang relevan untuk</tspan>
+                <tspan x="736" dy="13">dilengkapi sebelum review</tspan>
+                <tspan x="736" dy="13">berikutnya.</tspan>
+              </text>
+
+              <rect x="728" y="484" width="142" height="74" fill="#fff" stroke="#666" />
+              <text x="736" y="502" class="small">
+                <tspan x="736" dy="0">Jika lengkap, transaksi</tspan>
+                <tspan x="736" dy="13">diteruskan ke proses</tspan>
+                <tspan x="736" dy="13">underwriting lanjutan</tspan>
+                <tspan x="736" dy="13">sesuai kewenangan.</tspan>
+              </text>
+
+              <rect x="900" y="202" width="138" height="84" fill="#fff" stroke="#666" />
+              <text x="908" y="220" class="small">
+                <tspan x="908" dy="0">Kegiatan 6-7:</tspan>
+                <tspan x="908" dy="13">Antrean kerja tidak dipantau</tspan>
+                <tspan x="908" dy="13">atau status transaksi tertunda</tspan>
+                <tspan x="908" dy="13">(Risiko Operasional)</tspan>
+                <tspan x="908" dy="13">SLA: monitoring harian</tspan>
+              </text>
+
+              <rect x="900" y="346" width="138" height="84" fill="#fff" stroke="#666" />
+              <text x="908" y="364" class="small">
+                <tspan x="908" dy="0">Kegiatan 8:</tspan>
+                <tspan x="908" dy="13">Perbaikan data terlambat</tspan>
+                <tspan x="908" dy="13">sehingga review tertunda</tspan>
+                <tspan x="908" dy="13">(Risiko Operasional)</tspan>
+                <tspan x="908" dy="13">SLA: follow up kelengkapan</tspan>
+              </text>
+
+              <rect x="900" y="486" width="138" height="84" fill="#fff" stroke="#666" />
+              <text x="908" y="504" class="small">
+                <tspan x="908" dy="0">Kegiatan 9-10:</tspan>
+                <tspan x="908" dy="13">Transaksi siap review tetapi</tspan>
+                <tspan x="908" dy="13">belum diteruskan tepat waktu</tspan>
+                <tspan x="908" dy="13">(Risiko Operasional)</tspan>
+                <tspan x="908" dy="13">SLA: eskalasi sesuai kewenangan</tspan>
+              </text>
+            </svg>
+          </div>
+
+          <div class="page-footer">
+            <span>PROSEDUR UNDERWRITING</span>
+            <span class="page-no">20</span>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      const stack = document.getElementById("stack");
+      const viewport = document.getElementById("viewport");
+
+      function setZoom(value) {
+        stack.style.transform = `scale(${value})`;
+      }
+
+      document.querySelectorAll("[data-zoom]").forEach((button) => {
+        button.addEventListener("click", () => setZoom(Number(button.dataset.zoom)));
+      });
+
+      document.getElementById("fit-width").addEventListener("click", () => {
+        const available = viewport.clientWidth - 40;
+        const scale = Math.min(1, available / stack.offsetWidth);
+        setZoom(scale);
+      });
+    </script>
+  </body>
+</html>

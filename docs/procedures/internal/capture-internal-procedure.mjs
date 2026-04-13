@@ -1,0 +1,361 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { chromium } from "playwright";
+
+const baseUrl = "https://web-automation-underwriting-ritel.vercel.app";
+const rootDir = path.resolve("docs/procedures/internal");
+const assetsDir = path.join(rootDir, "assets");
+
+const viewport = { width: 1440, height: 2200 };
+
+async function ensureDir(dir) {
+  await fs.mkdir(dir, { recursive: true });
+}
+
+async function writeFlowchartHtml(filePath) {
+  const html = `<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <title>Flowchart Internal</title>
+    <style>
+      body {
+        margin: 0;
+        background: #ffffff;
+        font-family: Arial, sans-serif;
+        color: #111827;
+      }
+      .page {
+        width: 1620px;
+        margin: 0 auto;
+        padding: 18px 16px 22px;
+      }
+      .title {
+        margin: 0 0 10px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+      svg text {
+        font-family: Arial, sans-serif;
+        fill: #111827;
+      }
+      .small {
+        font-size: 12px;
+      }
+      .medium {
+        font-size: 13px;
+      }
+      .head {
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .lane-head {
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .note-head {
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .italic {
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="title">001/PRC/WAU/2026/001 - Proses Entri Internal Property Safe</div>
+      <svg width="1600" height="980" viewBox="0 0 1600 980" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#222" />
+          </marker>
+        </defs>
+
+        <rect x="20" y="25" width="1520" height="80" fill="#79b7e3" stroke="#222" stroke-width="1.5" />
+        <text x="32" y="48" class="medium">
+          <tspan x="32" dy="0">Nama Proses</tspan>
+          <tspan dx="18">:</tspan>
+          <tspan dx="10">Proses Entri Internal Property Safe</tspan>
+          <tspan x="32" dy="22">Group</tspan>
+          <tspan dx="60">:</tspan>
+          <tspan dx="10">Group Underwriting Ritel</tspan>
+          <tspan x="32" dy="22">Direktorat</tspan>
+          <tspan dx="28">:</tspan>
+          <tspan dx="10">Direktorat Operasional</tspan>
+        </text>
+
+        <rect x="20" y="105" width="1520" height="850" fill="#fff" stroke="#222" stroke-width="1.5" />
+        <rect x="20" y="105" width="1520" height="56" fill="#dddddd" stroke="#222" stroke-width="1.5" />
+        <line x1="300" y1="105" x2="300" y2="955" stroke="#222" stroke-width="1.2" />
+        <line x1="710" y1="105" x2="710" y2="955" stroke="#222" stroke-width="1.2" />
+        <line x1="890" y1="105" x2="890" y2="955" stroke="#222" stroke-width="1.2" />
+        <line x1="1150" y1="105" x2="1150" y2="955" stroke="#222" stroke-width="1.2" />
+        <line x1="20" y1="161" x2="1540" y2="161" stroke="#222" stroke-width="1.2" />
+
+        <text x="160" y="140" text-anchor="middle" class="lane-head">Penjelasan</text>
+        <text x="505" y="140" text-anchor="middle" class="lane-head">Group Underwriting</text>
+        <text x="800" y="140" text-anchor="middle" class="lane-head">Pihak Ketiga</text>
+        <text x="1020" y="140" text-anchor="middle" class="lane-head">Keterangan</text>
+        <text x="1345" y="140" text-anchor="middle" class="lane-head">Risiko &amp; SLA</text>
+
+        <rect x="40" y="300" width="240" height="70" fill="#fff" stroke="#666" />
+        <text x="48" y="320" class="small">
+          <tspan x="48" dy="0">1. Membuka Web Automation</tspan>
+          <tspan x="48" dy="16">dengan peran Internal lalu</tspan>
+          <tspan x="48" dy="16">memilih produk Property Safe</tspan>
+        </text>
+
+        <rect x="40" y="392" width="240" height="70" fill="#fff" stroke="#666" />
+        <text x="48" y="412" class="small">
+          <tspan x="48" dy="0">2. Kondisi, data minimum</tspan>
+          <tspan x="48" dy="16">simulasi premi lengkap atau</tspan>
+          <tspan x="48" dy="16">tidak lengkap</tspan>
+        </text>
+
+        <rect x="40" y="480" width="240" height="104" fill="#fff" stroke="#666" />
+        <text x="48" y="500" class="small">
+          <tspan x="48" dy="0">3a. Melengkapi data minimum</tspan>
+          <tspan x="48" dy="16">sebelum proses dilanjutkan</tspan>
+          <tspan x="48" dy="24">3b. Menjalankan Cek Premi</tspan>
+          <tspan x="48" dy="16">dan menampilkan hasil</tspan>
+          <tspan x="48" dy="16">simulasi awal</tspan>
+        </text>
+
+        <rect x="40" y="603" width="240" height="70" fill="#fff" stroke="#666" />
+        <text x="48" y="623" class="small">
+          <tspan x="48" dy="0">4. Menentukan tindak lanjut</tspan>
+          <tspan x="48" dy="16">setelah premi tampil:</tspan>
+          <tspan x="48" dy="16">kirim indikasi atau lanjut</tspan>
+          <tspan x="48" dy="16">ke Isi Data</tspan>
+        </text>
+
+        <rect x="40" y="692" width="240" height="94" fill="#fff" stroke="#666" />
+        <text x="48" y="712" class="small">
+          <tspan x="48" dy="0">5a. Mengirim indikasi ke</tspan>
+          <tspan x="48" dy="16">calon tertanggung melalui</tspan>
+          <tspan x="48" dy="16">link, WhatsApp, atau email</tspan>
+          <tspan x="48" dy="24">5b. Melanjutkan transaksi</tspan>
+          <tspan x="48" dy="16">ke Isi Data, Ruang Kerja,</tspan>
+          <tspan x="48" dy="16">dan Tinjauan Internal</tspan>
+        </text>
+
+        <rect x="472" y="178" width="96" height="40" rx="20" ry="20" fill="#fff" stroke="#222" stroke-width="1.2" />
+        <text x="520" y="202" text-anchor="middle" class="head">Mulai</text>
+
+        <polygon points="472,242 578,242 578,300 562,292 562,300 472,300" fill="#f6b37a" stroke="#222" stroke-width="1.2" />
+        <text x="525" y="266" text-anchor="middle" class="small">
+          <tspan x="525" dy="0">Pilih Produk</tspan>
+          <tspan x="525" dy="16">Property Safe</tspan>
+        </text>
+
+        <rect x="490" y="325" width="60" height="64" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+        <text x="520" y="363" text-anchor="middle" class="head">1</text>
+
+        <polygon points="520,420 555,455 520,490 485,455" fill="#fff" stroke="#222" stroke-width="1.2" />
+        <text x="520" y="460" text-anchor="middle" class="head">2</text>
+
+        <rect x="355" y="525" width="64" height="62" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+        <text x="387" y="562" text-anchor="middle" class="head">3a</text>
+
+        <rect x="595" y="525" width="64" height="62" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+        <text x="627" y="562" text-anchor="middle" class="head">3b</text>
+
+        <polygon points="520,618 555,653 520,688 485,653" fill="#fff" stroke="#222" stroke-width="1.2" />
+        <text x="520" y="658" text-anchor="middle" class="head">4</text>
+
+        <rect x="420" y="715" width="64" height="62" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+        <text x="452" y="752" text-anchor="middle" class="head">5a</text>
+
+        <rect x="610" y="715" width="64" height="62" fill="#d7e5f4" stroke="#577aa0" stroke-width="1.2" />
+        <text x="642" y="752" text-anchor="middle" class="head">5b</text>
+
+        <polygon points="344,870 430,870 418,914 356,914" fill="#cfe0f6" stroke="#666" />
+        <text x="387" y="888" text-anchor="middle" class="small">
+          <tspan x="387" dy="0">Lengkapi</tspan>
+          <tspan x="387" dy="15">Ulang</tspan>
+        </text>
+
+        <polygon points="484,870 570,870 558,914 496,914" fill="#cfe0f6" stroke="#666" />
+        <text x="527" y="888" text-anchor="middle" class="small">
+          <tspan x="527" dy="0">Indikasi</tspan>
+          <tspan x="527" dy="15">Terkirim</tspan>
+        </text>
+
+        <polygon points="624,870 710,870 698,914 636,914" fill="#cfe0f6" stroke="#666" />
+        <text x="667" y="888" text-anchor="middle" class="small">
+          <tspan x="667" dy="0">Masuk</tspan>
+          <tspan x="667" dy="15">Ruang Kerja</tspan>
+        </text>
+
+        <line x1="520" y1="218" x2="520" y2="242" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+        <line x1="520" y1="300" x2="520" y2="325" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+        <line x1="520" y1="389" x2="520" y2="420" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+
+        <line x1="485" y1="455" x2="387" y2="455" stroke="#222" stroke-width="1.4" />
+        <line x1="387" y1="455" x2="387" y2="525" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+        <text x="405" y="440" class="small">Tidak Lengkap</text>
+
+        <line x1="555" y1="455" x2="627" y2="455" stroke="#222" stroke-width="1.4" />
+        <line x1="627" y1="455" x2="627" y2="525" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+        <text x="585" y="440" class="small">Lengkap</text>
+
+        <line x1="387" y1="587" x2="387" y2="870" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+
+        <line x1="627" y1="587" x2="627" y2="618" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+
+        <line x1="485" y1="653" x2="452" y2="653" stroke="#222" stroke-width="1.4" />
+        <line x1="452" y1="653" x2="452" y2="715" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+        <text x="420" y="641" class="small">Indikasi</text>
+
+        <line x1="555" y1="653" x2="642" y2="653" stroke="#222" stroke-width="1.4" />
+        <line x1="642" y1="653" x2="642" y2="715" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+        <text x="600" y="641" class="small">Isi Data</text>
+
+        <line x1="452" y1="777" x2="527" y2="777" stroke="#222" stroke-width="1.4" />
+        <line x1="527" y1="777" x2="527" y2="870" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+
+        <line x1="642" y1="777" x2="667" y2="777" stroke="#222" stroke-width="1.4" />
+        <line x1="667" y1="777" x2="667" y2="870" stroke="#222" stroke-width="1.4" marker-end="url(#arrow)" />
+
+        <rect x="748" y="484" width="108" height="118" fill="#fff" stroke="#666" />
+        <text x="758" y="506" class="small">
+          <tspan x="758" dy="0">Calon</tspan>
+          <tspan x="758" dy="16">tertanggung</tspan>
+          <tspan x="758" dy="16">menerima</tspan>
+          <tspan x="758" dy="16">indikasi dan</tspan>
+          <tspan x="758" dy="16">membuka link</tspan>
+        </text>
+
+        <rect x="748" y="670" width="108" height="104" fill="#fff" stroke="#666" />
+        <text x="758" y="692" class="small">
+          <tspan x="758" dy="0">Respons dan</tspan>
+          <tspan x="758" dy="16">status nasabah</tspan>
+          <tspan x="758" dy="16">dipantau dari</tspan>
+          <tspan x="758" dy="16">antrean kerja</tspan>
+        </text>
+
+        <rect x="912" y="430" width="220" height="124" fill="#fff" stroke="#666" />
+        <text x="922" y="452" class="small">
+          <tspan x="922" dy="0">Dapat berupa:</tspan>
+          <tspan x="922" dy="18">Data CIF / nasabah</tspan>
+          <tspan x="922" dy="16">Jenis bangunan</tspan>
+          <tspan x="922" dy="16">Penggunaan bangunan</tspan>
+          <tspan x="922" dy="16">Kelas konstruksi</tspan>
+          <tspan x="922" dy="16">Lokasi dan nilai obyek</tspan>
+        </text>
+
+        <rect x="912" y="580" width="220" height="122" fill="#fff" stroke="#666" />
+        <text x="922" y="602" class="small">
+          <tspan x="922" dy="0">Kirim indikasi dipakai untuk</tspan>
+          <tspan x="922" dy="16">membuka penawaran awal,</tspan>
+          <tspan x="922" dy="16">membagi link, dan memberi</tspan>
+          <tspan x="922" dy="16">akses lanjutan ke calon</tspan>
+          <tspan x="922" dy="16">tertanggung.</tspan>
+        </text>
+
+        <rect x="912" y="728" width="220" height="128" fill="#fff" stroke="#666" />
+        <text x="922" y="748" class="small">
+          <tspan x="922" dy="0">Ruang Kerja Saya dan</tspan>
+          <tspan x="922" dy="16">Tinjauan Internal dipakai</tspan>
+          <tspan x="922" dy="16">untuk melihat transaksi</tspan>
+          <tspan x="922" dy="16">yang perlu revisi, sedang</tspan>
+          <tspan x="922" dy="16">review, atau sudah siap</tspan>
+          <tspan x="922" dy="16">ditindaklanjuti.</tspan>
+        </text>
+
+        <rect x="1170" y="286" width="344" height="118" fill="#fff" stroke="#666" />
+        <text x="1182" y="308" class="small">
+          <tspan x="1182" dy="0">Kegiatan 1:</tspan>
+          <tspan x="1182" dy="16">Salah peran / salah produk saat mulai</tspan>
+          <tspan x="1182" dy="16">(Risiko Operasional)</tspan>
+          <tspan x="1182" dy="16">SLA: validasi saat transaksi dibuka</tspan>
+        </text>
+
+        <rect x="1170" y="472" width="344" height="152" fill="#fff" stroke="#666" />
+        <text x="1182" y="494" class="small">
+          <tspan x="1182" dy="0">Kegiatan 2-4:</tspan>
+          <tspan x="1182" dy="16">Data minimum tidak lengkap</tspan>
+          <tspan x="1182" dy="16">atau hasil simulasi belum akurat</tspan>
+          <tspan x="1182" dy="16">(Risiko Operasional)</tspan>
+          <tspan x="1182" dy="16">Keterlambatan pengiriman indikasi</tspan>
+          <tspan x="1182" dy="16">atau salah memilih tindak lanjut</tspan>
+          <tspan x="1182" dy="16">(Risiko Operasional)</tspan>
+        </text>
+
+        <rect x="1170" y="714" width="344" height="124" fill="#fff" stroke="#666" />
+        <text x="1182" y="736" class="small">
+          <tspan x="1182" dy="0">Kegiatan 5a-5b:</tspan>
+          <tspan x="1182" dy="16">Terlambat menindaklanjuti antrean</tspan>
+          <tspan x="1182" dy="16">Ruang Kerja / Tinjauan Internal</tspan>
+          <tspan x="1182" dy="16">(Risiko Operasional)</tspan>
+          <tspan x="1182" dy="16">SLA: follow up sesuai status transaksi</tspan>
+        </text>
+      </svg>
+    </div>
+  </body>
+</html>`;
+
+  await fs.writeFile(filePath, html, "utf8");
+}
+
+async function fillInternalSimulation(page) {
+  await page.goto(`${baseUrl}/?journey=property-internal`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle");
+
+  const inputs = page.locator("input");
+  const selects = page.locator("select");
+
+  await inputs.nth(0).fill("Sony Laksono");
+  await inputs.nth(1).fill("081298765432");
+  await inputs.nth(2).fill("sony.laksono@email.com");
+  await selects.nth(0).selectOption("Nasabah Perorangan");
+  await selects.nth(1).selectOption("Rumah Tinggal");
+  await page.waitForTimeout(200);
+  await selects.nth(2).selectOption("Hunian");
+  await selects.nth(3).selectOption("Kelas 1");
+  await inputs.nth(3).fill("Jl. Sudirman Kav. 44, Jakarta Selatan");
+  await selects.nth(4).selectOption("Bangunan");
+  await inputs.nth(4).fill("1000000000");
+  await page.getByRole("button", { name: "CEK PREMI" }).click();
+  await page.waitForTimeout(900);
+}
+
+async function capture() {
+  await ensureDir(assetsDir);
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({ viewport });
+
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.screenshot({ path: path.join(assetsDir, "01-beranda-internal.png"), fullPage: true });
+
+  await fillInternalSimulation(page);
+  await page.screenshot({ path: path.join(assetsDir, "02-simulasi-dan-hasil-premi.png"), fullPage: true });
+
+  await page.getByRole("button", { name: "Kirim Indikasi" }).click();
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: path.join(assetsDir, "03-modal-kirim-indikasi.png"), fullPage: true });
+
+  await fillInternalSimulation(page);
+  await page.getByRole("button", { name: "Isi Data" }).last().click();
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: path.join(assetsDir, "04-langkah-isi-data.png"), fullPage: true });
+
+  await page.goto(`${baseUrl}/?journey=internal-workspace`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: path.join(assetsDir, "05-ruang-kerja-saya.png"), fullPage: true });
+
+  await page.goto(`${baseUrl}/?journey=review-internal`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: path.join(assetsDir, "06-tinjauan-internal.png"), fullPage: true });
+
+  const flowHtmlPath = path.join(assetsDir, "_flowchart_internal.html");
+  await writeFlowchartHtml(flowHtmlPath);
+  await page.goto(`file:///${flowHtmlPath.replace(/\\/g, "/")}`, { waitUntil: "load" });
+  await page.screenshot({ path: path.join(assetsDir, "07-flowchart-internal.png"), fullPage: true });
+
+  await browser.close();
+}
+
+capture().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
