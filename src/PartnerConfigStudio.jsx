@@ -2379,12 +2379,11 @@ function PartnerConfigStudio({
                     </button>
                   </div>
                 </div>
-                <div className="max-h-[420px] space-y-3 overflow-y-auto border-t border-[#D9E1EA] px-4 py-4">
+                <div className="max-h-[420px] space-y-2 overflow-y-auto border-t border-[#D9E1EA] px-4 py-3">
                   {lifeGuardAdditionalClauseOptions.map((clause) => (
                     <PartnerClauseAccordionRow
                       key={clause.title}
                       title={clause.title}
-                      subtitle={clause.lob}
                       detail={getClauseDescription(clause.title, "Klausula ini dapat diaktifkan sesuai kebutuhan produk partner dan akan ikut dalam package default.")}
                       selected={master.clausePackage.includes(clause.title)}
                       expanded={partnerClauseExpanded === `life-guard:${clause.title}`}
@@ -3035,14 +3034,13 @@ function PartnerConfigStudio({
 
             <div className="mt-6">
               <div className="mb-4 text-[14px] font-medium text-slate-950">Klausul yang Berlaku</div>
-              <div className="space-y-3">
+              <div className="space-y-2">
               {CLAUSE_LIBRARY.map((clause) => {
                 const active = master.clausePackage.includes(clause);
                 return (
                   <PartnerClauseAccordionRow
                     key={clause}
                     title={fixDisplayText(clause)}
-                    subtitle="Aktif bila dipilih untuk package partner"
                     detail={getClauseDescription(clause)}
                     selected={active}
                     expanded={partnerClauseExpanded === `generic-clause:${clause}`}
@@ -4478,8 +4476,8 @@ function PartnerClauseAccordionRow({
   icon: Icon = FileCode2,
 }) {
   return (
-    <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
-      <div className="flex items-center gap-3 px-3.5 py-3">
+    <div className="rounded-[14px] border border-[#C9D5E3] bg-[#F8FBFE]">
+      <div className="flex items-center gap-2.5 px-3 py-2.5">
         <button
           type="button"
           onClick={onSelect}
@@ -4493,17 +4491,17 @@ function PartnerClauseAccordionRow({
         <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[#0A4D82]">
-              <Icon className="h-4 w-4 shrink-0" />
-              <div className="truncate text-[15px] font-semibold">{title}</div>
+              <Icon className="h-[14px] w-[14px] shrink-0" />
+              <div className="truncate text-[14px] font-medium leading-5">{title}</div>
             </div>
-            <div className="mt-0.5 text-[12px] text-slate-500">{subtitle}</div>
+            {subtitle ? <div className="mt-0.5 text-[11px] leading-4 text-slate-500">{subtitle}</div> : null}
           </div>
           <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
         </button>
       </div>
       {expanded ? (
-        <div className="border-t border-[#D6E0EA] px-3.5 py-3">
-          <div className="text-[13px] leading-6 text-slate-700">{detail}</div>
+        <div className="border-t border-[#D6E0EA] px-3 py-2.5">
+          <div className="text-[12px] leading-5 text-slate-700">{detail}</div>
         </div>
       ) : null}
     </div>
