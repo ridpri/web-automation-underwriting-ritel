@@ -77,7 +77,9 @@ function SummaryRow({ label, value }) {
 function RiskRow({ item, totalValue, checked, setChecked, expanded, setExpanded, extra }) {
   const Icon = item.icon;
   const deductibleText = item.key === "earthquake" ? `2,5% dari Rp ${rp(totalValue)}` : item.deductible;
-  const isDirectDeductible = String(deductibleText || "").trim().toLowerCase().startsWith("tidak dikenakan risiko sendiri");
+const isDirectDeductible = ["tanpa biaya sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) =>
+  String(deductibleText || "").trim().toLowerCase().startsWith(token)
+);
   return <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]"><div className="flex items-center gap-3 px-3.5 py-3"><input type="checkbox" checked={checked} onChange={() => setChecked(!checked)} className="h-5 w-5 rounded border-slate-300 text-[#0A4D82]" /><button type="button" onClick={() => setExpanded(!expanded)} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"><div className="min-w-0"><div className="flex items-center gap-2 text-[#0A4D82]"><Icon className="h-4 w-4 shrink-0" /><div className="truncate text-[15px] font-semibold">{item.title}</div></div><div className="mt-0.5 text-[12px] text-slate-500">Premi: Rp {rp(Math.round(totalValue * item.rate))}</div></div><ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} /></button></div>{expanded ? <div className="border-t border-[#D6E0EA] px-3.5 py-3"><div className="text-[13px] leading-6 text-slate-700" style={{ textAlign: "justify" }}>{item.detail}</div><div className="mt-2 text-[12px] leading-6 text-slate-600" style={{ textAlign: "justify" }}>{isDirectDeductible ? deductibleText : <><span className="font-semibold text-slate-700">Biaya sendiri saat klaim: </span><span>{deductibleText}</span></>}</div>{extra ? <div className="mt-3">{extra}</div> : null}</div> : null}</div>;
 }
 function UploadCard({ title, done, onCapture }) {

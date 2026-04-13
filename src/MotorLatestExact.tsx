@@ -594,13 +594,13 @@ function calcCarComp(q: any) {
 function deductibleText(flowType: FlowType, vehicleType: string, itemId: string) {
   if (flowType === "motor") {
     if (itemId === "main") return "Rp150.000.";
-    if (itemId === "tpl") return "Jaminan ini tidak dikenakan risiko sendiri";
+    if (itemId === "tpl") return "Tanpa biaya sendiri saat klaim.";
     if (itemId === "srcc" || itemId === "ts") return "10% dari nilai yang disetujui, paling sedikit Rp500.000,- per kejadian.";
     if (itemId === "flood" || itemId === "quake") return "10% dari nilai kerugian, minimum Rp500.000,-- untuk setiap kejadian.";
     return "";
   }
   if (itemId === "main") return getCarCategory(vehicleType) === "Angkutan Penumpang" ? "Rp300.000." : "Rp500.000.";
-  if (itemId === "tpl" || itemId === "driverPa" || itemId === "passengerPa") return "Jaminan ini tidak dikenakan risiko sendiri";
+  if (itemId === "tpl" || itemId === "driverPa" || itemId === "passengerPa") return "Tanpa biaya sendiri saat klaim.";
   if (itemId === "srcc" || itemId === "ts") return "10% dari nilai yang disetujui, paling sedikit Rp500.000,- per kejadian.";
   if (itemId === "flood" || itemId === "quake") return "10% dari nilai kerugian, minimum Rp500.000,-- untuk setiap kejadian.";
   if (itemId === "theftByOwnDriver") return "10% dari Total Harga Pertanggungan.";
@@ -610,9 +610,9 @@ function deductibleText(flowType: FlowType, vehicleType: string, itemId: string)
 
 function mainCoverText(flowType: FlowType) {
   if (flowType === "carComp") {
-    return "Menjamin kerugian atau kerusakan pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tidak dipotong risiko sendiri.";
+    return "Menjamin kerugian atau kerusakan pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tanpa biaya sendiri saat klaim.";
   }
-  return "Menjamin kerugian total pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan mencapai sedikitnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tidak dipotong risiko sendiri.";
+  return "Menjamin kerugian total pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan mencapai sedikitnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tanpa biaya sendiri saat klaim.";
 }
 
 function mainCoverTitle(flowType: FlowType) {
@@ -789,7 +789,7 @@ function AccordionRiskRow({ title, premium, summary, detail, deductible, checked
       {expanded ? (
         <div className="border-t border-[#D6E0EA] px-3.5 py-3">
           <div className="whitespace-pre-line text-[13px] leading-5 text-slate-700">{summary}</div>
-          {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{String(deductible || "").trim().toLowerCase().startsWith("tidak dikenakan risiko sendiri") ? deductible : <><span className="font-semibold text-slate-700">Risiko Sendiri:</span> {deductible}</>}</div> : null}
+          {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{["tanpa biaya sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) => String(deductible || "").trim().toLowerCase().startsWith(token)) ? deductible : <><span className="font-semibold text-slate-700">Biaya sendiri saat klaim:</span> {deductible}</>}</div> : null}
           {detail ? <div className="mt-2 whitespace-pre-line text-[12px] leading-5 text-slate-500">{detail}</div> : null}
           {extra ? <div className="mt-3">{extra}</div> : null}
         </div>
@@ -1139,11 +1139,11 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
                                           setAt(flowType, "quote.extensions.passengerPa.amount", capped);
                                         }} inputMode="numeric" /></div>
                                         <div><FieldLabel label="Jumlah penumpang" compact /><SelectInput value={String(selected.quote.extensions.passengerPa.seats || "")} onChange={(value: string) => setAt(flowType, "quote.extensions.passengerPa.seats", value)} options={["1", "2", "3", "4", "5", "6", "7"]} placeholder="Jumlah penumpangnya berapa?" /></div>
-                                        <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,1% dari nilai pertanggungan per penumpang. Jaminan ini tidak dikenakan risiko sendiri.</div>
+                      <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,1% dari nilai pertanggungan per penumpang. Tanpa biaya sendiri saat klaim.</div>
                                       </div>
                                     ) : item.type === "amount" ? (
                                       <div className="grid gap-3 md:grid-cols-2">
-                                        <div><FieldLabel label={item.id === "tpl" ? "Nilai pertanggungan TJH" : item.id === "driverPa" ? "Nilai pertanggungan pengemudi" : item.id === "equipment" ? "Nilai perlengkapan tambahan" : "Nilai pertanggungan"} compact /><TextInput value={selected.quote.extensions[item.id].amount ? formatRupiah(Number(selected.quote.extensions[item.id].amount)) : ""} onChange={(value: string) => {
+                        <div><FieldLabel label={item.id === "tpl" ? "Nilai pertanggungan pihak ketiga" : item.id === "driverPa" ? "Nilai pertanggungan pengemudi" : item.id === "equipment" ? "Nilai perlengkapan tambahan" : "Nilai pertanggungan"} compact /><TextInput value={selected.quote.extensions[item.id].amount ? formatRupiah(Number(selected.quote.extensions[item.id].amount)) : ""} onChange={(value: string) => {
                                             const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
                                             let capped = raw;
 
@@ -1164,7 +1164,7 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
                                             setAt(flowType, `quote.extensions.${item.id}.amount`, capped);
                                           }} inputMode="numeric" /></div>
                                         {item.id === "equipment" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Batas maksimal: {formatRupiah(calc.details.equipmentCap || 0)}</div> : null}
-                                        {item.id === "driverPa" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,5% dari nilai pertanggungan. Jaminan ini tidak dikenakan risiko sendiri.</div> : null}
+                        {item.id === "driverPa" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,5% dari nilai pertanggungan. Tanpa biaya sendiri saat klaim.</div> : null}
                                       </div>
                                     ) : null : null}
                                   />
@@ -1550,6 +1550,7 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
     </div>
   );
 }
+
 
 
 

@@ -478,7 +478,9 @@ function ProposalRow({ label, value, strong = false }) {
 }
 
 function deductibleIsDirectText(value) {
-  return String(value || "").trim().toLowerCase().startsWith("tidak dikenakan risiko sendiri");
+  return ["tanpa biaya sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) =>
+    String(value || "").trim().toLowerCase().startsWith(token)
+  );
 }
 
 function ProposalAccordion({ title, subtitle, open, onToggle, children }) {

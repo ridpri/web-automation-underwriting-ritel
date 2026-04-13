@@ -130,7 +130,9 @@ export function PaymentInfoPanel({ title, children }: any) {
 }
 
 export function AccordionRiskRow({ title, premium, summary, detail, deductible, checked, onToggleChecked, expanded, onToggleExpand, alwaysIncluded = false, extra, itemIcon }: any) {
-  const deductibleIsDirect = String(deductible || "").trim().toLowerCase().startsWith("tidak dikenakan risiko sendiri");
+  const deductibleIsDirect = ["tanpa biaya sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) =>
+    String(deductible || "").trim().toLowerCase().startsWith(token)
+  );
   return (
     <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
       <div className="flex items-center gap-3 px-3.5 py-3">
