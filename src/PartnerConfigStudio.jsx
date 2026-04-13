@@ -422,6 +422,14 @@ const WORDING_OPTION_META = {
   "PSAKDI Bilingual": "Wording utama dua bahasa untuk partner yang membutuhkan dokumen bilingual.",
 };
 
+const WORDING_OPTIONS = ["PSAKDI", "PSAKDI Bilingual"];
+
+function renderWordingLabel(value) {
+  if (value === "PSAKDI") return "Polis Standar Asuransi Kecelakaan Diri Indonesia";
+  if (value === "PSAKDI Bilingual") return "Polis Standar Asuransi Kecelakaan Diri Indonesia (Bilingual)";
+  return value;
+}
+
 const CLAUSE_DESCRIPTIONS = {
   "Klausula 72 Jam": "Mengatur ketentuan pelaporan atau pemberitahuan dalam batas waktu yang disepakati.",
   "Klausula Kehamilan": "Mengatur batasan atau ketentuan perlindungan yang berkaitan dengan kehamilan.",
@@ -2305,20 +2313,14 @@ function PartnerConfigStudio({
 
               <div className="mt-6 border-t border-[#E6EDF5] pt-6">
                 <div className="mb-4 text-[14px] font-medium text-slate-950">Wording</div>
-                <div className="space-y-3">
-                  {["PSAKDI", "PSAKDI Bilingual"].map((wording) => (
-                    <PartnerClauseAccordionRow
-                      key={wording}
-                      title={wording}
-                      subtitle="Pilih salah satu wording utama"
-                      detail={WORDING_OPTION_META[wording]}
-                      selected={(master.wordingType || "PSAKDI") === wording}
-                      expanded={partnerClauseExpanded === `wording:${wording}`}
-                      onSelect={() => patchSection("master", { wordingType: wording })}
-                      onToggle={() => setPartnerClauseExpanded((prev) => (prev === `wording:${wording}` ? "" : `wording:${wording}`))}
-                      icon={FileSpreadsheet}
-                    />
-                  ))}
+                <SelectInput
+                  value={master.wordingType || "PSAKDI"}
+                  onChange={(value) => patchSection("master", { wordingType: value })}
+                  options={WORDING_OPTIONS}
+                  renderLabel={renderWordingLabel}
+                />
+                <div className="mt-2 text-[12px] leading-5 text-slate-500">
+                  {WORDING_OPTION_META[master.wordingType || "PSAKDI"]}
                 </div>
                 <div className="mt-4">
                   <PartnerClauseNoteCard title="Tambah klausula">
@@ -2600,20 +2602,14 @@ function PartnerConfigStudio({
             <SectionCard title="Wording & Klausul" subtitle="Klik setiap baris untuk melihat penjelasan detailnya.">
               <div>
                 <div className="mb-4 text-[14px] font-medium text-slate-950">Wording</div>
-                <div className="space-y-3">
-                  {["PSAKDI", "PSAKDI Bilingual"].map((wording) => (
-                    <PartnerClauseAccordionRow
-                      key={wording}
-                      title={wording}
-                      subtitle="Pilih salah satu wording utama"
-                      detail={WORDING_OPTION_META[wording]}
-                      selected={(master.wordingType || "PSAKDI") === wording}
-                      expanded={partnerClauseExpanded === `trip-wording:${wording}`}
-                      onSelect={() => patchSection("master", { wordingType: wording })}
-                      onToggle={() => setPartnerClauseExpanded((prev) => (prev === `trip-wording:${wording}` ? "" : `trip-wording:${wording}`))}
-                      icon={FileSpreadsheet}
-                    />
-                  ))}
+                <SelectInput
+                  value={master.wordingType || "PSAKDI"}
+                  onChange={(value) => patchSection("master", { wordingType: value })}
+                  options={WORDING_OPTIONS}
+                  renderLabel={renderWordingLabel}
+                />
+                <div className="mt-2 text-[12px] leading-5 text-slate-500">
+                  {WORDING_OPTION_META[master.wordingType || "PSAKDI"]}
                 </div>
               </div>
 
@@ -3026,23 +3022,14 @@ function PartnerConfigStudio({
           >
             <div>
               <div className="mb-4 text-[14px] font-medium text-slate-950">Wording</div>
-              <div className="space-y-3">
-                {["PSAKDI", "PSAKDI Bilingual"].map((wording) => {
-                  const active = (master.wordingType || "PSAKDI") === wording;
-                  return (
-                    <PartnerClauseAccordionRow
-                      key={wording}
-                      title={wording}
-                      subtitle="Pilih salah satu wording utama"
-                      detail={WORDING_OPTION_META[wording]}
-                      selected={active}
-                      expanded={partnerClauseExpanded === `generic-wording:${wording}`}
-                      onSelect={() => patchSection("master", { wordingType: wording })}
-                      onToggle={() => setPartnerClauseExpanded((prev) => (prev === `generic-wording:${wording}` ? "" : `generic-wording:${wording}`))}
-                      icon={FileSpreadsheet}
-                    />
-                  );
-                })}
+              <SelectInput
+                value={master.wordingType || "PSAKDI"}
+                onChange={(value) => patchSection("master", { wordingType: value })}
+                options={WORDING_OPTIONS}
+                renderLabel={renderWordingLabel}
+              />
+              <div className="mt-2 text-[12px] leading-5 text-slate-500">
+                {WORDING_OPTION_META[master.wordingType || "PSAKDI"]}
               </div>
             </div>
 
