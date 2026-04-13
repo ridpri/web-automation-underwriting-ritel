@@ -921,7 +921,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
 
       <div className="bg-[linear-gradient(135deg,#0A4D82_0%,#0F5F9C_60%,#1B78B6_100%)] pb-8">
         <div className="mx-auto max-w-[1280px] px-4 pt-8 md:px-6">
-          <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 text-white shadow-2xl shadow-[#08355A]/30 backdrop-blur">
+          <div className="mx-auto max-w-[960px] rounded-[28px] border border-white/15 bg-white/10 p-5 text-white shadow-2xl shadow-[#08355A]/30 backdrop-blur md:p-6">
             <div>
               <div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -933,22 +933,22 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                 <p className="mt-3 max-w-3xl text-[15px] leading-7 text-white/90 md:text-[17px]">
                   {activeVariant.heroSubtitle}
                 </p>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">Nasabah</div>
-                    <div className="mt-2 text-[16px] font-semibold text-white">{customerDisplay}</div>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-2xl bg-white/10 px-4 py-4 ring-1 ring-white/15">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">Nasabah</div>
+                    <div className="mt-2 text-[15px] font-semibold text-white">{customerDisplay}</div>
                   </div>
-                  <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">Properti</div>
-                    <div className="mt-2 text-[16px] font-semibold text-white">{objectSummaryLabel}</div>
+                  <div className="rounded-2xl bg-white/10 px-4 py-4 ring-1 ring-white/15">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">Properti</div>
+                    <div className="mt-2 text-[15px] font-semibold text-white">{objectSummaryLabel}</div>
                   </div>
-                  <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">Nilai yang Dilindungi</div>
-                    <div className="mt-2 text-[16px] font-semibold text-white">{coverageValue}</div>
+                  <div className="rounded-2xl bg-white/10 px-4 py-4 ring-1 ring-white/15">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">Nilai yang Dilindungi</div>
+                    <div className="mt-2 text-[15px] font-semibold text-white">{coverageValue}</div>
                   </div>
-                  <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">{coverageLabel}</div>
-                    <div className="mt-2 text-[16px] font-semibold text-white">{premiumValue}</div>
+                  <div className="rounded-2xl bg-white/10 px-4 py-4 ring-1 ring-white/15">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">{coverageLabel}</div>
+                    <div className="mt-2 text-[15px] font-semibold text-white">{premiumValue}</div>
                   </div>
                 </div>
               </div>
