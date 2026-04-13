@@ -2326,8 +2326,8 @@ function PartnerConfigStudio({
               <div className="mt-6 overflow-hidden rounded-[18px] border border-[#D9E1EA] bg-white">
                 <div className="flex items-start justify-between gap-4 border-b border-[#D9E1EA] px-5 py-4">
                   <div>
-                    <div className="text-[18px] font-semibold text-slate-950">Klausula Tambahan</div>
-                    <div className="mt-1 text-[12px] text-slate-500">Daftar klausula mengikuti LOB yang dipilih</div>
+                    <div className="text-[18px] font-semibold text-slate-950">Klausula</div>
+                    <div className="mt-1 text-[12px] text-slate-500">Pilih klausula yang berlaku untuk konfigurasi partner ini.</div>
                   </div>
                   <div className="rounded-full bg-[#EEF5FB] px-3 py-2 text-[12px] text-[#0A4D82]">
                     {lifeGuardAdditionalClauseOptions.filter((item) => master.clausePackage.includes(item.title)).length} terpilih
@@ -2381,7 +2381,7 @@ function PartnerConfigStudio({
                 </div>
               </div>
               <div className="mt-6">
-                <PartnerClauseNoteCard title="Tambah klausula">
+                <PartnerClauseNoteCard title="Klausula Tambahan">
                   <div className="grid gap-3">
                     <FormField label="Judul Klausula Tambahan">
                       <TextInput value={master.additionalClauseTitle || ""} onChange={(value) => patchSection("master", { additionalClauseTitle: value })} />
@@ -3033,7 +3033,7 @@ function PartnerConfigStudio({
             </div>
 
             <div className="mt-6">
-              <div className="mb-4 text-[14px] font-medium text-slate-950">Klausul yang Berlaku</div>
+              <div className="mb-4 text-[14px] font-medium text-slate-950">Klausula</div>
               <div className="space-y-2">
               {CLAUSE_LIBRARY.map((clause) => {
                 const active = master.clausePackage.includes(clause);
@@ -3054,7 +3054,7 @@ function PartnerConfigStudio({
             </div>
 
             <div className="mt-6">
-              <PartnerClauseNoteCard title="Klausul tambahan / subjectivity">
+              <PartnerClauseNoteCard title="Klausula Tambahan">
                 <TextAreaInput
                   rows={6}
                   value={master.additionalClauses || ""}
