@@ -4531,7 +4531,7 @@ function SectionCard({ title, subtitle, action, children }) {
 }
 
 function FormField({ label, required, helper, children }) {
-  const helperText = helper ?? FIELD_HELPERS[label];
+  const helperText = helper;
   return (
     <label className="block">
       <div className="mb-2">
