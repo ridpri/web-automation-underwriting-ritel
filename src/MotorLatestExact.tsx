@@ -1001,7 +1001,10 @@ export default function MotorLatestExact({
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.20),transparent_28%),radial-gradient(circle_at_80%_25%,rgba(255,255,255,0.14),transparent_24%),radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.12),transparent_24%)]" />
             <div className="absolute inset-0 bg-gradient-to-b from-[#0A4D82]/60 to-[#0A4D82]/75" />
             <div className="relative mx-auto max-w-[1800px] px-4 pt-6 md:px-6">
-              <button type="button" onClick={returnToLauncher} className="inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
+              <div className="flex items-center justify-between gap-3">
+                <button type="button" onClick={returnToLauncher} className="inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
+                <button type="button" tabIndex={-1} aria-hidden="true" className="pointer-events-none invisible inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
+              </div>
               <div className="mt-6 text-center text-white">
                 <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Selamat datang kembali, {userName}</div>
                 <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{flowType === "motor" ? "Total Loss Kendaraan - Motor" : flowType === "carComp" ? "Asuransi Mobil Comprehensive" : "Total Loss Kendaraan - Mobil"}</h1>
