@@ -41,6 +41,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { UserPillMenu } from "./components/UserPillMenu.jsx";
 
 const STORAGE_KEY = "partner-integration-studio-v3";
 
@@ -1454,6 +1455,9 @@ function PartnerConfigStudio({
   role: controlledRole = null,
   onRoleChange = null,
   onExit = null,
+  onOpenWorkspace = null,
+  onOpenQueue = null,
+  onOpenPartnerConfig = null,
   sessionName = "Taqwim (Internal)",
   sessionRoleLabel = "Internal",
 }) {
@@ -1474,6 +1478,7 @@ function PartnerConfigStudio({
   const [selectedFamily, setSelectedFamily] = useState(urlState.selectedFamily || cached?.selectedFamily || "");
   const [catalogSearch, setCatalogSearch] = useState(urlState.catalogSearch || cached?.catalogSearch || "");
   const [toast, setToast] = useState("");
+  const [headerAccountMenuOpen, setHeaderAccountMenuOpen] = useState(false);
   const [lifeGuardExpanded, setLifeGuardExpanded] = useState("main-accident");
   const [partnerClauseExpanded, setPartnerClauseExpanded] = useState("wording:PSAKDI");
   const [lifeGuardClauseSearch, setLifeGuardClauseSearch] = useState("");
@@ -1484,6 +1489,52 @@ function PartnerConfigStudio({
     [configs, selectedId]
   );
   const accountMeta = useMemo(() => getAccountMeta(role), [role]);
+  const accountMenuItems = useMemo(() => {
+    const openPartnerCatalog = () => {
+      setHeaderAccountMenuOpen(false);
+      setSelectedId(null);
+      setPortalView("catalog");
+    };
+
+    if (sessionRoleLabel === "Internal") {
+      return [
+        {
+          label: "Ruang Kerja Saya",
+          primary: true,
+          onClick: () => {
+            setHeaderAccountMenuOpen(false);
+            if (typeof onOpenWorkspace === "function") onOpenWorkspace();
+          },
+        },
+        {
+          label: "Antrean Internal",
+          onClick: () => {
+            setHeaderAccountMenuOpen(false);
+            if (typeof onOpenQueue === "function") onOpenQueue();
+          },
+        },
+        {
+          label: "Konfigurasi Partner",
+          onClick: () => {
+            if (typeof onOpenPartnerConfig === "function") {
+              setHeaderAccountMenuOpen(false);
+              onOpenPartnerConfig();
+              return;
+            }
+            openPartnerCatalog();
+          },
+        },
+      ];
+    }
+
+    return [
+      {
+        label: "Konfigurasi Partner",
+        primary: true,
+        onClick: openPartnerCatalog,
+      },
+    ];
+  }, [onOpenPartnerConfig, onOpenQueue, onOpenWorkspace, sessionRoleLabel]);
   const selectedCardMeta = useMemo(
     () => (selectedConfig ? getPortalCardMeta(selectedConfig.family) : null),
     [selectedConfig]
@@ -3727,6 +3778,9 @@ function PartnerConfigStudio({
           sessionRoleLabel={sessionRoleLabel}
           accountInitials={accountMeta.initials}
           onHome={exitToShell}
+          accountMenuOpen={headerAccountMenuOpen}
+          onToggleAccountMenu={() => setHeaderAccountMenuOpen((current) => !current)}
+          accountMenuItems={accountMenuItems}
         />
 
         <div className="mx-auto max-w-[1800px] px-4 py-4 md:px-6 md:py-6">
@@ -4269,7 +4323,15 @@ function SummarySheet({ open, onClose, config, primaryLabel, secondaryLabel, onP
   );
 }
 
-function AppProductHeader({ sessionName, sessionRoleLabel, accountInitials, onHome }) {
+function AppProductHeader({
+  sessionName,
+  sessionRoleLabel,
+  accountInitials,
+  onHome,
+  accountMenuOpen,
+  onToggleAccountMenu,
+  accountMenuItems,
+}) {
   return (
     <header className="sticky top-0 z-30 bg-[#0A4D82] shadow-sm">
       <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4">
@@ -4307,7 +4369,7 @@ function AppProductHeader({ sessionName, sessionRoleLabel, accountInitials, onHo
           </button>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="relative flex items-center gap-2 md:gap-3">
           <button
             type="button"
             className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3.5 text-sm font-medium text-white shadow-sm"
@@ -4317,6 +4379,10 @@ function AppProductHeader({ sessionName, sessionRoleLabel, accountInitials, onHo
           </button>
           <button
             type="button"
+            aria-expanded={accountMenuOpen}
+            aria-haspopup="menu"
+            aria-controls="partner-account-menu"
+            onClick={onToggleAccountMenu}
             className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4"
           >
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">
@@ -4325,6 +4391,9 @@ function AppProductHeader({ sessionName, sessionRoleLabel, accountInitials, onHo
             <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{sessionName}</span>
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </button>
+          <div id="partner-account-menu">
+            <UserPillMenu open={accountMenuOpen} items={accountMenuItems} />
+          </div>
         </div>
       </div>
     </header>

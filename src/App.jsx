@@ -397,6 +397,9 @@ export default function App() {
           role={partnerConfigRole}
           onRoleChange={setPartnerConfigRole}
           onExit={() => setActiveJourney("")}
+          onOpenWorkspace={() => setActiveJourney("internal-workspace")}
+          onOpenQueue={() => setActiveJourney("review-internal")}
+          onOpenPartnerConfig={() => setActiveJourney("partner-config")}
           sessionName={activeSessionName}
           sessionRoleLabel={resolveRoleLabel(sessionRole)}
         />
