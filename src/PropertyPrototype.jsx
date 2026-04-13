@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createEmptyDocumentCheck, createLocationEvidence, createPhotoEvidence, createTransactionAuthority, summarizeFraudSignals } from "./platform/securityControls.js";
 import {
   AlertTriangle,
@@ -835,7 +835,7 @@ function UnderwritingSections({
         <div><FieldLabel label="Tanggal mulai perlindungan" required /><TextInput type="date" value={uwForm.coverageStartDate} onChange={(value) => setUwField("coverageStartDate", value)} /></div>
         <div><FieldLabel label="Tanggal akhir perlindungan" /><TextInput value={coverageEndDate} onChange={() => {}} placeholder="Otomatis 1 tahun" readOnly={true} /></div>
           <div><FieldLabel label="Riwayat klaim 3 tahun terakhir" required /><SelectInput value={uwForm.claimHistory} onChange={(value) => setUwField("claimHistory", value)} options={CLAIM_HISTORY_OPTIONS} placeholder="Bagaimana riwayat klaim properti ini?" /></div>
-        <div className="md:col-span-2"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, optionalUw: !prev.optionalUw }))} className="flex w-full items-center justify-between rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-4 py-3 text-left"><div><div className="text-[15px] font-semibold text-slate-900">Informasi Tambahan Properti</div><div className="text-sm text-slate-500">Opsional, tetapi membantu penilaian risiko.</div></div><ChevronDown className={cls("h-4 w-4 text-slate-500 transition", expandedRows.optionalUw && "rotate-180")} /></button>{expandedRows.optionalUw ? <div className="mt-3 grid gap-4 md:grid-cols-2"><div><FieldLabel label="Luas Bangunan (m²)" /><TextInput value={uwForm.optionalBuildingArea} onChange={(value) => setUwField("optionalBuildingArea", onlyDigits(value))} placeholder="Contoh: 250" icon={<Building2 className="h-4 w-4" />} /></div><div><FieldLabel label="Usia Bangunan (tahun)" /><TextInput value={uwForm.optionalBuildingAge} onChange={(value) => setUwField("optionalBuildingAge", onlyDigits(value))} placeholder="Contoh: 8" icon={<Building2 className="h-4 w-4" />} /></div><div className="md:col-span-2"><FieldLabel label="Risiko di Sekitar Lokasi" /><TextAreaInput value={uwForm.surroundingRisk} onChange={(value) => setUwField("surroundingRisk", value)} placeholder="Contoh: berdekatan dengan pasar, bengkel, gudang bahan mudah terbakar, atau area padat penduduk" rows={3} /></div><div className="md:col-span-2"><FieldLabel label="Catatan Tambahan" /><TextAreaInput value={uwForm.additionalNotes} onChange={(value) => setUwField("additionalNotes", value)} placeholder="Tambahkan informasi penting lain yang perlu diketahui tim peninjau" rows={3} /></div></div> : null}</div>
+        <div className="md:col-span-2"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, optionalUw: !prev.optionalUw }))} className="flex w-full items-center justify-between rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-4 py-3 text-left"><div><div className="text-[15px] font-semibold text-slate-900">Informasi Tambahan Properti</div><div className="text-sm text-slate-500">Opsional, tetapi membantu penilaian risiko.</div></div><ChevronDown className={cls("h-4 w-4 text-slate-500 transition", expandedRows.optionalUw && "rotate-180")} /></button>{expandedRows.optionalUw ? <div className="mt-3 grid gap-4 md:grid-cols-2"><div><FieldLabel label="Luas Bangunan (mÂ²)" /><TextInput value={uwForm.optionalBuildingArea} onChange={(value) => setUwField("optionalBuildingArea", onlyDigits(value))} placeholder="Contoh: 250" icon={<Building2 className="h-4 w-4" />} /></div><div><FieldLabel label="Usia Bangunan (tahun)" /><TextInput value={uwForm.optionalBuildingAge} onChange={(value) => setUwField("optionalBuildingAge", onlyDigits(value))} placeholder="Contoh: 8" icon={<Building2 className="h-4 w-4" />} /></div><div className="md:col-span-2"><FieldLabel label="Risiko di Sekitar Lokasi" /><TextAreaInput value={uwForm.surroundingRisk} onChange={(value) => setUwField("surroundingRisk", value)} placeholder="Contoh: berdekatan dengan pasar, bengkel, gudang bahan mudah terbakar, atau area padat penduduk" rows={3} /></div><div className="md:col-span-2"><FieldLabel label="Catatan Tambahan" /><TextAreaInput value={uwForm.additionalNotes} onChange={(value) => setUwField("additionalNotes", value)} placeholder="Tambahkan informasi penting lain yang perlu diketahui tim peninjau" rows={3} /></div></div> : null}</div>
         </div>
       </SectionCard>
 
@@ -1141,7 +1141,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
         <ProposalRow label="Mulai perlindungan" value={uwForm.coverageStartDate || "-"} />
         <ProposalRow label="Akhir perlindungan" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
                       <ProposalRow label="Riwayat klaim 3 tahun terakhir" value={uwForm.claimHistory || "-"} />
-                      <ProposalRow label="Luas Bangunan (m²)" value={uwForm.optionalBuildingArea || "-"} />
+                      <ProposalRow label="Luas Bangunan (mÂ²)" value={uwForm.optionalBuildingArea || "-"} />
                       <ProposalRow label="Usia Bangunan (tahun)" value={uwForm.optionalBuildingAge || "-"} />
                       <ProposalRow label="Risiko di Sekitar Lokasi" value={uwForm.surroundingRisk || "-"} />
                       <ProposalRow label="Catatan Tambahan" value={uwForm.additionalNotes || "-"} />
@@ -1774,7 +1774,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                     {extensionPremiumSummaryValue ? <SummaryRow label="Premi Tambahan Perlindungan" value={extensionPremiumSummaryValue} /> : null}
                     <SummaryRow label="Biaya Materai" value={stampDutySummaryValue} />
                   </div>
-                  <SummarySidebarAlert items={stepOnePendingItems} successText="Data inti sudah cukup untuk lanjut ke peninjauan lanjutan." />
+                  <SummarySidebarAlert items={stepOnePendingItems} />
                   <div className="space-y-2">
                     <button type="button" disabled={!canAdvanceInternalStepOne} onClick={() => { setInternalStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Isi Data</button>
                     <button type="button" onClick={() => setShowIndicationModal(true)} className="flex h-[46px] w-full items-center justify-center rounded-[12px] border border-white/20 bg-[#0A4D82] text-sm font-bold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20 hover:brightness-110">Kirim Indikasi</button>
@@ -1796,7 +1796,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                 <SummaryRow label="Mulai perlindungan" value={uwForm.coverageStartDate || "-"} />
                 <SummaryRow label="Akhir perlindungan" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
               </div>
-              <SummarySidebarAlert items={underwritingPendingItems} successText="Data tambahan lengkap. Sales bisa lanjut mengirim penawaran lanjutan." />
+              <SummarySidebarAlert items={underwritingPendingItems} />
               <div className="space-y-2">
                 <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setShowIndicationModal(true)} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Kirim Penawaran</button>
                 <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setExternalView("offer-final")} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] border border-white/20 text-sm font-bold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20", canAdvanceUnderwriting ? "bg-[#0A4D82] hover:brightness-110" : "cursor-not-allowed bg-slate-500/70")}>Pembayaran</button>
@@ -1809,6 +1809,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
     </div>
   );
 }
+
 
 
 
