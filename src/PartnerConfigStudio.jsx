@@ -423,6 +423,7 @@ const WORDING_OPTION_META = {
 };
 
 const WORDING_OPTIONS = ["PSAKDI", "PSAKDI Bilingual"];
+const PRINT_DOCUMENT_OPTIONS = ["Ikhtisar", "Sertifikat"];
 
 function renderWordingLabel(value) {
   if (value === "PSAKDI") return "Polis Standar Asuransi Kecelakaan Diri Indonesia";
@@ -1115,6 +1116,7 @@ function createBlankConfig(family = "group-pa") {
         riskExposure: "Tersebar",
         deductible: "",
         wordingType: "PSAKDI",
+        printDocumentType: "Ikhtisar",
         additionalClauseTitle: "",
         additionalClauseDescription: "",
         customClauses: [],
@@ -1221,6 +1223,7 @@ const SEED_CONFIGS = [
         riskExposure: "Tersebar",
         deductible: "",
         wordingType: "PSAKDI",
+        printDocumentType: "Ikhtisar",
         additionalClauseTitle: "",
         additionalClauseDescription: "",
         customClauses: [],
@@ -1331,6 +1334,8 @@ const SEED_CONFIGS = [
         benefitSummary: "Perlindungan perjalanan grup untuk peserta partner.",
         coverageType: "72801 - P.A PERJALANAN",
         deductible: "",
+        wordingType: "PSAKDI",
+        printDocumentType: "Ikhtisar",
         discountPercent: "0",
         commissionPercent: "15",
         stampDuty: "Sesuai STAR",
@@ -2625,6 +2630,15 @@ function PartnerConfigStudio({
                 <div className="mt-2 text-[12px] leading-5 text-slate-500">
                   {WORDING_OPTION_META[master.wordingType || "PSAKDI"]}
                 </div>
+                <div className="mt-4">
+                  <FormField label="Jenis cetakan polis">
+                    <SelectInput
+                      value={master.printDocumentType || "Ikhtisar"}
+                      onChange={(value) => patchSection("master", { printDocumentType: value })}
+                      options={PRINT_DOCUMENT_OPTIONS}
+                    />
+                  </FormField>
+                </div>
               </div>
 
               <div className="mt-6">
@@ -3044,6 +3058,15 @@ function PartnerConfigStudio({
               />
               <div className="mt-2 text-[12px] leading-5 text-slate-500">
                 {WORDING_OPTION_META[master.wordingType || "PSAKDI"]}
+              </div>
+              <div className="mt-4">
+                <FormField label="Jenis cetakan polis">
+                  <SelectInput
+                    value={master.printDocumentType || "Ikhtisar"}
+                    onChange={(value) => patchSection("master", { printDocumentType: value })}
+                    options={PRINT_DOCUMENT_OPTIONS}
+                  />
+                </FormField>
               </div>
             </div>
 
