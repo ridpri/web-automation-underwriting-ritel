@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -1091,7 +1091,7 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
                       ) : null}
                       {!showPremiumDetails ? (
                         <div className="mt-5 flex justify-end">
-                          <button type="button" disabled={!validateMaxHP(flowType, Number(selected.quote.marketValue || 0))} onClick={() => setShowPremiumDetails(true)} className="flex items-center gap-2 rounded-xl bg-[#F5A623] px-5 py-3 text-sm font-bold text-white shadow-sm hover:brightness-105"><Wallet className="h-4 w-4" />CEK PREMI</button>
+                          <button type="button" disabled={!(Boolean(selected.quote.plateRegion) && Boolean(selected.quote.year) && isYearEligible(flowType, selected.quote.year) && Boolean(String(selected.quote.marketValue || "").trim()) && validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) && Boolean(selected.quote.usage) && (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) && (flowType !== "carTlo" || Boolean(selected.quote.vehicleType)))} onClick={() => setShowPremiumDetails(true)} className={cls("flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-sm", Boolean(selected.quote.plateRegion) && Boolean(selected.quote.year) && isYearEligible(flowType, selected.quote.year) && Boolean(String(selected.quote.marketValue || "").trim()) && validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) && Boolean(selected.quote.usage) && (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) && (flowType !== "carTlo" || Boolean(selected.quote.vehicleType)) ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}><Wallet className="h-4 w-4" />CEK PREMI</button>
                         </div>
                       ) : null}
                     </ActionCard>
@@ -1562,6 +1562,7 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
     </div>
   );
 }
+
 
 
 
