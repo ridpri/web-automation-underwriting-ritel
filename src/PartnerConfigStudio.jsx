@@ -2069,9 +2069,6 @@ function PartnerConfigStudio({
     const fieldRules = getOperationalFieldRules(selectedConfig);
     const normalizedPreview = buildNormalizedPreview(selectedConfig);
     const reviewPendingItems = getPendingItems(selectedConfig);
-    const premiumPreview =
-      Math.round(parseNumber(master.sumInsured || "0") * (Number(master.baseRate || 0) / 1000)) +
-      parseNumber(master.adminFee || "0");
     const isLifeGuard = selectedConfig.family === "group-pa";
     const isTripTravelGuard = ["health-group", "travel-group"].includes(selectedConfig.family);
     const lifeGuardComputed = isLifeGuard ? getLifeGuardComputed(master) : null;
@@ -2258,10 +2255,7 @@ function PartnerConfigStudio({
                 </div>
 
                 <div className="rounded-[18px] border border-[#D9E1EA] bg-[#F7FAFE] p-4">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div className="text-[14px] font-semibold text-slate-950">Premi & ketentuan</div>
-                    <div className="rounded-full bg-[#FFF7ED] px-3 py-1 text-xs font-medium text-[#C26B17]">Preview premi: Rp {formatRupiah(lifeGuardComputed.premiumMin)}</div>
-                  </div>
+                  <div className="mb-4 text-[14px] font-semibold text-slate-950">Premi & ketentuan</div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <FormField label="Rate Premi (‰)" helper="">
                       <TextInput value={master.baseRate || ""} onChange={(value) => patchSection("master", { baseRate: value })} className="max-w-[180px]" />
@@ -2918,11 +2912,6 @@ function PartnerConfigStudio({
           <SectionCard
             title="Obyek Pertanggungan"
             subtitle="Step ini menyamakan gaya pengisian coverage, limit, rate, dan parameter underwriting inti."
-            action={
-              <div className="rounded-full bg-[#FFF7ED] px-3 py-1 text-xs font-bold text-[#C26B17]">
-                Preview premi: Rp {formatRupiah(premiumPreview)}
-              </div>
-            }
           >
             <div className="grid gap-4 md:grid-cols-2">
               <FormField label="Kode Produk" required>
