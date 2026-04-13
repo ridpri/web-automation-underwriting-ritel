@@ -1738,7 +1738,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           {rejectionStatus ? <div className="mx-auto mt-6 max-w-[1280px] rounded-2xl border border-[#CFE0F0] bg-[#F8FBFE] px-4 py-3 text-sm text-[#0A4D82]">{rejectionStatus}</div> : null}
           {qrInfoVisible ? <div className="mx-auto mt-4 max-w-[1280px] rounded-2xl border border-[#CFE0F0] bg-white px-4 py-4 text-sm text-slate-700 shadow-sm"><div className="font-semibold text-slate-900">QR Code belum digenerate otomatis.</div><div className="mt-1">Untuk handoff ke IT, tautan yang akan diencode adalah: <span className="break-all text-[#0A4D82]">{shareUrl}</span></div></div> : null}
           {internalStep === 1 ? (
-            <div className="mx-auto max-w-[1280px] px-4 md:px-6">
+            <div className={cls("mx-auto px-4 md:px-6", showStepOneSummarySidebar ? "max-w-[1280px]" : "max-w-4xl")}>
               <div className={cls("mt-6 grid gap-5", showStepOneSummarySidebar ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
                 <div className="space-y-5">
                   <SectionCard title="Informasi Nasabah">
