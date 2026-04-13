@@ -922,7 +922,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
       <div className="bg-[linear-gradient(135deg,#0A4D82_0%,#0F5F9C_60%,#1B78B6_100%)] pb-8">
         <div className="mx-auto max-w-[1280px] px-4 pt-8 md:px-6">
           <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 text-white shadow-2xl shadow-[#08355A]/30 backdrop-blur">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+            <div>
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <ProposalBadge>{isIndicative ? "Penawaran Awal" : "Penawaran Lanjutan"}</ProposalBadge>
@@ -949,33 +949,6 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                   <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">{coverageLabel}</div>
                     <div className="mt-2 text-[16px] font-semibold text-white">{premiumValue}</div>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
-                <div className="text-sm text-white/70">Detail Penawaran</div>
-                <div className="mt-1 text-[18px] font-semibold">{isIndicative ? "Penawaran awal siap dilengkapi." : "Penawaran ini siap ditinjau kembali."}</div>
-                <div className="mt-4 space-y-3 border-t border-white/15 pt-4">
-                  <div className="flex items-start justify-between gap-3 text-sm">
-                    <span className="text-white/70">Nomor</span>
-                    <span className="text-right font-semibold text-white">{offerMeta.reference}</span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3 text-sm">
-                    <span className="text-white/70">Versi</span>
-                    <span className="text-right font-semibold text-white">{offerMeta.version}</span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3 text-sm">
-                    <span className="text-white/70">Berlaku sampai</span>
-                    <span className="text-right font-semibold text-white">{offerMeta.validUntil}</span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3 text-sm">
-                    <span className="text-white/70">Disiapkan oleh</span>
-                    <span className="text-right font-semibold text-white">{offerMeta.preparedBy}</span>
-                  </div>
-                  <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white/85">
-                    {isIndicative
-                ? "Lengkapi data nasabah dan properti bila penawaran ini ingin dilanjutkan."
-                      : "Pembayaran hanya berlaku untuk penawaran aktif yang tampil pada halaman ini."}
                   </div>
                 </div>
               </div>
