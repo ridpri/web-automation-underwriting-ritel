@@ -1457,7 +1457,6 @@ function PartnerConfigStudio({
   );
   const [selectedFamily, setSelectedFamily] = useState(urlState.selectedFamily || cached?.selectedFamily || "");
   const [catalogSearch, setCatalogSearch] = useState(urlState.catalogSearch || cached?.catalogSearch || "");
-  const [summaryOpen, setSummaryOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [lifeGuardExpanded, setLifeGuardExpanded] = useState("main-accident");
   const [lifeGuardClauseSearch, setLifeGuardClauseSearch] = useState("");
@@ -1890,7 +1889,6 @@ function PartnerConfigStudio({
     if (config) setSelectedFamily(config.family);
     setSelectedId(id);
     setStepIndex(0);
-    setSummaryOpen(false);
     setPortalView("studio");
   }
 
@@ -1906,7 +1904,6 @@ function PartnerConfigStudio({
       setSelectedId(target.id);
       setStepIndex(0);
       setPortalView("studio");
-      setSummaryOpen(false);
       return;
     }
 
@@ -1923,17 +1920,14 @@ function PartnerConfigStudio({
     setSelectedId(item.id);
     setStepIndex(0);
     setPortalView("studio");
-    setSummaryOpen(false);
   }
 
   function backToCatalog() {
-    setSummaryOpen(false);
     setSelectedId(null);
     setPortalView("catalog");
   }
 
   function exitToShell() {
-    setSummaryOpen(false);
     if (typeof onExit === "function") onExit();
   }
 
@@ -4009,14 +4003,6 @@ function PartnerConfigStudio({
                     ) : null}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setSummaryOpen(true)}
-                    className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 text-sm font-medium text-white lg:hidden focus-visible:ring-4 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A4D82]"
-                  >
-                    <ClipboardList className="h-4 w-4" />
-                    Ringkasan
-                  </button>
                 </div>
 
                 <div className="mt-4 text-center text-white md:mt-5">
@@ -4069,23 +4055,8 @@ function PartnerConfigStudio({
             </header>
 
             <main className="mx-auto max-w-7xl px-4 py-5 md:px-6">
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-                <div className="min-w-0">
-                  <div>{renderStep()}</div>
-                </div>
-
-                <aside className="hidden lg:block">
-                  <div className="sticky top-[180px]">
-                    <SummaryPanel
-                      config={selectedConfig}
-                      primaryLabel={primaryLabel.toUpperCase()}
-                      secondaryLabel="KEMBALI KE PRODUK"
-                      onPrimary={moveNext}
-                      onSecondary={backToCatalog}
-                      primaryDisabled={summaryPrimaryDisabled}
-                    />
-                  </div>
-                </aside>
+              <div className="min-w-0">
+                <div>{renderStep()}</div>
               </div>
             </main>
 
@@ -4124,23 +4095,6 @@ function PartnerConfigStudio({
             </div>
           </div>
         )}
-
-        <SummarySheet
-          open={summaryOpen}
-          onClose={() => setSummaryOpen(false)}
-          config={selectedConfig}
-          primaryLabel={primaryLabel.toUpperCase()}
-          secondaryLabel="KEMBALI KE PRODUK"
-          onPrimary={() => {
-            moveNext();
-            setSummaryOpen(false);
-          }}
-          onSecondary={() => {
-            setSummaryOpen(false);
-            backToCatalog();
-          }}
-          primaryDisabled={summaryPrimaryDisabled}
-        />
 
         {toast ? (
           <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg">
