@@ -248,6 +248,12 @@ export default function App() {
           records={operatingRecords}
           onBack={() => setActiveJourney("")}
           onOpenJourney={(record) => { setActiveTransactionId(record.id); setActiveJourney(record.journeyKey); }}
+          sessionName={activeSessionName}
+          sessionRoleLabel={resolveRoleLabel(sessionRole)}
+          onNavigateHome={() => setActiveJourney("")}
+          onNavigateProducts={() => setActiveJourney("")}
+          onOpenWorkspace={() => setActiveJourney("internal-workspace")}
+          onOpenPartnerConfig={() => setActiveJourney("partner-config")}
         />
       </Suspense>
     );
@@ -266,6 +272,12 @@ export default function App() {
           records={ownedOperatingRecords}
           onBack={() => setActiveJourney("")}
           onOpenJourney={(record) => { setActiveTransactionId(record.id); setActiveJourney(record.journeyKey); }}
+          sessionName={activeSessionName}
+          sessionRoleLabel={resolveRoleLabel(sessionRole)}
+          onNavigateHome={() => setActiveJourney("")}
+          onNavigateProducts={() => setActiveJourney("")}
+          onOpenWorkspace={() => setActiveJourney("internal-workspace")}
+          onOpenPartnerConfig={() => setActiveJourney("partner-config")}
         />
       </Suspense>
     );
@@ -566,30 +578,17 @@ export default function App() {
                       {accountPrimaryLabel}
                     </button>
                     {isInternalSession ? (
-                      <>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            setAccountMenuOpen(false);
-                            setActiveJourney("review-internal");
-                          }}
-                          className="mt-1 flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-[#F7FAFD]"
-                        >
-                          Antrean Internal
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            setAccountMenuOpen(false);
-                            setActiveJourney("partner-config");
-                          }}
-                          className="mt-1 flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-[#F7FAFD]"
-                        >
-                          Konfigurasi Partner
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setAccountMenuOpen(false);
+                          setActiveJourney("partner-config");
+                        }}
+                        className="mt-1 flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-[#F7FAFD]"
+                      >
+                        Konfigurasi Partner
+                      </button>
                     ) : null}
                   </div>
                 ) : null}

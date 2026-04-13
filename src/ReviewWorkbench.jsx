@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronDown, Clock3, FileText, Filter, Search, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bell, CheckCircle2, ChevronDown, Clock3, FileText, Filter, Home, Search, Shield, ShieldAlert } from "lucide-react";
 
 function cls() {
   return Array.from(arguments).filter(Boolean).join(" ");
@@ -190,11 +190,18 @@ export default function ReviewWorkbench({
   defaultFilter = "Semua",
   showWorkspaceRail = false,
   defaultWorkspaceLane = "review",
+  sessionName = "Taqwim (Internal)",
+  sessionRoleLabel = "Internal",
+  onNavigateHome,
+  onNavigateProducts,
+  onOpenWorkspace,
+  onOpenPartnerConfig,
 }) {
   const [activeFilter, setActiveFilter] = useState(defaultFilter);
   const [activeWorkspaceLane, setActiveWorkspaceLane] = useState(defaultWorkspaceLane);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(records[0]?.id || "");
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   const laneRecords = useMemo(() => {
     if (!showWorkspaceRail) return records;
@@ -246,6 +253,92 @@ export default function ReviewWorkbench({
 
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
+        <div className="mx-auto flex max-w-[1800px] items-center justify-between px-4 py-3 md:px-6">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 text-white">
+              <div className="text-[15px] font-black leading-tight md:text-[18px]">
+                Danantara
+                <div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div>
+              </div>
+              <div className="hidden items-center gap-2.5 text-white md:flex">
+                <div className="text-[14px] font-semibold leading-none md:text-[15px]">asuransi</div>
+                <div className="h-1.5 w-1.5 rounded-full bg-white/70" />
+                <div className="text-[14px] font-semibold leading-none md:text-[15px]">jasindo</div>
+              </div>
+            </div>
+
+            <div className="hidden items-center gap-3 md:flex">
+              <button
+                type="button"
+                onClick={onNavigateHome}
+                className="inline-flex items-center gap-2 rounded-[8px] bg-white/6 px-5 py-3 text-sm font-medium text-white hover:bg-white/10"
+              >
+                <Home className="h-4 w-4" />
+                Beranda
+              </button>
+              <button
+                type="button"
+                onClick={onNavigateProducts}
+                className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-5 py-3 text-sm font-semibold text-white shadow-sm"
+              >
+                <Shield className="h-4 w-4" />
+                Produk
+              </button>
+            </div>
+          </div>
+
+          <div className="relative flex items-center gap-2 md:gap-3">
+            <button
+              type="button"
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3.5 text-sm font-medium text-white shadow-sm"
+            >
+              <span>{sessionRoleLabel}</span>
+            </button>
+            <button
+              type="button"
+              aria-expanded={accountMenuOpen}
+              aria-haspopup="menu"
+              onClick={() => setAccountMenuOpen((current) => !current)}
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4"
+            >
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
+              <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{sessionName}</span>
+              <ChevronDown className={cls("h-4 w-4 text-slate-500 transition", accountMenuOpen && "rotate-180")} aria-hidden="true" />
+            </button>
+            <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
+              <Bell className="h-4 w-4" />
+            </button>
+            {accountMenuOpen ? (
+              <div role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    onOpenWorkspace?.();
+                  }}
+                  className="flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-[#0A4D82] hover:bg-[#F7FAFD]"
+                >
+                  Ruang Kerja Saya
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    onOpenPartnerConfig?.();
+                  }}
+                  className="mt-1 flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-[#F7FAFD]"
+                >
+                  Konfigurasi Partner
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
       <section className="bg-[#0A4D82] pb-12 pt-6 md:pb-16 md:pt-8">
         <div className="mx-auto max-w-[1280px] px-4 md:px-6">
           <div className="flex items-center justify-between gap-4">
