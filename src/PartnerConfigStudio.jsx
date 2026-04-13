@@ -22,6 +22,7 @@ import {
   Link2,
   Lock,
   NotebookPen,
+  MapPin,
   Plus,
   Puzzle,
   RadioTower,
@@ -826,26 +827,12 @@ function getPendingItems(config) {
   if (!blueprint.agreementNo) items.push("Nomor PKS / kerjasama belum diisi.");
   if (!blueprint.insuredCode) items.push("Kode tertanggung belum diisi.");
   if (!blueprint.ownerEmail) items.push("Email owner proses belum diisi.");
-  if (!blueprint.channels?.length) items.push("Belum ada channel yang diaktifkan.");
-  if (!blueprint.integrationMode) items.push("Mode integrasi belum dipilih.");
-  if (blueprint.integrationMode === "REST API" && !blueprint.endpoint) items.push("Endpoint partner API belum diisi.");
-  if (!blueprint.primaryKey) items.push("Primary key partner belum diisi.");
   if (!master.productCode || !master.productName) items.push("Kode produk atau nama produk induk belum lengkap.");
   if (!master.masterPolicyNo) items.push("Nomor polis induk / PKS untuk master policy belum diisi.");
   if (!master.plan || !master.sumInsured || !master.baseRate) items.push("Plan, nilai pertanggungan, atau rate dasar belum lengkap.");
   if (!master.clausePackage?.length) items.push("Minimal satu clause package harus aktif.");
-  if ((mapping.rows || []).length < 4) items.push("Mapping field masih terlalu sedikit untuk siap integrasi.");
-  if (missingTargets.length) {
-    items.push(`Mapping field inti belum lengkap: ${missingTargets.map((key) => FIELD_MAP[key]?.label || key).join(", ")}.`);
-  }
-  if (sample === null) items.push("Sample payload belum valid JSON.");
-  if (!partnerFacing.length) items.push("Belum ada field partner-facing untuk realisasi.");
-  const requiredActive = Object.values(rules).filter((rule) => rule.active && rule.required).length;
-  if (requiredActive < Math.max(3, getRequiredTargets(config).length - 1)) items.push("Template realisasi belum cukup ramping dan belum jelas field wajibnya.");
-  if (!review.checklist.mappingReviewed) items.push("Checklist review mapping belum dicentang.");
   if (!review.checklist.documentBound) items.push("Dokumen PKS / wording belum ditandai terikat.");
-  if (!review.checklist.partnerUat) items.push("Partner UAT belum ditandai selesai.");
-  if (!review.checklist.syncReady) items.push("Sync readiness ke core belum ditandai siap.");
+  if (!review.checklist.syncReady) items.push("Konfigurasi belum ditandai siap diproses.");
   return items;
 }
 
@@ -895,9 +882,6 @@ function getReadiness(config) {
   checks.push(Boolean(blueprint.agreementNo));
   checks.push(Boolean(blueprint.insuredCode));
   checks.push(Boolean(blueprint.ownerEmail));
-  checks.push(Boolean(blueprint.channels?.length));
-  checks.push(Boolean(blueprint.integrationMode));
-  checks.push(Boolean(blueprint.primaryKey));
   checks.push(Boolean(master.productCode));
   checks.push(Boolean(master.productName));
   checks.push(Boolean(master.masterPolicyNo));
@@ -905,10 +889,8 @@ function getReadiness(config) {
   checks.push(Boolean(master.sumInsured));
   checks.push(Boolean(master.baseRate));
   checks.push(Boolean(master.clausePackage?.length));
-  checks.push((mapping.rows || []).length >= 4);
-  checks.push(getMissingRequiredTargets(config).length === 0);
-  checks.push(getPartnerFacingFields(config).length >= 3);
-  checks.push(Object.values(rules).filter((rule) => rule.active && rule.required).length >= 3);
+  checks.push(Boolean(review.checklist.documentBound));
+  checks.push(Boolean(review.checklist.syncReady));
   checks.push(Boolean(review.checklist.mappingReviewed));
   checks.push(Boolean(review.checklist.documentBound));
   checks.push(Boolean(review.checklist.partnerUat));
@@ -2111,6 +2093,32 @@ function PartnerConfigStudio({
                           onChange={(value) => patchSection("blueprint", { address: value })}
                           placeholder="Masukkan alamat nasabah"
                         />
+                        <div className="mt-2 flex flex-wrap gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              patchSection("blueprint", {
+                                address: "Lokasi GPS tersimulasi - Gedung Cyber 2, Lt. 15, Jl. HR Rasuna Said Blok X-5, Jakarta Selatan",
+                              })
+                            }
+                            className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            <MapPin className="h-4 w-4" />
+                            Ambil Lokasi Sekarang
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              patchSection("blueprint", {
+                                address: "Pin peta tersimulasi - Graha Jasindo, Jl. MT Haryono Kav. 61, Jakarta Selatan",
+                              })
+                            }
+                            className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            <MapPin className="h-4 w-4" />
+                            Pilih di Peta
+                          </button>
+                        </div>
                       </FormField>
                     </div>
                   </>
@@ -2507,6 +2515,32 @@ function PartnerConfigStudio({
                       onChange={(value) => patchSection("blueprint", { address: value })}
                       disabled
                     />
+                    <div className="mt-2 flex flex-wrap gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          patchSection("blueprint", {
+                            address: "Lokasi GPS tersimulasi - Gedung Cyber 2, Lt. 15, Jl. HR Rasuna Said Blok X-5, Jakarta Selatan",
+                          })
+                        }
+                        className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <MapPin className="h-4 w-4" />
+                        Ambil Lokasi Sekarang
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          patchSection("blueprint", {
+                            address: "Pin peta tersimulasi - Graha Jasindo, Jl. MT Haryono Kav. 61, Jakarta Selatan",
+                          })
+                        }
+                        className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <MapPin className="h-4 w-4" />
+                        Pilih di Peta
+                      </button>
+                    </div>
                   </FormField>
                 </div>
                 <FormField label="Email Korespondensi" required>
@@ -2777,97 +2811,6 @@ function PartnerConfigStudio({
             </div>
           </SectionCard>
 
-          <SectionCard
-            title="Channel Scope"
-            subtitle="Pilih channel seperti pola portal partner, tetapi tetap menjaga scope integrasi yang diperlukan."
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
-              {CHANNEL_OPTIONS.map((item) => {
-                const Icon = item.icon;
-                const active = blueprint.channels.includes(item.id);
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => toggleChannel(item.id)}
-                    className={cls(
-                      "rounded-2xl border p-4 text-left transition",
-                      active ? "border-[#0A4D82] bg-[#F4F9FE]" : "border-slate-200 bg-white"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={cls("mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl", active ? "bg-[#0A4D82] text-white" : "bg-slate-100 text-slate-500")}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <div className="text-[13px] font-medium text-slate-900">{item.label}</div>
-                        <div className="mt-1 text-xs leading-5 text-slate-500">{item.note}</div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Scope Integrasi"
-            subtitle="Kontrol integrasi tetap ada, tetapi sekarang posisinya menyatu dengan Informasi Umum."
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Mode Integrasi" required>
-                <SelectInput
-                  value={blueprint.integrationMode}
-                  onChange={(value) => patchSection("blueprint", { integrationMode: value })}
-                  options={INTEGRATION_OPTIONS}
-                />
-              </FormField>
-              <FormField label="Sync Target">
-                <TextInput
-                  value={blueprint.syncTarget}
-                  onChange={(value) => patchSection("blueprint", { syncTarget: value })}
-                  placeholder="Contoh: STAR Core Registry"
-                />
-              </FormField>
-              <FormField label="Cek Nomor Polis Induk di STAR">
-                <SelectInput
-                  value={blueprint.starCheckMode}
-                  onChange={(value) => patchSection("blueprint", { starCheckMode: value })}
-                  options={STAR_CHECK_OPTIONS}
-                />
-              </FormField>
-              <FormField label="Jika Sudah Ada">
-                <SelectInput
-                  value={blueprint.ifExists}
-                  onChange={(value) => patchSection("blueprint", { ifExists: value })}
-                  options={EXISTS_OPTIONS}
-                />
-              </FormField>
-              <FormField label="Jika Belum Ada">
-                <SelectInput
-                  value={blueprint.ifMissing}
-                  onChange={(value) => patchSection("blueprint", { ifMissing: value })}
-                  options={MISSING_OPTIONS}
-                />
-              </FormField>
-              <FormField label="Primary Key Partner" required>
-                <TextInput
-                  value={blueprint.primaryKey}
-                  onChange={(value) => patchSection("blueprint", { primaryKey: value })}
-                  placeholder="Contoh: partner_policy_ref"
-                />
-              </FormField>
-              <div className="md:col-span-2">
-                <FormField label="Endpoint / Bucket / Route">
-                  <TextInput
-                    value={blueprint.endpoint}
-                    onChange={(value) => patchSection("blueprint", { endpoint: value })}
-                    placeholder="Contoh: /api/v1/partner/momotrip/realisasi"
-                  />
-                </FormField>
-              </div>
-            </div>
-          </SectionCard>
         </div>
       );
     }
