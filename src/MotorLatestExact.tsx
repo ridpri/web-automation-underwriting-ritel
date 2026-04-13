@@ -8,7 +8,6 @@ import {
   ChevronDown,
   FileText,
   Home,
-  LogIn,
   Mail,
   MapPin,
   Package,
@@ -975,7 +974,6 @@ export default function MotorLatestExact({
                 }))}
               />
             </div>
-            <button className="hidden items-center gap-2 text-sm font-medium text-white sm:inline-flex"><LogIn className="h-4 w-4" />Masuk</button>
           </div>
         </div>
       </header>
@@ -1521,7 +1519,7 @@ Contoh: ojek online, rental, antar barang, dan kegiatan usaha.`} />
                 ) : null}
               </div>
 
-              <aside className="h-fit rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg lg:sticky lg:top-24">
+              {step > 1 || showPremiumDetails ? <aside className="h-fit rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg lg:sticky lg:top-24">
                 <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-[18px] font-bold"><FileText className="h-5 w-5" />Ringkasan</div><ChevronDown className="h-5 w-5 text-white/80" /></div>
                 <div className="mt-4 border-t border-white/15 pt-3.5">
                   <SummaryRow label="Produk" value={flowType === "motor" ? "KBM Roda 2 - TLO" : flowType === "carComp" ? "KBM Roda 4 - Comprehensive" : "KBM Roda 4 - TLO"} />
@@ -1542,7 +1540,7 @@ Contoh: ojek online, rental, antar barang, dan kegiatan usaha.`} />
                 {step === 3 && !selected.agree ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>Persetujuan kebijakan harus dibuka dan disetujui sebelum pembayaran.</div></div></div> : null}
                 {step === 3 && operatingBlockedMessage ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>{operatingBlockedMessage}</div></div></div> : null}
                 {step === 3 && checkoutStatus ? <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"><div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4" /><div>{checkoutStatus}</div></div></div> : null}
-              </aside>
+              </aside> : null}
             </div>
           </div>
           <ConsentModal open={showConsentModal} agreed={selected.agree} onClose={() => setShowConsentModal(false)} onAgree={() => { setAt(flowType, "agree", true); setShowConsentModal(false); }} />
