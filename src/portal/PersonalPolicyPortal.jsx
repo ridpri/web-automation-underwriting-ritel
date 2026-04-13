@@ -1596,16 +1596,13 @@ export default function PersonalPolicyPortal({
     <>
       <section className={cls("bg-[#0A4D82] pb-12 pt-6 md:pb-16 md:pt-8", embedded && "bg-transparent p-0")}>
         <div className={cls("mx-auto max-w-[1280px] px-4 md:px-6", embedded && "max-w-[1480px] px-0")}>
-          <div className="flex items-center justify-between gap-4">
-            <button type="button" onClick={onExit || onGoHome} className="inline-flex items-center gap-2 rounded-[12px] border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white hover:bg-white/15">
-              <ArrowLeft className="h-4 w-4" />
-              Kembali ke Produk
-            </button>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#F5A623]" />
-              Status
+            <div className="flex items-center justify-between gap-4">
+              <button type="button" onClick={onExit || onGoHome} className="inline-flex items-center gap-2 rounded-[12px] border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white hover:bg-white/15">
+                <ArrowLeft className="h-4 w-4" />
+                Kembali ke Produk
+              </button>
+              <div className="h-[48px] w-[140px] shrink-0 opacity-0" aria-hidden="true" />
             </div>
-          </div>
 
           <div className="mx-auto mt-8 max-w-[900px] text-center text-white md:mt-10">
             <div className="inline-flex rounded-full bg-white/10 px-4 py-2 text-sm font-semibold">Selamat datang kembali, {sessionName}</div>
