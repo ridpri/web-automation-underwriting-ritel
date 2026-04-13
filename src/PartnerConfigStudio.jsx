@@ -1815,6 +1815,12 @@ function PartnerConfigStudio({
     });
   }
 
+  function triggerPolicyPrintTest() {
+    if (!selectedConfig) return;
+    appendAudit("Uji cetak polis dijalankan dari langkah wording dan klausula.", role.toUpperCase());
+    setToast("Test print polis diproses");
+  }
+
   function updateMappingRow(rowId, changes) {
     if (!selectedConfig) return;
     const nextRows = selectedConfig.data.mapping.rows.map((row) =>
@@ -2398,6 +2404,15 @@ function PartnerConfigStudio({
                     </button>
                   </div>
                 </PartnerClauseNoteCard>
+              </div>
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={triggerPolicyPrintTest}
+                  className="inline-flex h-11 items-center justify-center rounded-[14px] border border-[#0A4D82] bg-white px-4 text-sm font-medium text-[#0A4D82] transition hover:bg-[#F7FAFE]"
+                >
+                  Test Print Polis
+                </button>
               </div>
             </SectionCard>
           </div>
@@ -3062,6 +3077,15 @@ function PartnerConfigStudio({
                   placeholder="Masukkan klausul tambahan, subjectivity, atau catatan wording khusus."
                 />
               </PartnerClauseNoteCard>
+            </div>
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={triggerPolicyPrintTest}
+                className="inline-flex h-11 items-center justify-center rounded-[14px] border border-[#0A4D82] bg-white px-4 text-sm font-medium text-[#0A4D82] transition hover:bg-[#F7FAFE]"
+              >
+                Test Print Polis
+              </button>
             </div>
           </SectionCard>
         </div>
