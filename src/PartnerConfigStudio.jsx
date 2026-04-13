@@ -2322,25 +2322,6 @@ function PartnerConfigStudio({
                 <div className="mt-2 text-[12px] leading-5 text-slate-500">
                   {WORDING_OPTION_META[master.wordingType || "PSAKDI"]}
                 </div>
-                <div className="mt-4">
-                  <PartnerClauseNoteCard title="Tambah klausula">
-                    <div className="grid gap-3">
-                      <FormField label="Judul Klausula Tambahan">
-                        <TextInput value={master.additionalClauseTitle || ""} onChange={(value) => patchSection("master", { additionalClauseTitle: value })} />
-                      </FormField>
-                      <FormField label="Deskripsi Klausula Tambahan">
-                        <TextAreaInput rows={5} value={master.additionalClauseDescription || ""} onChange={(value) => patchSection("master", { additionalClauseDescription: value })} />
-                      </FormField>
-                      <button
-                        type="button"
-                        onClick={addLifeGuardCustomClause}
-                        className="inline-flex h-11 items-center justify-center rounded-[14px] border border-[#0A4D82] bg-[#0A4D82] px-4 text-sm text-white transition hover:bg-[#083D66]"
-                      >
-                        Tambah Klausula
-                      </button>
-                    </div>
-                  </PartnerClauseNoteCard>
-                </div>
               </div>
               <div className="mt-6 overflow-hidden rounded-[18px] border border-[#D9E1EA] bg-white">
                 <div className="flex items-start justify-between gap-4 border-b border-[#D9E1EA] px-5 py-4">
@@ -2398,6 +2379,25 @@ function PartnerConfigStudio({
                     </div>
                   ) : null}
                 </div>
+              </div>
+              <div className="mt-6">
+                <PartnerClauseNoteCard title="Tambah klausula">
+                  <div className="grid gap-3">
+                    <FormField label="Judul Klausula Tambahan">
+                      <TextInput value={master.additionalClauseTitle || ""} onChange={(value) => patchSection("master", { additionalClauseTitle: value })} />
+                    </FormField>
+                    <FormField label="Deskripsi Klausula Tambahan">
+                      <TextAreaInput rows={5} value={master.additionalClauseDescription || ""} onChange={(value) => patchSection("master", { additionalClauseDescription: value })} />
+                    </FormField>
+                    <button
+                      type="button"
+                      onClick={addLifeGuardCustomClause}
+                      className="inline-flex h-11 items-center justify-center rounded-[14px] border border-[#0A4D82] bg-[#0A4D82] px-4 text-sm text-white transition hover:bg-[#083D66]"
+                    >
+                      Tambah Klausula
+                    </button>
+                  </div>
+                </PartnerClauseNoteCard>
               </div>
             </SectionCard>
           </div>
