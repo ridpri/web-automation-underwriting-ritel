@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronDown, Clock3, FileText, Filter, Search, ShieldAlert } from "lucide-react";
 
 function cls() {
@@ -49,6 +49,24 @@ const WORKSPACE_LANES = [
     icon: CheckCircle2,
   },
 ];
+
+const WORKSPACE_LANE_CONTENT = {
+  review: {
+    title: "Perlu Saya Tinjau",
+    subtitle: "Transaksi yang sedang menunggu tinjauan dan keputusan internal.",
+    emptyMessage: "Belum ada transaksi yang perlu Anda tinjau saat ini.",
+  },
+  waiting: {
+    title: "Menunggu Respons Nasabah",
+    subtitle: "Transaksi yang masih menunggu kelengkapan atau tindak lanjut dari nasabah.",
+    emptyMessage: "Belum ada transaksi yang sedang menunggu respons nasabah.",
+  },
+  ready: {
+    title: "Siap Kirim / Bayar",
+    subtitle: "Transaksi yang sudah cukup lengkap untuk dikirim atau dilanjutkan ke pembayaran.",
+    emptyMessage: "Belum ada transaksi yang siap dikirim atau dibayar saat ini.",
+  },
+};
 
 function matchesWorkspaceLane(record, laneKey) {
   if (laneKey === "review") return ["Pending Review Internal", "Perlu Revisi"].includes(record.status);
@@ -178,6 +196,11 @@ export default function ReviewWorkbench({
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(records[0]?.id || "");
 
+  const laneRecords = useMemo(() => {
+    if (!showWorkspaceRail) return records;
+    return records.filter((item) => matchesWorkspaceLane(item, activeWorkspaceLane));
+  }, [activeWorkspaceLane, records, showWorkspaceRail]);
+
   const filtered = useMemo(() => {
     return records.filter((item) => {
       const matchesLane = showWorkspaceRail ? matchesWorkspaceLane(item, activeWorkspaceLane) : true;
@@ -202,7 +225,24 @@ export default function ReviewWorkbench({
     });
   }, [activeFilter, activeWorkspaceLane, query, records, showWorkspaceRail]);
 
-  const selected = filtered.find((item) => item.id === selectedId) || filtered[0] || records[0];
+  useEffect(() => {
+    if (!showWorkspaceRail) return;
+    setActiveFilter("Semua");
+    setSelectedId(laneRecords[0]?.id || "");
+  }, [activeWorkspaceLane, laneRecords, showWorkspaceRail]);
+
+  useEffect(() => {
+    if (!filtered.length) {
+      setSelectedId("");
+      return;
+    }
+
+    const stillVisible = filtered.some((item) => item.id === selectedId);
+    if (!stillVisible) setSelectedId(filtered[0].id);
+  }, [filtered, selectedId]);
+
+  const selected = filtered.find((item) => item.id === selectedId) || filtered[0] || null;
+  const workspaceCopy = showWorkspaceRail ? WORKSPACE_LANE_CONTENT[activeWorkspaceLane] : null;
 
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
@@ -231,7 +271,10 @@ export default function ReviewWorkbench({
 
       <div className="mx-auto max-w-[1280px] px-4 py-6 md:px-6 md:py-8">
         <div className="space-y-6">
-          <WorkbenchSection title="Antrean internal" subtitle="Cari dan pilih transaksi yang ingin dipantau atau ditinjau.">
+          <WorkbenchSection
+            title={workspaceCopy?.title || "Ruang Kerja Saya"}
+            subtitle={workspaceCopy?.subtitle || "Cari dan pilih transaksi yang ingin dipantau atau ditinjau."}
+          >
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 {FILTERS.map((item) => (
@@ -288,7 +331,7 @@ export default function ReviewWorkbench({
                 ))}
                 {!filtered.length ? (
                   <div className="rounded-[24px] border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-                    {emptyMessage}
+                    {workspaceCopy?.emptyMessage || emptyMessage}
                   </div>
                 ) : null}
               </div>
