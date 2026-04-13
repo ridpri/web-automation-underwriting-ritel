@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -59,22 +59,22 @@ type FlowState = {
 const PRODUCTS = [
   {
     id: "motor",
-    title: "Kendaraan Bermotor Roda 2 - TLO",
-    category: "Kendaraan Bermotor",
+    title: "Total Loss Kendaraan - Motor",
+    category: "Kendaraan",
     subtitle: "Perlindungan motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     gradient: "from-slate-700 via-slate-600 to-slate-500",
   },
   {
     id: "carComp",
     title: "Kendaraan Bermotor Roda 4 - Comprehensive",
-    category: "Kendaraan Bermotor",
+    category: "Kendaraan",
     subtitle: "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran.",
     gradient: "from-sky-800 via-sky-700 to-sky-600",
   },
   {
     id: "carTlo",
-    title: "Kendaraan Bermotor Roda 4 - TLO",
-    category: "Kendaraan Bermotor",
+    title: "Total Loss Kendaraan - Mobil",
+    category: "Kendaraan",
     subtitle: "Perlindungan mobil untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     gradient: "from-slate-900 via-slate-800 to-slate-700",
   },
@@ -986,7 +986,7 @@ export default function MotorLatestExact({
               <div className="flex items-center gap-3 text-[#0A4D82]">
                 <Shield className="h-8 w-8" />
                 <div>
-                  <div className="text-[22px] font-bold">Asuransi Kendaraan Bermotor</div>
+                  <div className="text-[22px] font-bold">Asuransi Kendaraan</div>
             <div className="text-[15px] text-slate-600">Perlindungan kendaraan untuk risiko yang dijamin sesuai produk yang dipilih</div>
                 </div>
               </div>
@@ -1004,7 +1004,7 @@ export default function MotorLatestExact({
               <button type="button" onClick={returnToLauncher} className="inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
               <div className="mt-6 text-center text-white">
                 <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Selamat datang kembali, {userName}</div>
-                <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{flowType === "motor" ? "Asuransi Motor TLO" : flowType === "carComp" ? "Asuransi Mobil Comprehensive" : "Asuransi Mobil TLO"}</h1>
+                <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{flowType === "motor" ? "Total Loss Kendaraan - Motor" : flowType === "carComp" ? "Asuransi Mobil Comprehensive" : "Total Loss Kendaraan - Mobil"}</h1>
 <p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{flowType === "motor" ? "Perlindungan sepeda motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran." : flowType === "carComp" ? "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran." : "Perlindungan mobil untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran."}</p>
               </div>
               <div className="mx-auto mt-7 max-w-4xl rounded-2xl bg-white p-4 shadow-2xl shadow-black/15 md:p-5">
@@ -1522,7 +1522,7 @@ Contoh: ojek online, rental, antar barang, dan kegiatan usaha.`} />
               {step > 1 || showPremiumDetails ? <aside className="h-fit rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg lg:sticky lg:top-24">
                 <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-[18px] font-bold"><FileText className="h-5 w-5" />Ringkasan</div><ChevronDown className="h-5 w-5 text-white/80" /></div>
                 <div className="mt-4 border-t border-white/15 pt-3.5">
-                  <SummaryRow label="Produk" value={flowType === "motor" ? "KBM Roda 2 - TLO" : flowType === "carComp" ? "KBM Roda 4 - Comprehensive" : "KBM Roda 4 - TLO"} />
+                  <SummaryRow label="Produk" value={flowType === "motor" ? "Total Loss Kendaraan - Motor" : flowType === "carComp" ? "Kendaraan Roda 4 - Comprehensive" : "Total Loss Kendaraan - Mobil"} />
                   <SummaryRow label="Kode Wilayah" value={selected.quote.plateRegion || "-"} />
                   <SummaryRow label="Penggunaan" value={selected.quote.usage || "-"} />
                   {flowType !== "motor" ? <SummaryRow label="Nilai yang Dilindungi" value={formatRupiah(calc?.details?.insuredValue || Number(selected.quote.marketValue || 0))} /> : null}
@@ -1549,6 +1549,7 @@ Contoh: ojek online, rental, antar barang, dan kegiatan usaha.`} />
     </div>
   );
 }
+
 
 
 

@@ -7,22 +7,22 @@ export const MIN_YEAR_COMP = CURRENT_YEAR - 15;
 export const PRODUCTS = [
   {
     id: "motor",
-    title: "Kendaraan Bermotor Roda 2 - TLO",
-    category: "Kendaraan Bermotor",
+    title: "Total Loss Kendaraan - Motor",
+    category: "Kendaraan",
     subtitle: "Perlindungan motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     gradient: "from-slate-700 via-slate-600 to-slate-500",
   },
   {
     id: "carComp",
     title: "Kendaraan Bermotor Roda 4 - Comprehensive",
-    category: "Kendaraan Bermotor",
+    category: "Kendaraan",
     subtitle: "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran.",
     gradient: "from-sky-800 via-sky-700 to-sky-600",
   },
   {
     id: "carTlo",
-    title: "Kendaraan Bermotor Roda 4 - TLO",
-    category: "Kendaraan Bermotor",
+    title: "Total Loss Kendaraan - Mobil",
+    category: "Kendaraan",
     subtitle: "Perlindungan mobil untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     gradient: "from-slate-900 via-slate-800 to-slate-700",
   },

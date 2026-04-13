@@ -608,7 +608,7 @@ export default function App() {
 
           <SectionShelf icon={Shield} title="Asuransi Kecelakaan Diri" subtitle="Perlindungan biaya pengobatan akibat kecelakaan" items={PERSONAL_PRODUCTS} onOpen={handleOpenJourney} />
           <SectionShelf icon={Building2} title="Asuransi Harta Benda" subtitle="Perlindungan bangunan dan isi properti dengan simulasi premi dan penawaran digital." items={buildPropertyCatalog(propertyItems)} onOpen={handleOpenJourney} />
-          <SectionShelf icon={Car} title="Asuransi Kendaraan Bermotor" subtitle="Perlindungan motor dan mobil dengan simulasi premi dan penawaran digital." items={buildVehicleCatalog({ motorItem, carTloItem, carCompItem, sessionRole })} onOpen={handleOpenJourney} />
+          <SectionShelf icon={Car} title="Asuransi Kendaraan" subtitle="Perlindungan motor dan mobil dengan simulasi premi dan penawaran digital." items={buildVehicleCatalog({ motorItem, carTloItem, carCompItem, sessionRole })} onOpen={handleOpenJourney} />
         </div>
       </div>
     </div>
