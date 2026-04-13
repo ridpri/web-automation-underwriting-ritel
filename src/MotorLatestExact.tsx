@@ -1029,7 +1029,7 @@ export default function MotorLatestExact({
           </div>
 
           <div className={cls("mx-auto px-4 pb-12 md:px-6", step > 1 || showPremiumDetails ? "max-w-[1280px]" : "max-w-4xl")}>
-            <div className={cls("grid gap-5", step > 1 || showPremiumDetails ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
+            <div className={cls("grid items-start gap-5", step > 1 || showPremiumDetails ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
               <div className="space-y-5">
                 {step === 1 ? (
                   <>
