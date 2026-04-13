@@ -464,47 +464,29 @@ const LIFE_GUARD_COVERAGE_ITEMS = [
   {
     id: "main-accident",
     section: "main",
-    title: "Meninggal Dunia karena Kecelakaan",
+    title: "Meninggal Dunia",
     clauseLabel: "Meninggal Dunia karena Kecelakaan",
-    description: "Menjamin santunan meninggal dunia akibat kecelakaan sesuai limit manfaat yang disetujui pada konfigurasi produk.",
-    note: "Nilai santunan mengikuti NP Meninggal Dunia (A) dan periode pertanggungan aktif.",
+    description: "Menjamin santunan bila Tertanggung meninggal dunia sebagai akibat langsung dari kecelakaan yang dijamin polis.",
+    note: "Santunan juga dapat diberikan bila Tertanggung hilang akibat kecelakaan dan tidak ditemukan sekurang-kurangnya 60 hari. Hak santunan mengikuti Jaminan A yang tercantum pada ikhtisar.",
     included: true,
   },
   {
     id: "main-disability",
     section: "main",
-    title: "Cacat Tetap Total / Sebagian",
+    title: "Cacat Tetap Total atau Sebagian",
     clauseLabel: "Cacat Tetap Total / Sebagian",
-    description: "Menjamin cacat tetap total atau sebagian akibat kecelakaan dengan perhitungan manfaat berdasarkan persentase yang ditetapkan.",
-    note: "Persentase manfaat mengikuti NP Cacat Tetap (B) pada konfigurasi Life Guard.",
+    description: "Menjamin santunan bila Tertanggung mengalami cacat tetap sebagai akibat langsung dari kecelakaan yang dijamin polis.",
+    note: "Jaminan ini mencakup cacat tetap keseluruhan dan cacat tetap sebagian. Besarnya santunan mengikuti Jaminan B dan penetapan dokter sesuai kondisi cacat tetap.",
     included: true,
   },
   {
-    id: "ext-medical",
-    section: "extension",
-    title: "Biaya Pengobatan Akibat Kecelakaan",
+    id: "main-medical",
+    section: "main",
+    title: "Biaya Perawatan atau Pengobatan",
     clauseLabel: "Biaya Pengobatan Akibat Kecelakaan",
-    description: "Perluasan untuk penggantian biaya pengobatan akibat kecelakaan sesuai wording dan sub-limit yang ditetapkan.",
-    note: "Besaran manfaat mengikuti NP Pengobatan (C).",
-    included: false,
-  },
-  {
-    id: "ext-sport",
-    section: "extension",
-    title: "Kegiatan Olahraga",
-    clauseLabel: "Klausul Kegiatan Olahraga",
-    description: "Perluasan untuk aktivitas olahraga yang disepakati dalam PKS atau wording tambahan.",
-    note: "Aktifkan bersama klausul kegiatan olahraga bila diperlukan oleh partner.",
-    included: false,
-  },
-  {
-    id: "ext-motor",
-    section: "extension",
-    title: "Risiko Mengendarai Sepeda Motor",
-    clauseLabel: "Klausul Risiko Mengendarai Sepeda Motor dan Sejenisnya",
-    description: "Perluasan atau pengecualian untuk risiko mengendarai sepeda motor dan sejenisnya sesuai kebutuhan produk.",
-    note: "Tidak boleh aktif bersamaan dengan klausul pengecualian risiko motor yang saling bertentangan.",
-    included: false,
+    description: "Menjamin penggantian biaya perawatan atau pengobatan untuk pemulihan sakit atau cedera yang timbul langsung dari kecelakaan yang dijamin polis.",
+    note: "Penggantian mengikuti biaya yang benar-benar dikeluarkan dan tidak melebihi Jaminan C pada ikhtisar. Kuitansi pengobatan alternatif tidak termasuk.",
+    included: true,
   },
 ];
 
@@ -2288,22 +2270,6 @@ function PartnerConfigStudio({
                 <div className="mb-4 text-[14px] font-medium text-slate-950">Risiko yang Dijamin</div>
                 <div className="space-y-2">
                   {LIFE_GUARD_COVERAGE_ITEMS.filter((item) => item.section === "main").map((item) => (
-                    <LifeGuardCoverageCard
-                      key={item.id}
-                      item={item}
-                      selected={master.clausePackage.includes(item.clauseLabel)}
-                      expanded={lifeGuardExpanded === item.id}
-                      onSelect={() => toggleClause(item.clauseLabel)}
-                      onToggle={() => setLifeGuardExpanded((prev) => (prev === item.id ? "" : item.id))}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <div className="mb-4 text-[14px] font-medium text-slate-950">Perluasan Jaminan</div>
-                <div className="space-y-2">
-                  {LIFE_GUARD_COVERAGE_ITEMS.filter((item) => item.section === "extension").map((item) => (
                     <LifeGuardCoverageCard
                       key={item.id}
                       item={item}
