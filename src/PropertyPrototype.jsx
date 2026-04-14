@@ -1762,7 +1762,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
               </div>
               <SummarySidebarAlert items={underwritingPendingItems} />
               <div className="space-y-2">
-                <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setShowIndicationModal(true)} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Kirim Penawaran</button>
+                <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setShowIndicationModal(true)} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Kirim Indikasi</button>
                 <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setExternalView("offer-final")} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] border border-white/20 text-sm font-bold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20", canAdvanceUnderwriting ? "bg-[#0A4D82] hover:brightness-110" : "cursor-not-allowed bg-slate-500/70")}>Pembayaran</button>
                 <button type="button" onClick={() => setInternalStep(1)} className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-white/20 bg-[#0A4D82] text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali</button>
               </div>
