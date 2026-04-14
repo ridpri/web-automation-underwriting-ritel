@@ -1184,6 +1184,41 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
                               })}
                             </div>
                           </div>
+                          {step === 1 ? (
+                            <div className="flex justify-stretch sm:justify-end">
+                              <button
+                                type="button"
+                                disabled={
+                                  !(
+                                    Boolean(selected.quote.plateRegion) &&
+                                    Boolean(selected.quote.year) &&
+                                    isYearEligible(flowType, selected.quote.year) &&
+                                    Boolean(String(selected.quote.marketValue || "").trim()) &&
+                                    validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) &&
+                                    Boolean(selected.quote.usage) &&
+                                    (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) &&
+                                    (flowType !== "carTlo" || Boolean(selected.quote.vehicleType))
+                                  )
+                                }
+                                onClick={() => setStep(2)}
+                                className={cls(
+                                  "inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition sm:w-auto",
+                                  Boolean(selected.quote.plateRegion) &&
+                                    Boolean(selected.quote.year) &&
+                                    isYearEligible(flowType, selected.quote.year) &&
+                                    Boolean(String(selected.quote.marketValue || "").trim()) &&
+                                    validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) &&
+                                    Boolean(selected.quote.usage) &&
+                                    (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) &&
+                                    (flowType !== "carTlo" || Boolean(selected.quote.vehicleType))
+                                    ? "bg-[#F5A623] hover:brightness-105"
+                                    : "cursor-not-allowed bg-slate-400",
+                                )}
+                              >
+                                Isi Data
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       </ActionCard>
                     ) : null}
