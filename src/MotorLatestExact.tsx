@@ -975,7 +975,7 @@ export default function MotorLatestExact({
                 }))}
               />
             </div>
-            <button type="button" aria-label="Lihat notifikasi" className="hidden h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white hover:bg-white/15 sm:inline-flex">
+            <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
               <Bell className="h-4 w-4" />
             </button>
           </div>
