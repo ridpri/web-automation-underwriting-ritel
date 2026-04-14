@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { canProceedToPaymentFromOperating, paymentBlockMessage } from "./operatingLayer.js";
 import { SentOffersHistoryModal, UserPillMenu } from "./components/UserPillMenu.jsx";
+import { VehicleYearPicker } from "./components/VehicleYearPicker.jsx";
 import { createEmptyDocumentCheck, createPhotoEvidence, createTransactionAuthority, evaluateDocumentRead, summarizeFraudSignals } from "./platform/securityControls.js";
 import { PASSENGER_CAR_MODELS, getPassengerCarMeta } from "./carDomain.js";
 
@@ -414,10 +415,6 @@ function addOneYear(dateStr: string) {
 }
 function getStampDuty(netPremium: number) {
   return netPremium > 5000000 ? 20000 : 10000;
-}
-function getYearOptions(flowType: FlowType) {
-  const minYear = flowType === "carComp" ? MIN_YEAR_COMP : MIN_YEAR_TLO;
-  return Array.from({ length: CURRENT_YEAR - minYear + 1 }, (_, i) => String(CURRENT_YEAR - i));
 }
 function isYearEligible(flowType: FlowType, year: string) {
   if (!year) return true;
@@ -1060,7 +1057,13 @@ export default function MotorLatestExact({
                         ) : null}
                         <div>
                           <FieldLabel label="Tahun Pembuatan Kendaraan" helpText="Sesuai tahun pembuatan/manufacture year pada STNK." />
-                          <SelectInput value={selected.quote.year} onChange={(value: string) => setAt(flowType, "quote.year", value)} options={getYearOptions(flowType)} placeholder="Kendaraan ini dibuat tahun berapa?" />
+                          <VehicleYearPicker
+                            value={selected.quote.year}
+                            onChange={(value: string) => setAt(flowType, "quote.year", value)}
+                            minYear={flowType === "carComp" ? MIN_YEAR_COMP : MIN_YEAR_TLO}
+                            maxYear={CURRENT_YEAR}
+                            placeholder="Pilih tahun kendaraan"
+                          />
                         </div>
                         <div>
                           <FieldLabel label="Harga Pertanggungan" helpText="Harga pertanggungan sebaiknya mencerminkan harga sebenarnya kendaraan sesaat sebelum kerugian atau kerusakan. Jika lebih rendah dari harga sebenarnya, penyelesaian klaim dapat diperhitungkan secara proporsional sebelum pengurangan risiko sendiri." />
