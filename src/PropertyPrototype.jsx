@@ -1497,6 +1497,72 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
     return items;
   }, [activeVariant, guaranteeBreakdown, form.constructionClass, totalValue]);
 
+  const fillPrototypeData = () => {
+    const demoCustomer = MOCK_CIF[0];
+    const selectedCoverageDate = formatDateInput(new Date());
+    const demoAddress = "Jl. Sudirman Kav. 44, Jakarta Selatan";
+    const declarationTime = formatDateInput(new Date());
+    setCurrentProductVariant(currentProductVariant);
+    setExternalView("");
+    setInternalStep(2);
+    setQuoted(true);
+    setSelectedCustomer(demoCustomer);
+    setField("identity", `${demoCustomer.name} - ${demoCustomer.cif}`);
+    setField("phone", demoCustomer.phone);
+    setField("email", demoCustomer.email);
+    setField("propertyType", PROPERTY_TYPES.includes("Rumah Tinggal") ? "Rumah Tinggal" : PROPERTY_TYPES[0]);
+    setField("occupancy", "Hunian");
+    setField("constructionClass", "Kelas 1");
+    setField("locationSearch", demoAddress);
+    setField("customerType", demoCustomer.type);
+    setObjectRows([
+      {
+        id: "obj-1",
+        type: "Bangunan",
+        amount: "350000000",
+        note: "Rumah tinggal 2 lantai dengan renovasi ringan",
+      },
+    ]);
+    setSelectedGuarantees({
+      riot: true,
+      flood: false,
+      tsfwd: false,
+      earthquake: false,
+    });
+    setExpandedRows((prev) => ({ ...prev, fire: true, riot: true, flood: false, tsfwd: false, earthquake: false }));
+    setFloorCount("");
+    setUwForm({
+      idNumber: "3173010101010001",
+      sameAsInsured: true,
+      picName: demoCustomer.name,
+      ownership: "Milik Sendiri",
+      coverageStartDate: selectedCoverageDate,
+      fireProtection: "APAR + Hydrant",
+      claimHistory: "Tidak Ada",
+      surroundingRisk: "",
+      additionalNotes: "Isi otomatis prototype untuk verifikasi proses.",
+    });
+    setUploads({
+      frontView: "data:demo/photo-front",
+      sideRightView: "data:demo/photo-right",
+      sideLeftView: "data:demo/photo-left",
+    });
+    setEvidence({
+      location: createLocationEvidence({ declaredAddress: demoAddress, source: "demo" }),
+      photos: {
+        frontView: createPhotoEvidence({ label: "Foto Tampak Depan", declaredAddress: demoAddress, declarationTime }),
+        sideRightView: createPhotoEvidence({ label: "Foto Samping Kanan", declaredAddress: demoAddress, declarationTime }),
+        sideLeftView: createPhotoEvidence({ label: "Foto Samping Kiri", declaredAddress: demoAddress, declarationTime }),
+      },
+    });
+    setRejectReason("");
+    setRejectCustomReason("");
+    setPaymentStatus("");
+    setShowIndicationModal(false);
+    setHelpRequestSent(false);
+    setRejectionStatus("");
+  };
+
   if (externalView === "offer-indicative") {
     return (
       <>
@@ -1650,6 +1716,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                 <div className="hidden items-center gap-3 md:flex"><button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button><button type="button" onClick={() => { if (embedded && onExit) onExit(); else setScreen("catalog"); }} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button></div>
           </div>
           <div className="relative flex items-center gap-4 text-white">
+            <button type="button" onClick={fillPrototypeData} className="hidden rounded-[10px] border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15 md:inline-flex md:text-sm">Isi Otomatis (Demo)</button>
             <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{sessionName}{helpRequestSent ? <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" /> : null}</button>
             <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
             <UserMenu
