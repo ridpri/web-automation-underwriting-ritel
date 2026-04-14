@@ -438,16 +438,18 @@ function SummaryRow({ label, value }) {
 
 function SummarySidebarShell({ title = "Ringkasan", children }) {
   return (
-    <aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-4 text-white shadow-lg lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[14px] font-bold">
-          <FileText className="h-4 w-4" />
-          {title}
+    <div className="self-start lg:sticky lg:top-24">
+      <aside className="h-fit rounded-2xl bg-[#0A4D82] p-4 text-white shadow-lg lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[14px] font-bold">
+            <FileText className="h-4 w-4" />
+            {title}
+          </div>
+          <ChevronDown className="h-4 w-4 text-white/80" />
         </div>
-        <ChevronDown className="h-4 w-4 text-white/80" />
-      </div>
-      <div className="mt-3 space-y-3">{children}</div>
-    </aside>
+        <div className="mt-3 space-y-3">{children}</div>
+      </aside>
+    </div>
   );
 }
 
