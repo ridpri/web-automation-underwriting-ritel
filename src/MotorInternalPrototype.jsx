@@ -285,7 +285,7 @@ return <div className="fixed inset-0 z-50 flex items-center justify-center bg-sl
   if (externalView === "offer-final") return <CustomerProposalPage mode="final" />;
   if (externalView === "payment") return <PaymentPage />;
 
-  return <div className="min-h-screen overflow-x-hidden bg-[#F3F5F7] text-slate-900">
+  return <div className="min-h-screen bg-[#F3F5F7] text-slate-900" style={{ overflowX: "clip" }}>
     <IndicationModal />
     <SentOffersHistoryModal open={showSentOffers} onClose={() => setShowSentOffers(false)} />
     <HelpRequestToast />
