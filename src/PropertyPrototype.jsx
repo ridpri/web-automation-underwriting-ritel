@@ -438,20 +438,8 @@ function SummaryRow({ label, value }) {
 
 function SummarySidebarShell({ title = "Ringkasan", children }) {
   return (
-    <div className="w-full self-start lg:w-[320px]">
-      <div className="lg:fixed lg:top-24 lg:w-[320px]" style={{ right: "max(1.5rem, calc((100vw - 1280px) / 2 + 1.5rem))" }}>
-        <aside className="h-fit rounded-2xl bg-[#0A4D82] p-4 text-white shadow-lg lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[14px] font-bold">
-              <FileText className="h-4 w-4" />
-              {title}
-            </div>
-            <ChevronDown className="h-4 w-4 text-white/80" />
-          </div>
-          <div className="mt-3 space-y-3">{children}</div>
-        </aside>
-      </div>
-      <aside className="hidden h-fit rounded-2xl bg-transparent p-0 text-transparent shadow-none lg:block lg:pointer-events-none lg:invisible lg:max-h-[calc(100vh-7rem)]">
+    <div className="w-full self-start lg:w-[320px] lg:sticky lg:top-24">
+      <aside className="h-fit rounded-2xl bg-[#0A4D82] p-4 text-white shadow-lg lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-[14px] font-bold">
             <FileText className="h-4 w-4" />
