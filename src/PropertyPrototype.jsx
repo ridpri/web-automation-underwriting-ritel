@@ -438,7 +438,7 @@ function SummaryRow({ label, value }) {
 
 function SummarySidebarShell({ title = "Ringkasan", children }) {
   return (
-<aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-4 text-white shadow-lg md:sticky md:top-32">
+    <aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-4 text-white shadow-lg lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[14px] font-bold">
           <FileText className="h-4 w-4" />
