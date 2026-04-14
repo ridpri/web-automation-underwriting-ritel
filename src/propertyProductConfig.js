@@ -8,7 +8,7 @@ export const PROPERTY_PRODUCT_VARIANTS = {
     catalogImage: "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=900&q=80",
     productCode: "PSF",
     primaryCoverageTitle: "Kerusakan Akibat Kebakaran",
-    primaryCoveragePremiumLabel: "Premi Dasar",
+    primaryCoveragePremiumLabel: "Premi",
     primaryCoverageDescription:
       "Menjamin kerusakan atau kerugian yang secara langsung disebabkan oleh kebakaran, petir, ledakan, kejatuhan pesawat terbang, dan asap sesuai Polis Standar Asuransi Kebakaran Indonesia.",
     primaryCoverageDeductibleClassOne: "Tidak dikenakan risiko sendiri.",
@@ -36,7 +36,7 @@ export const PROPERTY_PRODUCT_VARIANTS = {
     catalogImage: "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=900&q=80",
     productCode: "PAR",
     primaryCoverageTitle: "Kerusakan Fisik Mendadak pada Properti",
-    primaryCoveragePremiumLabel: "Premi Dasar",
+    primaryCoveragePremiumLabel: "Premi",
     primaryCoverageDescription:
       "Menjamin kerusakan fisik yang terjadi tiba-tiba dan tidak direncanakan pada bangunan atau isi properti yang diasuransikan, selama berada di lokasi yang tercantum dalam polis dan tidak termasuk dalam pengecualian polis.",
     primaryCoverageDeductibleClassOne: "Besar risiko sendiri mengikuti ketentuan polis final dan tambahan perlindungan yang Anda pilih.",
