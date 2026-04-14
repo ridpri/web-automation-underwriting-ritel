@@ -397,7 +397,13 @@ export default function App() {
   if (activeJourney === "self-care-portal" || activeJourney === "self-care-lookup") {
     return (
       <Suspense fallback={<JourneyFallback />}>
-        <SelfCarePortalBridge sessionRole={sessionRole} sessionName={activeSessionName} onGoHome={() => setActiveJourney("")} onExit={() => setActiveJourney("")} />
+        <SelfCarePortalBridge
+          sessionRole={sessionRole}
+          sessionName={activeSessionName}
+          sessionRoleLabel={resolveRoleLabel(sessionRole)}
+          onGoHome={() => setActiveJourney("")}
+          onExit={() => setActiveJourney("")}
+        />
       </Suspense>
     );
   }

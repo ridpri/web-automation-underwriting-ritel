@@ -427,7 +427,7 @@ function ModalShell({ title, subtitle, onClose, children }) {
   );
 }
 
-function BrandHeader({ onOpenHelp, onGoHome, embedded, sessionName }) {
+function BrandHeader({ onOpenHelp, onGoHome, embedded, sessionName, sessionRoleLabel = "Eksternal" }) {
   if (embedded) return null;
 
   const accountInitial = String(sessionName || "U").trim().charAt(0).toUpperCase();
@@ -440,6 +440,13 @@ function BrandHeader({ onOpenHelp, onGoHome, embedded, sessionName }) {
           <div className="hidden text-[15px] font-semibold text-white/95 sm:block">asuransi jasindo</div>
         </div>
         <div className="flex w-full items-center justify-end gap-2 md:w-auto md:gap-3">
+          <button
+            type="button"
+            className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3.5 text-sm font-medium text-white shadow-sm"
+          >
+            <span>{sessionRoleLabel}</span>
+            <ChevronDown className="h-4 w-4 text-white/85" />
+          </button>
           <button type="button" onClick={onGoHome} className="hidden rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 md:inline-flex">Beranda</button>
           <button type="button" onClick={onOpenHelp} className="rounded-[8px] bg-[#F5A623] px-2.5 py-2 text-xs font-semibold text-white shadow-sm md:px-4 md:text-sm">Bantuan</button>
           <div className="inline-flex items-center gap-2 rounded-full bg-white px-2 py-2 text-sm font-semibold text-slate-700 shadow-sm">
@@ -1502,6 +1509,7 @@ function UploadDocumentsModal({ claim, open, onClose, onSubmit }) {
 
 export default function PersonalPolicyPortal({
   sessionName = "Dita (External)",
+  sessionRoleLabel = "Eksternal",
   embedded = false,
   onGoHome,
   onExit,
@@ -1634,7 +1642,13 @@ export default function PersonalPolicyPortal({
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#F3F5F7] text-slate-900">
-      <BrandHeader onOpenHelp={() => setActiveTab("help")} onGoHome={onGoHome} embedded={embedded} sessionName={sessionName} />
+      <BrandHeader
+        onOpenHelp={() => setActiveTab("help")}
+        onGoHome={onGoHome}
+        embedded={embedded}
+        sessionName={sessionName}
+        sessionRoleLabel={sessionRoleLabel}
+      />
       {content}
       <ReportClaimModal open={reportClaimOpen} policies={sourcePolicies} onClose={() => setReportClaimOpen(false)} onSubmit={handleSubmitClaim} />
       <UploadDocumentsModal claim={uploadClaim} open={Boolean(uploadClaim)} onClose={() => setUploadClaimId("")} onSubmit={handleSubmitDocuments} />

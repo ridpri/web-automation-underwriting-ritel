@@ -314,7 +314,7 @@ function GuestLookupPortal({ onGoHome, sessionName }) {
   );
 }
 
-export default function SelfCarePortalBridge({ sessionRole = "external", sessionName = "Dita (External)", onGoHome, onExit }) {
+export default function SelfCarePortalBridge({ sessionRole = "external", sessionName = "Dita (External)", sessionRoleLabel = "Eksternal", onGoHome, onExit }) {
   if (sessionRole === "guest") {
     return <GuestLookupPortal sessionName={sessionName} onGoHome={onGoHome || onExit} />;
   }
@@ -330,6 +330,7 @@ export default function SelfCarePortalBridge({ sessionRole = "external", session
   return (
     <PersonalPolicyPortal
       sessionName={portalModel.sessionName}
+      sessionRoleLabel={sessionRoleLabel}
       onGoHome={onGoHome}
       onExit={onExit}
       policies={portalModel.policies}
