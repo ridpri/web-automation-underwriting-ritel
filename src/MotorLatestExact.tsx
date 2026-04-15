@@ -815,7 +815,7 @@ export default function MotorLatestExact({
   const [flowType, setFlowType] = useState<FlowType | null>(initialFlow);
   const [step, setStep] = useState(1);
   const [openCatalog, setOpenCatalog] = useState(false);
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({ main: true });
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({ main: false });
   const [showPremiumDetails, setShowPremiumDetails] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [paymentPanel, setPaymentPanel] = useState("");
@@ -1403,14 +1403,14 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
 
                           {(selected.ui.dataMode !== "scan" || selected.stnkRead) ? <div className="mt-4 grid gap-4 md:grid-cols-2">
                             <div>
-                                  <FieldLabel label="Tanggal Mulai Perlindungan" />
+                                  <FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" />
                               <TextInput value={selected.quote.coverageStart} onChange={(value: string) => setAt(flowType, "quote.coverageStart", value)} type="date" />
                             </div>
 
                             {selected.ui.dataMode ? (
                               <>
                                 <div>
-                                  <FieldLabel label="Tanggal Akhir Perlindungan" />
+                                  <FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" />
                                   <TextInput value={selected.quote.coverageEnd} type="date" readOnly />
                                 </div>
                                 {flowType === "carTlo" ? (
@@ -1581,7 +1581,7 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
                 <div className="mt-3 border-t border-white/15 pt-3.5">
                   <SummaryRow label="Premi" value={formatRupiah(flowType === "carComp" ? calc.mainPremium : getMainPremiumSplit(flowType, calc).ownDamage + getMainPremiumSplit(flowType, calc).theft)} />
                   {calc.extensionTotal > 0 ? <SummaryRow label="Premi Perluasan" value={formatRupiah(calc.extensionTotal)} /> : null}
-                  <SummaryRow label="Biaya Materai" value={formatRupiah(calc.stamp)} />
+                  <SummaryRow label="Biaya Meterai" value={formatRupiah(calc.stamp)} />
                 </div>
                 <div className="mt-4 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Estimasi Premi 1 Tahun</div><div className="mt-2 text-right text-[30px] font-bold leading-none">{formatRupiah(calc.total)}</div></div>
                 {step === 1 ? <div className="mt-4"><button onClick={() => setStep(2)} disabled={!isYearEligible(flowType, selected.quote.year) || !validateMaxHP(flowType, Number(selected.quote.marketValue || 0))} className={cls("flex h-[48px] w-full items-center justify-center rounded-[8px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", isYearEligible(flowType, selected.quote.year) ? "bg-[#F5A623] hover:brightness-105" : "bg-white/20")}>Isi Data</button></div> : null}
@@ -1600,6 +1600,10 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
     </div>
   );
 }
+
+
+
+
 
 
 

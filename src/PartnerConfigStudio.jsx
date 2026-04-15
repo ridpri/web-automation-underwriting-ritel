@@ -235,7 +235,7 @@ const FIELD_HELPERS = {
   "Rate Premi (â€°)": "Isi rate premi.",
   "Biaya Admin": "Isi biaya admin.",
   "Biaya Polis": "Isi biaya polis.",
-  "Biaya Materai (Sesuai STAR)": "Isi biaya materai yang berlaku.",
+  "Biaya Meterai (Sesuai STAR)": "Isi biaya meterai yang berlaku.",
   "Diskon (%)": "Isi diskon.",
   "Brokerage / Komisi (%)": "Isi komisi atau brokerage.",
   "Owner / Squad": "Pilih penanggung jawab internal.",
@@ -2454,7 +2454,7 @@ function PartnerConfigStudio({
                     <FormField label="Biaya Polis" required>
                       <CurrencyInput value={master.adminFee || ""} onChange={(value) => patchSection("master", { adminFee: value })} />
                     </FormField>
-                    <FormField label="Biaya Materai (Sesuai STAR)">
+                    <FormField label="Biaya Meterai (Sesuai STAR)">
                       <TextInput value={master.stampDuty || "Sesuai STAR"} onChange={(value) => patchSection("master", { stampDuty: value })} disabled />
                     </FormField>
                     <FormField label="Diskon (%)">
@@ -2479,7 +2479,7 @@ function PartnerConfigStudio({
                   ]}
                   premiumRows={[
                     { label: "Biaya Polis", value: master.adminFee ? `Rp ${formatRupiah(master.adminFee)}` : "-" },
-                    { label: "Biaya Materai", value: master.stampDuty || "Sesuai STAR" },
+                    { label: "Biaya Meterai", value: master.stampDuty || "Sesuai STAR" },
                     { label: "Brokerage / Komisi", value: `${master.commissionPercent || "15"}%` },
                   ]}
                   totalLabel="Estimasi Premi"
@@ -2738,7 +2738,7 @@ function PartnerConfigStudio({
                     <FormField label="Biaya Polis" required>
                       <CurrencyInput value={master.adminFee || ""} onChange={(value) => patchSection("master", { adminFee: value })} />
                     </FormField>
-                    <FormField label="Biaya Materai (Sesuai STAR)">
+                    <FormField label="Biaya Meterai (Sesuai STAR)">
                       <TextInput value={master.stampDuty || "Sesuai STAR"} onChange={(value) => patchSection("master", { stampDuty: value })} disabled />
                     </FormField>
                     <FormField label="Diskon (%)">
@@ -2758,7 +2758,7 @@ function PartnerConfigStudio({
                   ]}
                   premiumRows={[
                     { label: "Biaya Polis", value: master.adminFee ? `Rp ${formatRupiah(master.adminFee)}` : "-" },
-                    { label: "Biaya Materai", value: master.stampDuty || "Sesuai STAR" },
+                    { label: "Biaya Meterai", value: master.stampDuty || "Sesuai STAR" },
                     { label: "Brokerage / Komisi", value: `${master.commissionPercent || "15"}%` },
                   ]}
                   totalLabel="Ringkasan Pertanggungan"
