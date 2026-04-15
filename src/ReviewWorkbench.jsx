@@ -291,9 +291,10 @@ export default function ReviewWorkbench({
           <div className="relative flex items-center gap-2 md:gap-3">
             <button
               type="button"
-              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3.5 text-sm font-medium text-white shadow-sm"
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm"
             >
-              <span>{sessionRoleLabel}</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
+              <span className="max-w-[124px] truncate">{sessionRoleLabel}</span>
             </button>
             <button
               type="button"

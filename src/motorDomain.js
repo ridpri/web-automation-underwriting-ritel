@@ -72,7 +72,7 @@ export const MOTOR_EXTENSIONS = [
   },
   {
     key: "srcc",
-    title: "Risiko Kerusuhan dan Huru-hara",
+    title: "Jaminan Kerusuhan dan Huru-hara",
     detail:
       "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa senjata api, revolusi tanpa senjata api, serta penjarahan yang terjadi dalam peristiwa tersebut.",
     deductible: "10% dari klaim yang disetujui, minimum Rp500.000 per kejadian.",
@@ -80,14 +80,14 @@ export const MOTOR_EXTENSIONS = [
   },
   {
     key: "ts",
-    title: "Risiko Terorisme",
+    title: "Jaminan Terorisme",
     detail: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, atau sabotase.",
     deductible: "10% dari klaim yang disetujui, minimum Rp500.000 per kejadian.",
     type: "toggle",
   },
   {
     key: "flood",
-    title: "Risiko Banjir",
+    title: "Jaminan Banjir",
     detail:
       "Menjamin kerugian atau kerusakan akibat banjir, angin topan, badai, hujan es, genangan air, dan atau tanah longsor yang secara langsung mengenai kendaraan.",
     deductible: "10% dari nilai kerugian yang disetujui, minimum Rp500.000 per kejadian.",
@@ -95,7 +95,7 @@ export const MOTOR_EXTENSIONS = [
   },
   {
     key: "quake",
-    title: "Risiko Gempa Bumi",
+    title: "Jaminan Gempa Bumi",
     detail: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh gempa bumi, tsunami, dan atau letusan gunung berapi.",
     deductible: "10% dari nilai kerugian yang disetujui, minimum Rp500.000 per kejadian.",
     type: "toggle",

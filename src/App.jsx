@@ -479,14 +479,15 @@ export default function App() {
                 setAccountMenuOpen(false);
                 setRoleMenuOpen((current) => !current);
               }}
-              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3.5 text-sm font-medium text-white shadow-sm hover:bg-white/15"
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/15"
             >
-              <span>{resolveRoleLabel(sessionRole)}</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
+              <span className="max-w-[118px] truncate">{resolveRoleLabel(sessionRole)}</span>
               <ChevronDown className={cls("h-4 w-4 text-white/85 transition", roleMenuOpen && "rotate-180")} aria-hidden="true" />
             </button>
             {roleMenuOpen ? (
               <div id="role-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
-                <div className="px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Pilih peran</div>
+                <div className="px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">View as</div>
                 {SESSION_OPTIONS.map((item) => (
                   <button
                     key={item.key}

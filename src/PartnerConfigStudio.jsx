@@ -3734,7 +3734,7 @@ function PartnerConfigStudio({
             <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200 md:p-8">
               <div className="inline-flex items-center gap-2 rounded-full bg-[#EEF5FB] px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[#0A4D82]">
                 <Lock className="h-3.5 w-3.5" />
-                Pilih Peran
+                View as
               </div>
               <div className="mt-4 text-[30px] font-black tracking-tight text-slate-950 md:text-[40px]">
                 Mulai dari login role, baru lanjut ke empat produk
@@ -3884,17 +3884,20 @@ function PartnerConfigStudio({
                   </div>
 
                   <div className="flex shrink-0 flex-wrap items-center gap-3">
-                    <select
-                      value={role}
-                      onChange={(event) => updateRole(event.target.value)}
-                      className="h-12 rounded-[10px] border border-white/20 bg-white/10 px-4 text-sm font-medium text-white outline-none backdrop-blur focus:border-white/35 focus-visible:ring-4 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A4D82]"
-                    >
+                    <div className="flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-white">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
+                      <select
+                        value={role}
+                        onChange={(event) => updateRole(event.target.value)}
+                        className="h-8 rounded-[8px] bg-transparent pr-6 text-sm font-medium text-white outline-none"
+                      >
                       {ROLE_OPTIONS.map((item) => (
                         <option key={item} value={item} className="text-slate-900">
                           {getRoleLabel(item)}
                         </option>
                       ))}
-                    </select>
+                      </select>
+                    </div>
                     <button
                       type="button"
                       onClick={createConfig}
@@ -4449,9 +4452,10 @@ function AppProductHeader({
         <div className="relative flex items-center gap-2 md:gap-3">
           <button
             type="button"
-            className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3.5 text-sm font-medium text-white shadow-sm"
+            className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm"
           >
-            <span>{sessionRoleLabel}</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
+            <span className="max-w-[132px] truncate">{sessionRoleLabel}</span>
             <ChevronDown className="h-4 w-4 text-white/85" />
           </button>
           <button

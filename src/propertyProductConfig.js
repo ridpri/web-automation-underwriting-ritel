@@ -7,14 +7,14 @@ export const PROPERTY_PRODUCT_VARIANTS = {
     catalogDescription: "Perlindungan untuk bangunan, inventaris, dan isi properti dari risiko kebakaran, dengan tambahan perlindungan opsional.",
     catalogImage: "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=900&q=80",
     productCode: "PSF",
-    primaryCoverageTitle: "Kerusakan Akibat Kebakaran",
+    primaryCoverageTitle: "Jaminan Kebakaran",
     primaryCoveragePremiumLabel: "Premi",
     primaryCoverageDescription:
       "Menjamin kerusakan atau kerugian yang secara langsung disebabkan oleh kebakaran, petir, ledakan, kejatuhan pesawat terbang, dan asap sesuai Polis Standar Asuransi Kebakaran Indonesia.",
     primaryCoverageDeductibleClassOne: "Tidak dikenakan risiko sendiri.",
     primaryCoverageDeductibleOther:
       "5% dari nilai kerugian yang disetujui atau 0,1% dari total nilai yang dilindungi untuk setiap risiko dan setiap lokasi, mana yang lebih besar.",
-    insuredRisksSectionTitle: "Risiko yang Dijamin",
+    insuredRisksSectionTitle: "Jaminan Utama",
     exclusionsSectionTitle: "",
     exclusionsSectionSubtitle: "",
     importantExclusions: [],
@@ -25,6 +25,7 @@ export const PROPERTY_PRODUCT_VARIANTS = {
     shareSubject: "Penawaran Property Safe",
     shareLabel: "Property Safe",
     paymentSuccessMessage: "Pembayaran Property Safe berhasil disimulasikan.",
+    policyDocumentName: "Polis Standar Asuransi Kebakaran Indonesia",
     activeExtensions: ["riot", "flood", "earthquake"],
   },
   "property-all-risk": {
@@ -59,6 +60,7 @@ export const PROPERTY_PRODUCT_VARIANTS = {
     shareSubject: "Penawaran Property All Risk",
     shareLabel: "Property All Risk",
     paymentSuccessMessage: "Pembayaran Property All Risk berhasil disimulasikan.",
+    policyDocumentName: "Wording Property All Risk",
     activeExtensions: ["tsfwd", "riot", "earthquake"],
   },
 };
@@ -66,7 +68,7 @@ export const PROPERTY_PRODUCT_VARIANTS = {
 export const PROPERTY_EXTENSION_LIBRARY = {
   riot: {
     key: "riot",
-    title: "Risiko Kerusuhan & Huru-hara",
+    title: "Jaminan Kerusuhan & Huru-hara",
     detail:
       "Menjamin kerusakan atau kerugian yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, perbuatan jahat, huru-hara, tindakan pencegahan terkait, serta penjarahan dalam rangkaian kejadian tersebut.",
     deductible: "5% dari jumlah ganti rugi yang disetujui, minimum Rp5.000.000 setiap kejadian.",
@@ -75,7 +77,7 @@ export const PROPERTY_EXTENSION_LIBRARY = {
   },
   flood: {
     key: "flood",
-    title: "Risiko Banjir",
+    title: "Jaminan Banjir",
     detail:
       "Menjamin kerugian atau kerusakan akibat banjir, angin topan atau badai, dan air dari luar bangunan yang masuk secara tiba-tiba, termasuk biaya pembersihan atau pemindahan puing akibat risiko tersebut.",
     deductible: "10% dari jumlah ganti rugi yang disetujui.",
@@ -93,7 +95,7 @@ export const PROPERTY_EXTENSION_LIBRARY = {
   },
   earthquake: {
     key: "earthquake",
-    title: "Risiko Gempa Bumi",
+    title: "Jaminan Gempa Bumi",
     detail:
       "Menjamin kerugian atau kerusakan yang secara langsung disebabkan oleh gempa bumi, letusan gunung berapi, tsunami, atau likuifaksi sesuai ketentuan polis.",
     deductible: "2,5% dari nilai yang dilindungi.",
