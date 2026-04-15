@@ -549,6 +549,19 @@ function OfferSummaryField({ label, value, description }) {
   );
 }
 
+function SummaryEditButton({ onClick }) {
+  if (!onClick) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]"
+    >
+      Edit
+    </button>
+  );
+}
+
 function ProposalRow({ label, value, strong = false }) {
   return (
     <div className="flex flex-col gap-1.5 border-b border-slate-100 py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -1180,17 +1193,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
               <div className="space-y-3">
                 <OfferSummarySection
                   title="Ringkasan Nasabah"
-                  action={
-                    !isInternalPreview ? (
-                      <button
-                        type="button"
-                        onClick={onEditInsured}
-                        className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]"
-                      >
-                        Edit
-                      </button>
-                    ) : null
-                  }
+                  action={<SummaryEditButton onClick={onEditInsured} />}
                 >
                   <OfferSummaryGrid>
                     <OfferSummaryField label="Nama Tertanggung" value={customerDisplay} />
@@ -1200,52 +1203,40 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
 
                 <OfferSummarySection
                   title="Ringkasan Properti"
-                  action={
-                    !isInternalPreview ? (
-                      <button
-                        type="button"
-                        onClick={onEditObject}
-                        className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]"
-                      >
-                        Edit
-                      </button>
-                    ) : null
-                  }
+                  action={<SummaryEditButton onClick={onEditObject} />}
                 >
                   <div className="space-y-4">
-                    <OfferSummaryGrid>
-                      <div className="space-y-4">
-                        <OfferSummaryField label="Properti" value={objectSummaryLabel} />
-                        <OfferSummaryField label="Harga Pertanggungan" value={coverageValue} />
-                        <OfferSummaryField
-                          label="Kelas Konstruksi"
-                          value={constructionSummaryLabel}
-                          description={constructionInfo ? constructionInfo.desc : null}
-                        />
-                      </div>
-
-                      <OfferSummaryField
-                        label="Objek yang Dijamin"
-                        value={
-                          objectRows.length ? (
-                            <div className="space-y-1.5">
-                              {objectRows.map((row) => (
-                                <div key={row.id} className="text-[15px] leading-[1.4] text-slate-900">
-                                  <span className="font-semibold">{row.type || "Objek"}</span>
-                                  <span>: Rp {formatRupiah(parseNumber(row.amount))}</span>
-                                  {row.note ? <span className="text-slate-600">, {row.note}</span> : null}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            objectTypeSummary
-                          )
-                        }
-                      />
-                    </OfferSummaryGrid>
+                    <OfferSummaryField label="Properti" value={objectSummaryLabel} />
+                    <OfferSummaryField label="Harga Pertanggungan" value={coverageValue} />
+                    <OfferSummaryField
+                      label="Objek yang Dijamin"
+                      value={
+                        objectRows.length ? (
+                          <div className="space-y-1.5">
+                            {objectRows.map((row) => (
+                              <div key={row.id} className="text-[15px] leading-[1.4] text-slate-900">
+                                <span className="font-semibold">{row.type || "Objek"}</span>
+                                <span>: Rp {formatRupiah(parseNumber(row.amount))}</span>
+                                {row.note ? <span className="text-slate-600">, {row.note}</span> : null}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          objectTypeSummary
+                        )
+                      }
+                    />
+                    <OfferSummaryField
+                      label="Kelas Konstruksi"
+                      value={constructionSummaryLabel}
+                      description={constructionInfo ? constructionInfo.desc : null}
+                    />
 
                     <div className="border-t border-[#E3E9F0] pt-4">
-                      <OfferSummaryGrid>
+                      <div className="mb-4 flex items-center justify-end">
+                        <SummaryEditButton onClick={onEditObject} />
+                      </div>
+                      <div className="space-y-4">
                         <OfferSummaryField
                           label="Cakupan Polis"
                           value={activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}
@@ -1270,12 +1261,12 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                             )
                           }
                         />
-                      </OfferSummaryGrid>
+                      </div>
                     </div>
                   </div>
                 </OfferSummarySection>
 
-                <OfferSummarySection title="Ringkasan Biaya">
+                <OfferSummarySection title="Ringkasan Biaya" action={<SummaryEditButton onClick={onEditObject} />}>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-[12px] border border-[#D8E1EA] bg-[#F3F7FB] px-4 py-3.5">
                       <div className="text-[13px] font-medium text-slate-500">Premi Dasar</div>
