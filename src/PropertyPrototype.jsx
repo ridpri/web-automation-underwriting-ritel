@@ -562,6 +562,15 @@ function SummaryEditButton({ onClick }) {
   );
 }
 
+function OfferSummaryKeyValue({ label, value }) {
+  return (
+    <div className="grid gap-y-0 gap-x-4 md:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="text-[14px] font-medium leading-[1.45] text-slate-600">{label}</div>
+      <div className="text-[15px] font-semibold leading-[1.45] text-slate-900">{value}</div>
+    </div>
+  );
+}
+
 function ProposalRow({ label, value, strong = false }) {
   return (
     <div className="flex flex-col gap-1.5 border-b border-slate-100 py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -577,16 +586,23 @@ function deductibleIsDirectText(value) {
   );
 }
 
-function ProposalAccordion({ title, subtitle, open, onToggle, children }) {
+function ProposalAccordion({ title, subtitle, open, onToggle, children, action }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[#D8E1EA] bg-white">
-      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50/80">
+      <div
+        role="button"
+        onClick={onToggle}
+        className="flex w-full cursor-pointer items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50/80"
+      >
         <div>
           <div className="text-[15px] font-semibold text-slate-900">{title}</div>
           {subtitle ? <div className="mt-1 text-sm text-slate-500">{subtitle}</div> : null}
         </div>
-        <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", open && "rotate-180")} />
-      </button>
+        <div className="flex items-center gap-2">
+          {action ? <span onClick={(event) => event.stopPropagation()}>{action}</span> : null}
+          <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", open && "rotate-180")} />
+        </div>
+      </div>
       {open ? <div className="border-t border-slate-100 px-5 py-4">{children}</div> : null}
     </div>
   );
@@ -970,7 +986,57 @@ function UnderwritingSections({
   );
 }
 
-function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, uploads, propertyType, occupancy, objectRows, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, onReject, onEditObject, onEditInsured, helpRequestSent, floorCount, setFloorCount, canProceed, blockingMessage, showFloorInput, floorFieldRef, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", referralCode = "", senderName = "", onViewerModeChange = () => {} }) {
+function ExternalProposalPage({
+  mode,
+  customerName,
+  customerType,
+  form,
+  uwForm,
+  uploads,
+  propertyType,
+  setPropertyType,
+  occupancy,
+  setOccupancy,
+  objectRows,
+  updateObjectRow,
+  addObjectRow,
+  removeObjectRow,
+  totalValue,
+  estimatedTotal,
+  basePremium,
+  extensionPremium,
+  stampDuty,
+  selectedGuarantees,
+  setSelectedGuarantees,
+  expandedRows,
+  setExpandedRows,
+  constructionClass,
+  setField,
+  setUwField,
+  onBack,
+  onPrimary,
+  onSecondary,
+  onReject,
+  onEditObject,
+  onEditInsured,
+  helpRequestSent,
+  floorCount,
+  setFloorCount,
+  canProceed,
+  blockingMessage,
+  showFloorInput,
+  floorFieldRef,
+  preparedBy,
+  operatingRecord,
+  transactionAuthority,
+  productConfig,
+  extensionOptions,
+  viewerMode = "customer",
+  referralCode = "",
+  senderName = "",
+  onViewerModeChange = () => {},
+  propertyOptions = PROPERTY_TYPES,
+}) {
   const isIndicative = mode === "indicative";
   const isInternalPreview = viewerMode === "internal";
   const activeVariant = productConfig || getPropertyVariant("property-safe");
@@ -983,6 +1049,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   const primaryLabel = isIndicative ? "Isi Data" : "Pembayaran";
   const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === constructionClass);
   const [sectionOpen, setSectionOpen] = useState({ property: false, insured: false, guarantee: false });
+  const [editingSections, setEditingSections] = useState({ property: false, guarantee: false, insured: false });
   const [objectOpen, setObjectOpen] = useState({ detail: false, main: false, exclusions: false, extension: false });
   const [insuredOpen, setInsuredOpen] = useState({ profile: false, advanced: false, photos: false });
   const offerMeta = useMemo(() => {
@@ -1048,9 +1115,12 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   });
   const constructionSummaryLabel = constructionClass || "Belum dipilih";
   const showAdvancedAccordions = !isIndicative && (hasAnyAdvancedData || uploads.frontView || uploads.sideRightView || uploads.sideLeftView);
-  const guaranteeSectionSubtitle = isIndicative
-    ? "Buka untuk melihat jaminan yang sudah termasuk dan memilih perluasan yang diinginkan."
-    : "Buka untuk melihat jaminan yang termasuk dalam penawaran ini.";
+  const occupancyOptions = OCCUPANCY_MAP[propertyType] || [];
+  const constructionOptions = CONSTRUCTION_GUIDE.map((item) => item.title);
+  const startEditingSection = (section) => {
+    setSectionOpen((prev) => ({ ...prev, [section]: true, property: section === "property" ? true : prev.property, guarantee: section === "guarantee" ? true : prev.guarantee, insured: section === "insured" ? true : prev.insured }));
+    setEditingSections((prev) => ({ ...prev, [section]: true }));
+  };
   const headerUserLabel = isInternalPreview ? senderName || "Taqwim (Internal)" : greetingRecipientName;
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
 
@@ -1193,7 +1263,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
               <div className="space-y-3">
                 <OfferSummarySection
                   title="Ringkasan Nasabah"
-                  action={<SummaryEditButton onClick={onEditInsured} />}
+                  action={<SummaryEditButton onClick={() => startEditingSection("insured")} />}
                 >
                   <OfferSummaryGrid>
                     <OfferSummaryField label="Nama Tertanggung" value={customerDisplay} />
@@ -1203,21 +1273,21 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
 
                 <OfferSummarySection
                   title="Ringkasan Properti"
-                  action={<SummaryEditButton onClick={onEditObject} />}
+                  action={<SummaryEditButton onClick={() => startEditingSection("property")} />}
                 >
-                  <div className="space-y-4">
-                    <OfferSummaryField label="Properti" value={objectSummaryLabel} />
-                    <OfferSummaryField label="Harga Pertanggungan" value={coverageValue} />
-                    <OfferSummaryField
-                      label="Objek yang Dijamin"
+                  <div className="space-y-2.5">
+                    <OfferSummaryKeyValue label="Jenis Bangunan:" value={propertyType || "-"} />
+                    <OfferSummaryKeyValue label="Penggunaan bangunan:" value={occupancy || "-"} />
+                    <OfferSummaryKeyValue
+                      label="Objek Pertanggungan:"
                       value={
                         objectRows.length ? (
-                          <div className="space-y-1.5">
+                          <div className="space-y-0.5">
                             {objectRows.map((row) => (
-                              <div key={row.id} className="text-[15px] leading-[1.4] text-slate-900">
-                                <span className="font-semibold">{row.type || "Objek"}</span>
-                                <span>: Rp {formatRupiah(parseNumber(row.amount))}</span>
-                                {row.note ? <span className="text-slate-600">, {row.note}</span> : null}
+                              <div key={row.id}>
+                                <span>{row.type || "Objek"}</span>
+                                <span> senilai Rp{formatRupiah(parseNumber(row.amount))}</span>
+                                {row.note ? <span className="font-medium text-slate-600">, {row.note}</span> : null}
                               </div>
                             ))}
                           </div>
@@ -1226,19 +1296,16 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                         )
                       }
                     />
-                    <OfferSummaryField
-                      label="Kelas Konstruksi"
-                      value={constructionSummaryLabel}
-                      description={constructionInfo ? constructionInfo.desc : null}
+                    <OfferSummaryKeyValue label="Total Harga Pertanggungan:" value={coverageValue} />
+                    <OfferSummaryKeyValue
+                      label="Kelas Konstruksi:"
+                      value={constructionInfo ? `${constructionSummaryLabel}, yaitu ${constructionInfo.desc}` : constructionSummaryLabel}
                     />
 
                     <div className="border-t border-[#E3E9F0] pt-4">
-                      <div className="mb-4 flex items-center justify-end">
-                        <SummaryEditButton onClick={onEditObject} />
-                      </div>
-                      <div className="space-y-4">
+                      <div className="space-y-2.5">
                         <OfferSummaryField
-                          label="Cakupan Polis"
+                          label="Syarat dan Ketentuan"
                           value={activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}
                         />
                         <OfferSummaryField
@@ -1267,26 +1334,19 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                 </OfferSummarySection>
 
                 <OfferSummarySection title="Ringkasan Biaya" action={<SummaryEditButton onClick={onEditObject} />}>
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-[12px] border border-[#D8E1EA] bg-[#F3F7FB] px-4 py-3.5">
-                      <div className="text-[13px] font-medium text-slate-500">Premi Dasar</div>
-                      <div className="mt-2 text-[16px] font-semibold leading-none text-slate-900">{"Rp " + formatRupiah(basePremium)}</div>
-                    </div>
-                    <div className="rounded-[12px] border border-[#D8E1EA] bg-[#F3F7FB] px-4 py-3.5">
-                      <div className="text-[13px] font-medium text-slate-500">Premi Perluasan</div>
-                      <div className="mt-2 text-[16px] font-semibold leading-none text-slate-900">{"Rp " + formatRupiah(extensionPremium)}</div>
-                    </div>
-                    <div className="rounded-[12px] border border-[#D8E1EA] bg-[#F3F7FB] px-4 py-3.5">
-                      <div className="text-[13px] font-medium text-slate-500">Biaya Meterai</div>
-                      <div className="mt-2 text-[16px] font-semibold leading-none text-slate-900">{"Rp " + formatRupiah(stampDuty)}</div>
-                    </div>
-                    <div className="rounded-[12px] bg-[#0A4D82] px-4 py-3.5 text-white shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="text-[13px] font-medium leading-[1.35] text-white/80">{coverageLabel}</div>
-                        {isIndicative ? <TooltipDot text="Nilai ini masih berupa estimasi awal. Premi final dapat menyesuaikan setelah informasi properti dilengkapi lebih rinci." /> : null}
-                      </div>
-                      <div className="mt-2 text-[20px] font-semibold leading-none text-white">Rp {formatRupiah(estimatedTotal)}</div>
-                    </div>
+                  <div className="space-y-2.5">
+                    <OfferSummaryKeyValue label="Premi Dasar:" value={"Rp " + formatRupiah(basePremium)} />
+                    <OfferSummaryKeyValue label="Premi Perluasan:" value={"Rp " + formatRupiah(extensionPremium)} />
+                    <OfferSummaryKeyValue label="Biaya Meterai:" value={"Rp " + formatRupiah(stampDuty)} />
+                    <OfferSummaryKeyValue
+                      label={coverageLabel + ":"}
+                      value={
+                        <span className="inline-flex items-center gap-2">
+                          <span>{"Rp " + formatRupiah(estimatedTotal)}</span>
+                          {isIndicative ? <TooltipDot text="Nilai ini masih berupa estimasi awal. Premi final dapat menyesuaikan setelah informasi properti dilengkapi lebih rinci." /> : null}
+                        </span>
+                      }
+                    />
                   </div>
 
                   {!isInternalPreview && !isIndicative ? (
@@ -1306,81 +1366,149 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
           <div className="space-y-3">
             <ProposalAccordion
               title="Informasi Properti"
-              subtitle="Buka bila Anda ingin meninjau atau mengubah rincian properti yang dilindungi."
               open={sectionOpen.property}
               onToggle={() => setSectionOpen((prev) => ({ ...prev, property: !prev.property }))}
+              action={<SummaryEditButton onClick={() => startEditingSection("property")} />}
             >
-              <div className="space-y-4">
-                {!isInternalPreview ? (
-                  <div className="flex justify-end">
-                    <button type="button" onClick={onEditObject} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]">
-                      {isIndicative ? "Ubah Informasi Properti" : "Tinjau Informasi Properti"}
+              {editingSections.property ? (
+                <div className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <FieldLabel label="Jenis Bangunan" required />
+                      <SelectInput value={propertyType} onChange={setPropertyType} options={propertyOptions} placeholder="Pilih jenis bangunan" />
+                    </div>
+                    <div>
+                      <FieldLabel label="Penggunaan Bangunan" required />
+                      <SelectInput value={occupancy} onChange={setOccupancy} options={occupancyOptions} placeholder="Pilih penggunaan bangunan" />
+                    </div>
+                    <div>
+                      <FieldLabel label="Kelas Konstruksi" required />
+                      <SelectInput
+                        value={constructionClass}
+                        onChange={(value) => setField("constructionClass", value)}
+                        options={constructionOptions}
+                        placeholder="Pilih kelas konstruksi"
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[15px] font-semibold text-slate-900">Objek yang Dilindungi</div>
+                        <div className="text-sm text-slate-500">Anda bisa langsung edit jenis dan nilai pertanggungan.</div>
+                      </div>
+                      <button type="button" onClick={addObjectRow} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]">
+                        <Plus className="h-4 w-4" />
+                        Tambah Objek
+                      </button>
+                    </div>
+                    <div className="mt-3 space-y-3">
+                      {objectRows.map((row) => (
+                        <div key={row.id} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div>
+                              <FieldLabel label="Jenis Objek" />
+                              <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Pilih jenis objek" />
+                            </div>
+                            <div>
+                              <FieldLabel label="Nilai Pertanggungan" />
+                              <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Masukkan nilai pertanggungan" />
+                            </div>
+                          </div>
+                          <TextInput value={row.note || ""} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder="Keterangan singkat" />
+                          {objectRows.length > 1 ? (
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => removeObjectRow(row.id)}
+                                className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-red-200 bg-white px-2.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Hapus Objek
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setEditingSections((prev) => ({ ...prev, property: false }))}
+                      className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
+                    >
+                      Selesai
                     </button>
                   </div>
-                ) : null}
-                <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <ProposalRow label="Jenis Bangunan" value={propertyType} strong={true} />
-                    <ProposalRow label="Penggunaan Bangunan" value={occupancy} strong={true} />
-                    <div className="space-y-3">
-                      <ProposalRow label="Kelas Bangunan" value={constructionClass} strong={true} />
-                      {constructionInfo ? <div className="rounded-xl border border-[#CFE0F0] bg-white px-4 py-3 text-sm leading-6 text-slate-600"><span className="font-semibold text-slate-900">{constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
-                    </div>
-                    <ProposalRow label="Harga Pertanggungan" value={"Rp " + formatRupiah(totalValue)} strong={true} />
-                  </div>
+                  <div className="text-sm text-slate-500">Perubahan akan langsung disinkronkan ke ringkasan penawaran.</div>
                 </div>
-
-                <ProposalAccordion
-                  title="Objek yang Dilindungi"
-                  subtitle="Lihat daftar objek dan nilai pertanggungannya."
-                  open={objectOpen.detail}
-                  onToggle={() => setObjectOpen((prev) => ({ ...prev, detail: !prev.detail }))}
-                >
-                  <div className="space-y-3">
-                    {objectRows.map((row, index) => (
-                      <div key={row.id} className="rounded-xl border border-slate-200 bg-[#FCFDFE] p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[15px] font-semibold text-slate-900">Objek {index + 1} - {row.type}</div>
-                            <div className="mt-1 text-sm text-slate-500">{row.note || "Belum ada keterangan tambahan."}</div>
-                          </div>
-                          <div className="shrink-0 whitespace-nowrap text-right text-[15px] font-semibold leading-none text-[#0A4D82]">Rp {formatRupiah(parseNumber(row.amount))}</div>
-                        </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <ProposalRow label="Jenis Bangunan" value={propertyType} strong={true} />
+                      <ProposalRow label="Penggunaan Bangunan" value={occupancy} strong={true} />
+                      <div className="space-y-3">
+                        <ProposalRow label="Kelas Bangunan" value={constructionClass} strong={true} />
+                        {constructionInfo ? <div className="rounded-xl border border-[#CFE0F0] bg-white px-4 py-3 text-sm leading-6 text-slate-600"><span className="font-semibold text-slate-900">{constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
                       </div>
-                    ))}
+                      <ProposalRow label="Harga Pertanggungan" value={"Rp " + formatRupiah(totalValue)} strong={true} />
+                    </div>
                   </div>
-                </ProposalAccordion>
 
-                {showAdvancedAccordions ? (
                   <ProposalAccordion
-                    title="Detail Properti"
-                    subtitle="Informasi lanjutan mengenai properti dan masa pertanggungannya."
-                    open={insuredOpen.advanced}
-                    onToggle={() => setInsuredOpen((prev) => ({ ...prev, advanced: !prev.advanced }))}
+                    title="Objek yang Dilindungi"
+                    subtitle="Lihat daftar objek dan nilai pertanggungannya."
+                    open={objectOpen.detail}
+                    onToggle={() => setObjectOpen((prev) => ({ ...prev, detail: !prev.detail }))}
                   >
-                    {hasAnyAdvancedData ? (
-                      <div className="space-y-1">
-                        <ProposalRow label="Status Kepemilikan Properti" value={uwForm.ownership || "-"} />
-                        <ProposalRow label="Proteksi Kebakaran" value={uwForm.fireProtection || "-"} />
-                        <ProposalRow label="Jangka Waktu Pertanggungan (Mulai)" value={uwForm.coverageStartDate || "-"} />
-                        <ProposalRow label="Jangka Waktu Pertanggungan (Akhir)" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
-                        <ProposalRow label="Riwayat Klaim 3 Tahun Terakhir" value={uwForm.claimHistory || "-"} />
-                        <ProposalRow label="Risiko di Sekitar Lokasi" value={uwForm.surroundingRisk || "-"} />
-                        <ProposalRow label="Catatan Tambahan" value={uwForm.additionalNotes || "-"} />
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">Belum ada detail properti tambahan pada penawaran ini.</div>
-                    )}
+                    <div className="space-y-3">
+                      {objectRows.map((row, index) => (
+                        <div key={row.id} className="rounded-xl border border-slate-200 bg-[#FCFDFE] p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[15px] font-semibold text-slate-900">Objek {index + 1} - {row.type || "Objek"}</div>
+                              <div className="mt-1 text-sm text-slate-500">{row.note || "Belum ada keterangan tambahan."}</div>
+                            </div>
+                            <div className="shrink-0 whitespace-nowrap text-right text-[15px] font-semibold leading-none text-[#0A4D82]">Rp {formatRupiah(parseNumber(row.amount))}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </ProposalAccordion>
-                ) : null}
-              </div>
+
+                  {showAdvancedAccordions ? (
+                    <ProposalAccordion
+                      title="Detail Properti"
+                      subtitle="Informasi lanjutan mengenai properti dan masa pertanggungannya."
+                      open={insuredOpen.advanced}
+                      onToggle={() => setInsuredOpen((prev) => ({ ...prev, advanced: !prev.advanced }))}
+                    >
+                      {hasAnyAdvancedData ? (
+                        <div className="space-y-1">
+                          <ProposalRow label="Status Kepemilikan Properti" value={uwForm.ownership || "-"} />
+                          <ProposalRow label="Proteksi Kebakaran" value={uwForm.fireProtection || "-"} />
+                          <ProposalRow label="Jangka Waktu Pertanggungan (Mulai)" value={uwForm.coverageStartDate || "-"} />
+                          <ProposalRow label="Jangka Waktu Pertanggungan (Akhir)" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
+                          <ProposalRow label="Riwayat Klaim 3 Tahun Terakhir" value={uwForm.claimHistory || "-"} />
+                          <ProposalRow label="Risiko di Sekitar Lokasi" value={uwForm.surroundingRisk || "-"} />
+                          <ProposalRow label="Catatan Tambahan" value={uwForm.additionalNotes || "-"} />
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">Belum ada detail properti tambahan pada penawaran ini.</div>
+                      )}
+                    </ProposalAccordion>
+                  ) : null}
+                </div>
+              )}
             </ProposalAccordion>
 
             <ProposalAccordion
               title="Jaminan"
-              subtitle={guaranteeSectionSubtitle}
               open={sectionOpen.guarantee}
               onToggle={() => setSectionOpen((prev) => ({ ...prev, guarantee: !prev.guarantee }))}
+              action={<SummaryEditButton onClick={() => startEditingSection("guarantee")} />}
             >
               <div className="space-y-5">
                 <div>
@@ -1393,30 +1521,35 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                 <div>
                   <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
                   <div className="mt-3 space-y-2.5">
-                    {visibleGuarantees.length ? (
-                      visibleGuarantees.map((item) => {
-                        const premiumValue = Math.round(totalValue * item.rate);
-                        const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible;
-                        const checked = isIndicative ? selectedGuarantees[item.key] : true;
-                        return (
+                    {extensionOptions.map((item) => {
+                      const premiumValue = Math.round(totalValue * item.rate);
+                      const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible;
+                      const checked = Boolean(selectedGuarantees[item.key]);
+                      return (
+                        <div key={item.key} className="rounded-xl border border-slate-200 bg-white p-3">
+                          <label className={cls("mb-3 flex items-start gap-2 text-sm font-medium", checked ? "text-[#0A4D82]" : "text-slate-700")}>
+                            <input
+                              type="checkbox"
+                              className="mt-0.5"
+                              checked={checked}
+                              onChange={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                            />
+                            <span>{item.title}</span>
+                          </label>
                           <AccordionRiskRow
-                            key={item.key}
                             title={item.title}
                             icon={item.icon}
                             premium={"Rp " + formatRupiah(premiumValue)}
                             detail={item.detail}
                             deductible={deductibleValue}
                             checked={checked}
-                            onToggleChecked={isIndicative && !isInternalPreview ? () => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] })) : undefined}
                             expanded={expandedRows[item.key]}
                             onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
                             extra={item.key === "earthquake" && checked && isFloorRelevant(propertyType, occupancy) ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Wajib untuk simulasi gempa bumi pada objek bertingkat." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null}
                           />
-                        );
-                      })
-                    ) : (
-                      isIndicative ? null : <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">Belum ada perluasan jaminan yang dipilih pada penawaran ini.</div>
-                    )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1439,32 +1572,57 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
             {hasInsuredSummaryData ? (
               <ProposalAccordion
                 title="Informasi Tertanggung"
-                subtitle="Buka bila Anda ingin meninjau atau mengubah informasi tertanggung."
                 open={sectionOpen.insured}
                 onToggle={() => setSectionOpen((prev) => ({ ...prev, insured: !prev.insured }))}
+                action={<SummaryEditButton onClick={() => startEditingSection("insured")} />}
               >
                 <div className="space-y-4">
-                  {!isInternalPreview ? (
-                    <div className="flex justify-end">
-                      <button type="button" onClick={onEditInsured} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]">
-                        {isIndicative ? "Lengkapi Informasi Tertanggung" : "Ubah Informasi Tertanggung"}
-                      </button>
+                  {editingSections.insured ? (
+                    <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <FieldLabel label="Nama Tertanggung" required />
+                          <TextInput value={form.identity} onChange={(value) => setField("identity", value)} icon={<User className="h-4 w-4" />} />
+                        </div>
+                        <div>
+                          <FieldLabel label="Jenis Tertanggung" required />
+                          <SelectInput value={customerType} onChange={(value) => setField("customerType", value)} options={CUSTOMER_TYPES} placeholder="Pilih jenis tertanggung" />
+                        </div>
+                        <div>
+                          <FieldLabel label="Nomor Handphone" required />
+                          <TextInput value={form.phone} onChange={(value) => setField("phone", value)} icon={<Phone className="h-4 w-4" />} />
+                        </div>
+                        <div>
+                          <FieldLabel label="Alamat Email" required />
+                          <TextInput value={form.email} onChange={(value) => setField("email", value)} icon={<Mail className="h-4 w-4" />} />
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditingSections((prev) => ({ ...prev, insured: false }))}
+                          className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
+                        >
+                          Selesai
+                        </button>
+                      </div>
                     </div>
-                  ) : null}
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <ProposalRow label="Nama Tertanggung" value={customerName || "-"} strong={true} />
-                      <ProposalRow label="Jenis Tertanggung" value={customerType || "-"} strong={true} />
-                      <ProposalRow label="Nomor Handphone" value={phoneDisplay} />
-                      <ProposalRow label="Alamat Email" value={emailDisplay} />
+                  ) : (
+                    <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <ProposalRow label="Nama Tertanggung" value={customerName || "-"} strong={true} />
+                        <ProposalRow label="Jenis Tertanggung" value={customerType || "-"} strong={true} />
+                        <ProposalRow label="Nomor Handphone" value={phoneDisplay} />
+                        <ProposalRow label="Alamat Email" value={emailDisplay} />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {showAdvancedAccordions ? (
                     <div className="space-y-3">
                       <ProposalAccordion
                         title="Identitas Tertanggung"
-                        subtitle="Rincian identitas dan kontak tertanggung."
+                        subtitle={editingSections.insured ? "" : "Rincian identitas dan kontak tertanggung."}
                         open={insuredOpen.profile}
                         onToggle={() => setInsuredOpen((prev) => ({ ...prev, profile: !prev.profile }))}
                       >
@@ -1478,7 +1636,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
 
                       <ProposalAccordion
                         title="Foto Properti"
-                        subtitle="Status foto yang sudah dilampirkan pada penawaran."
+                        subtitle={editingSections.insured ? "" : "Status foto yang sudah dilampirkan pada penawaran."}
                         open={insuredOpen.photos}
                         onToggle={() => setInsuredOpen((prev) => ({ ...prev, photos: !prev.photos }))}
                       >
@@ -1984,6 +2142,8 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           setPropertyType={(value) => setField("propertyType", value)}
           occupancy={form.occupancy}
           setOccupancy={(value) => setField("occupancy", value)}
+          setField={setField}
+          setUwField={setUwField}
           objectRows={objectRows}
           updateObjectRow={updateObjectRow}
           addObjectRow={addObjectRow}
@@ -2052,6 +2212,8 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           setPropertyType={(value) => setField("propertyType", value)}
           occupancy={form.occupancy}
           setOccupancy={(value) => setField("occupancy", value)}
+          setField={setField}
+          setUwField={setUwField}
           objectRows={objectRows}
           updateObjectRow={updateObjectRow}
           addObjectRow={addObjectRow}
