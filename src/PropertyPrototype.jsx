@@ -1267,7 +1267,6 @@ function ExternalProposalPage({
                 >
                   <OfferSummaryGrid>
                     <OfferSummaryField label="Nama Tertanggung" value={customerDisplay} />
-                    <OfferSummaryField label="Status Penawaran" value={canProceed ? "Siap ditinjau" : "Masih perlu dilengkapi"} />
                   </OfferSummaryGrid>
                 </OfferSummarySection>
 
@@ -1333,7 +1332,7 @@ function ExternalProposalPage({
                   </div>
                 </OfferSummarySection>
 
-                <OfferSummarySection title="Ringkasan Biaya" action={<SummaryEditButton onClick={onEditObject} />}>
+                <OfferSummarySection title="Ringkasan Biaya">
                   <div className="space-y-2.5">
                     <OfferSummaryKeyValue label="Premi Dasar:" value={"Rp " + formatRupiah(basePremium)} />
                     <OfferSummaryKeyValue label="Premi Perluasan:" value={"Rp " + formatRupiah(extensionPremium)} />
