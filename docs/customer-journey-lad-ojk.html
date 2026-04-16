@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer Journey LAD Penutupan Asuransi</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-alt: #eef4fb;
+      --ink: #11243a;
+      --muted: #5f7085;
+      --line: #d8e2ee;
+      --brand: #0a4d82;
+      --brand-dark: #08385f;
+      --accent: #f5a623;
+      --good: #11845b;
+      --warn: #a15b00;
+      --shadow: 0 18px 45px rgba(17, 36, 58, 0.08);
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(245, 166, 35, 0.12), transparent 24%),
+        linear-gradient(180deg, #f9fbfd 0%, var(--bg) 100%);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    .page {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 62%, #2472ac 100%);
+      color: white;
+      border-radius: 28px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -60px -60px auto;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      margin-top: 16px;
+      font-size: clamp(30px, 5vw, 46px);
+      line-height: 1.06;
+      max-width: 860px;
+    }
+
+    .hero p {
+      margin-top: 14px;
+      max-width: 860px;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 26px;
+    }
+
+    .hero-stat {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-stat small {
+      display: block;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    .hero-stat strong {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .section {
+      margin-top: 22px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 20px;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      max-width: 760px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: var(--surface-alt);
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .grid-2, .grid-3, .grid-4 {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      background: #fff;
+    }
+
+    .card.alt { background: var(--surface-alt); }
+
+    .card h3 {
+      font-size: 17px;
+      margin-bottom: 8px;
+    }
+
+    .card p, .card li {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .card ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+    }
+
+    .journey {
+      display: grid;
+      gap: 14px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    }
+
+    .step-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .step-no {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: var(--brand);
+      color: white;
+      font-weight: 800;
+    }
+
+    .step-title {
+      flex: 1;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 170px 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .lane-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--brand);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .pill.brand { background: #e8f2fb; color: var(--brand); }
+    .pill.accent { background: #fff3dc; color: var(--warn); }
+    .pill.good { background: #e7f6ef; color: var(--good); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+    }
+
+    th, td {
+      padding: 14px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--surface-alt);
+      color: var(--brand);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    .footer-note {
+      margin-top: 22px;
+      padding: 18px;
+      background: #fff7e9;
+      border: 1px solid #f2d8a2;
+      border-radius: var(--radius-md);
+      color: #7b5611;
+      font-size: 14px;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .grid-4,
+      .grid-3,
+      .grid-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .lane {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page { width: min(100vw - 20px, 1180px); padding-top: 16px; }
+      .hero, .section { padding: 20px; }
+      .hero-grid,
+      .grid-4,
+      .grid-3,
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .section-head {
+        flex-direction: column;
+      }
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      thead { display: none; }
+      tr {
+        border-bottom: 1px solid var(--line);
+      }
+      td {
+        padding: 10px 12px;
+      }
+      td::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--brand);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Draft Dokumen OJK • Customer Journey LAD</div>
+      <h1>Customer Journey Penyelenggaraan LAD dalam Penutupan Asuransi melalui Sistem Elektronik</h1>
+      <p>
+        Dokumen ini menjelaskan alur end-to-end proses penutupan asuransi ritel secara elektronik,
+        mulai dari calon tertanggung masuk ke kanal digital, pengisian data, proses underwriting,
+        pembayaran premi, penerbitan dokumen polis, sampai akses layanan lanjutan pasca-pembelian.
+      </p>
+
+      <div class="hero-grid">
+        <div class="hero-stat">
+          <small>Kanal</small>
+          <strong>Guest, External, Partner, Internal</strong>
+        </div>
+        <div class="hero-stat">
+          <small>Ruang Lingkup</small>
+          <strong>Quote, Underwriting, Bayar, Terbit, Portal</strong>
+        </div>
+        <div class="hero-stat">
+          <small>Kontrol</small>
+          <strong>Persetujuan, Validasi, Review, Audit Trail</strong>
+        </div>
+        <div class="hero-stat">
+          <small>Tujuan</small>
+          <strong>Bukti journey LAD untuk OJK</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>1. Tujuan dan Ruang Lingkup</h2>
+          <p>Dokumen ini digunakan untuk menjelaskan bagaimana Perusahaan menyelenggarakan penutupan asuransi secara elektronik dengan sistem yang dimiliki, dikuasai, dan dikendalikan oleh Perusahaan.</p>
+        </div>
+        <div class="tag">High Level Overview</div>
+      </div>
+
+      <div class="grid-4">
+        <article class="card alt">
+          <h3>Tujuan</h3>
+          <p>Menyampaikan customer journey penyelenggaraan LAD secara utuh sebagai bahan penjelasan kepada regulator.</p>
+        </article>
+        <article class="card">
+          <h3>Produk</h3>
+          <p>Produk ritel yang diproses melalui web automation underwriting, termasuk properti dan kendaraan.</p>
+        </article>
+        <article class="card alt">
+          <h3>Aktor</h3>
+          <p>Calon tertanggung/nasabah, sistem perusahaan, petugas underwriting internal, dan partner sesuai kanal distribusi.</p>
+        </article>
+        <article class="card">
+          <h3>Output</h3>
+          <p>Penawaran, status underwriting, pembayaran premi, dokumen polis, dan akses portal layanan nasabah.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>2. Aktor dan Peran dalam Customer Journey</h2>
+          <p>Setiap aktor memiliki akses dan kewenangan yang berbeda. Pemisahan peran ini menjadi bagian dari kontrol proses penutupan asuransi secara elektronik.</p>
+        </div>
+        <div class="tag">Role Mapping</div>
+      </div>
+
+      <div class="grid-2">
+        <article class="card">
+          <h3>Nasabah / Calon Tertanggung</h3>
+          <ul>
+            <li>Mengakses kanal digital perusahaan.</li>
+            <li>Memilih produk dan mengisi data objek pertanggungan.</li>
+            <li>Mengunggah atau mengambil foto/dokumen yang dipersyaratkan.</li>
+            <li>Memberikan persetujuan dan melakukan pembayaran premi.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Sistem Elektronik Perusahaan</h3>
+          <ul>
+            <li>Menyediakan antarmuka pengisian data dan simulasi premi.</li>
+            <li>Melakukan validasi awal, klasifikasi risiko, dan routing proses.</li>
+            <li>Mencatat status transaksi, pembayaran, dan penerbitan output digital.</li>
+            <li>Menghubungkan hasil penutupan dengan portal layanan nasabah.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Tim Underwriting / Operasional Internal</h3>
+          <ul>
+            <li>Melakukan review pada kasus yang memerlukan analisa internal.</li>
+            <li>Memberikan keputusan lanjut, revisi, atau penolakan sesuai ketentuan.</li>
+            <li>Memantau antrean kerja dan histori status transaksi.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Partner</h3>
+          <ul>
+            <li>Digunakan pada kanal distribusi tertentu sesuai konfigurasi perusahaan.</li>
+            <li>Tetap tunduk pada rule, approval, dan parameter yang dikendalikan internal.</li>
+            <li>Tidak menggantikan kontrol perusahaan atas proses penutupan asuransi.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>3. Customer Journey End-to-End</h2>
+          <p>Alur berikut menggambarkan customer journey dari sisi nasabah dan sisi sistem/perusahaan sampai polis terbit dan layanan pasca-pembelian tersedia.</p>
+        </div>
+        <div class="tag">End-to-End Flow</div>
+      </div>
+
+      <div class="journey">
+        <article class="step">
+          <div class="step-top">
+            <div class="step-no">01</div>
+            <div class="step-title">Akses Kanal Digital dan Pemilihan Produk</div>
+            <span class="pill brand">Front Door</span>
+          </div>
+          <div class="lane">
+            <div class="lane-label">Aksi Nasabah</div>
+            <div>Nasabah mengakses aplikasi/web perusahaan, melihat katalog produk, lalu memilih produk asuransi yang ingin dibeli.</div>
+            <div>Perusahaan menyediakan katalog produk sesuai kanal, sesi pengguna, dan role yang berlaku.</div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <div class="step-no">02</div>
+            <div class="step-title">Input Parameter Risiko dan Simulasi Premi</div>
+            <span class="pill accent">Quote</span>
+          </div>
+          <div class="lane">
+            <div class="lane-label">Aksi Nasabah</div>
+            <div>Nasabah mengisi parameter objek pertanggungan, seperti jenis bangunan/kendaraan, penggunaan, nilai pertanggungan, dan informasi lain yang diminta sistem.</div>
+            <div>Sistem menjalankan validasi awal, klasifikasi risiko, dan kalkulasi simulasi premi berdasarkan rule produk yang aktif.</div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <div class="step-no">03</div>
+            <div class="step-title">Pengisian Data Tertanggung dan Data Pendukung</div>
+            <span class="pill brand">Data Capture</span>
+          </div>
+          <div class="lane">
+            <div class="lane-label">Aksi Nasabah</div>
+            <div>Nasabah melengkapi identitas, kontak, masa pertanggungan, serta dokumen/foto yang dipersyaratkan oleh produk.</div>
+            <div>Sistem memastikan field wajib terisi, format data sesuai, dan bukti pendukung tersedia sebelum pengguna dapat lanjut ke tahap berikutnya.</div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <div class="step-no">04</div>
+            <div class="step-title">Persetujuan, Disclosure, dan Ringkasan Penutupan</div>
+            <span class="pill accent">Consent</span>
+          </div>
+          <div class="lane">
+            <div class="lane-label">Aksi Nasabah</div>
+            <div>Nasabah membaca ringkasan manfaat, syarat penting, dan menyatakan persetujuan atas kebijakan serta kebenaran fakta material.</div>
+            <div>Sistem mencatat persetujuan pengguna sebagai bagian dari proses penutupan secara elektronik.</div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <div class="step-no">05</div>
+            <div class="step-title">Keputusan Otomatis atau Review Internal</div>
+            <span class="pill brand">Underwriting</span>
+          </div>
+          <div class="lane">
+            <div class="lane-label">Aksi Sistem/Perusahaan</div>
+            <div>Pada risiko yang memenuhi rule straight-through, sistem dapat melanjutkan proses. Pada kondisi tertentu, transaksi diroute ke workbench internal untuk analisa atau review underwriting.</div>
+            <div>Petugas internal memantau antrean, membuka detail transaksi, memberi catatan, dan menetapkan tindak lanjut sesuai otoritas yang berlaku.</div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <div class="step-no">06</div>
+            <div class="step-title">Pembayaran Premi</div>
+            <span class="pill accent">Payment</span>
+          </div>
+          <div class="lane">
+            <div class="lane-label">Aksi Nasabah</div>
+            <div>Setelah penawaran dapat diteruskan, nasabah memilih metode pembayaran dan menyelesaikan transaksi premi.</div>
+            <div>Sistem memperbarui status transaksi, status pembayaran, dan hanya melanjutkan ke penerbitan setelah pembayaran dinyatakan berhasil.</div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <div class="step-no">07</div>
+            <div class="step-title">Penerbitan Polis / Dokumen Final</div>
+            <span class="pill good">Issued</span>
+          </div>
+          <div class="lane">
+            <div class="lane-label">Output</div>
+            <div>Dokumen final seperti polis atau dokumen terkait penutupan dihasilkan dalam sistem elektronik perusahaan.</div>
+            <div>Status transaksi berubah menjadi issued/selesai sesuai hasil proses dan menjadi sumber data untuk layanan pasca-pembelian.</div>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-top">
+            <div class="step-no">08</div>
+            <div class="step-title">Layanan Pasca-Pembelian melalui Portal Nasabah</div>
+            <span class="pill brand">Self Care</span>
+          </div>
+          <div class="lane">
+            <div class="lane-label">Aksi Nasabah</div>
+            <div>Nasabah diarahkan ke portal untuk melihat polis, dokumen, bantuan, dan proses lanjutan seperti klaim atau layanan terkait polis.</div>
+            <div>Sistem menggunakan data transaksi dan polis yang sama sebagai sumber utama sehingga kesinambungan journey tetap terjaga.</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>4. Journey Internal Underwriting dan Operasional</h2>
+          <p>Selain journey nasabah, Perusahaan memiliki jalur kontrol internal untuk transaksi yang memerlukan pengecekan lebih lanjut.</p>
+        </div>
+        <div class="tag">Internal Control Flow</div>
+      </div>
+
+      <div class="grid-3">
+        <article class="card">
+          <h3>Ruang Kerja Saya</h3>
+          <p>Petugas internal membuka transaksi yang menjadi tanggung jawabnya untuk review, tindak lanjut, revisi, atau pengambilan keputusan.</p>
+        </article>
+        <article class="card alt">
+          <h3>Tinjauan Internal</h3>
+          <p>Transaksi yang memerlukan review ditempatkan pada antrean operasional dengan status, owner, catatan, dan histori proses.</p>
+        </article>
+        <article class="card">
+          <h3>Otoritas dan Status</h3>
+          <p>Perubahan status transaksi dilakukan di lingkungan sistem internal perusahaan dan menjadi bagian dari audit trail proses penutupan.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>5. Kontrol yang Menunjukkan Sistem Dimiliki, Dikuasai, dan Dikendalikan Perusahaan</h2>
+          <p>Butir ini dapat dipakai untuk menjawab permintaan regulator bahwa proses penutupan dilakukan dengan sistem elektronik yang berada dalam pengelolaan Perusahaan.</p>
+        </div>
+        <div class="tag">Control Evidence</div>
+      </div>
+
+      <div class="grid-2">
+        <article class="card alt">
+          <h3>Kanal dan Antarmuka</h3>
+          <ul>
+            <li>Katalog produk dan flow penutupan tersedia pada kanal digital perusahaan.</li>
+            <li>Journey guest, external, partner, dan internal berada dalam ekosistem proses yang sama.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Validasi dan Rule</h3>
+          <ul>
+            <li>Rule produk, klasifikasi risiko, validasi field, dan syarat kelengkapan dijalankan oleh sistem perusahaan.</li>
+            <li>Partner hanya mengikuti konfigurasi yang ditetapkan dan disetujui secara internal.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Kontrol Internal</h3>
+          <ul>
+            <li>Tersedia workbench internal, queue review, dan penetapan owner transaksi.</li>
+            <li>Tersedia role internal untuk review dan monitoring keputusan underwriting.</li>
+          </ul>
+        </article>
+        <article class="card alt">
+          <h3>Audit Trail dan Status</h3>
+          <ul>
+            <li>Status transaksi, pembayaran, dan tindak lanjut internal tercatat di sistem.</li>
+            <li>Output digital pasca-pembelian terhubung dengan data transaksi yang sama.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>6. Matriks Tahap, Input, Kontrol, dan Output</h2>
+          <p>Matriks ini dapat digunakan sebagai lampiran penjelasan singkat per tahap customer journey.</p>
+        </div>
+        <div class="tag">Evidence Matrix</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Tahap</th>
+            <th>Input Utama</th>
+            <th>Kontrol Sistem</th>
+            <th>Output</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Tahap">Akses & Pilih Produk</td>
+            <td data-label="Input Utama">Pilihan produk dan kanal akses</td>
+            <td data-label="Kontrol Sistem">Routing sesuai role/sesi pengguna</td>
+            <td data-label="Output">Journey produk yang relevan terbuka</td>
+          </tr>
+          <tr>
+            <td data-label="Tahap">Simulasi Premi</td>
+            <td data-label="Input Utama">Data objek pertanggungan dan parameter risiko</td>
+            <td data-label="Kontrol Sistem">Validasi field, klasifikasi, kalkulasi premi</td>
+            <td data-label="Output">Penawaran/simulasi premi</td>
+          </tr>
+          <tr>
+            <td data-label="Tahap">Isi Data Tertanggung</td>
+            <td data-label="Input Utama">Identitas, kontak, masa pertanggungan, dokumen/foto</td>
+            <td data-label="Kontrol Sistem">Cek kelengkapan, format data, syarat wajib</td>
+            <td data-label="Output">Draft data penutupan lengkap</td>
+          </tr>
+          <tr>
+            <td data-label="Tahap">Persetujuan</td>
+            <td data-label="Input Utama">Konfirmasi/persetujuan nasabah</td>
+            <td data-label="Kontrol Sistem">Pencatatan consent sebelum lanjut</td>
+            <td data-label="Output">Transaksi siap dibayar / diproses</td>
+          </tr>
+          <tr>
+            <td data-label="Tahap">Underwriting</td>
+            <td data-label="Input Utama">Data penutupan dan rule produk</td>
+            <td data-label="Kontrol Sistem">Auto decision atau routing ke internal review</td>
+            <td data-label="Output">Approve, revisi, refer, atau reject</td>
+          </tr>
+          <tr>
+            <td data-label="Tahap">Pembayaran</td>
+            <td data-label="Input Utama">Pilihan metode bayar dan hasil transaksi</td>
+            <td data-label="Kontrol Sistem">Update status pembayaran</td>
+            <td data-label="Output">Paid / unpaid</td>
+          </tr>
+          <tr>
+            <td data-label="Tahap">Penerbitan</td>
+            <td data-label="Input Utama">Status bayar berhasil dan keputusan final</td>
+            <td data-label="Kontrol Sistem">Generate dokumen final dan update status</td>
+            <td data-label="Output">Polis/dokumen final dan data portal</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>7. Lampiran yang Disarankan untuk Penyampaian ke OJK</h2>
+          <p>Selain halaman ini, penyampaian ke regulator akan lebih kuat bila disertai bukti visual dan dokumen pendukung berikut.</p>
+        </div>
+        <div class="tag">Recommended Attachments</div>
+      </div>
+
+      <div class="grid-3">
+        <article class="card">
+          <h3>Lampiran A - Screenshot Journey</h3>
+          <ul>
+            <li>Halaman katalog produk</li>
+            <li>Halaman cek premi</li>
+            <li>Halaman isi data</li>
+            <li>Halaman consent/pembayaran</li>
+            <li>Halaman internal review</li>
+            <li>Halaman portal pasca-pembelian</li>
+          </ul>
+        </article>
+        <article class="card alt">
+          <h3>Lampiran B - Prosedur Internal</h3>
+          <ul>
+            <li>Role maker/checker/approval bila relevan</li>
+            <li>Aturan penanganan transaksi yang direfer ke internal</li>
+            <li>Otoritas perubahan status transaksi</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Lampiran C - Kontrol dan Governance</h3>
+          <ul>
+            <li>Daftar kontrol akses</li>
+            <li>Ringkasan audit trail/status</li>
+            <li>Arsitektur sederhana kanal digital perusahaan</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="footer-note">
+        Catatan: halaman ini adalah draft HTML naratif untuk kebutuhan penyampaian customer journey ke OJK. Isi dapat diperdalam lagi dengan identitas perusahaan, nama produk final, screenshot aktual, nomor prosedur internal, dan daftar kontrol operasional yang berlaku.
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -61,9 +61,10 @@ type FlowState = {
 const PRODUCTS = [
   {
     id: "motor",
-    title: "Total Loss Kendaraan - Motor",
+    title: "Asuransi TLO Motor",
     category: "Kendaraan",
-    subtitle: "Perlindungan motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
+    subtitle:
+      "Perlindungan total kerugian untuk motor bila terjadi kerusakan total, termasuk risiko kebakaran dan pencurian sesuai ketentuan polis.",
     gradient: "from-slate-700 via-slate-600 to-slate-500",
   },
   {
@@ -75,9 +76,10 @@ const PRODUCTS = [
   },
   {
     id: "carTlo",
-    title: "Total Loss Kendaraan - Mobil",
+    title: "Asuransi TLO Mobil",
     category: "Kendaraan",
-    subtitle: "Perlindungan mobil untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
+    subtitle:
+      "Perlindungan total kerugian untuk mobil bila terjadi kerusakan total, termasuk risiko kebakaran dan pencurian sesuai ketentuan polis.",
     gradient: "from-slate-900 via-slate-800 to-slate-700",
   },
 ] as const;
@@ -1071,30 +1073,34 @@ export default function MotorLatestExact({
                           {String(selected.quote.marketValue || "").trim() && !validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) ? <div className="mt-2 text-xs font-medium text-[#E8A436]">{maxHPText(flowType)}</div> : null}
                         </div>
                         <div>
-                          <FieldLabel label="Penggunaan" helpText={`Penggunaan Pribadi adalah penggunaan kendaraan untuk kepentingan pribadi pengguna kendaraan.
+                          <FieldLabel label="Penggunaan" helpText={`Penggunaan Pribadi: penggunaan untuk kebutuhan pribadi pemilik (perjalanan sehari-hari, ke kantor, aktivitas keluarga).
 
-Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan untuk menerima balas jasa.`} />
+Penggunaan Komersial: penggunaan untuk disewakan atau memberikan jasa (seperti ojek, rental, antar barang, dan usaha operasional).`} />
                           <SelectInput value={selected.quote.usage} onChange={(value: string) => setAt(flowType, "quote.usage", value)} options={["Pribadi", "Komersial"]} placeholder="Kendaraan ini digunakan untuk apa?" />
                           {selected.quote.usage === "Pribadi" ? (
                             <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                              <span className="font-semibold text-slate-800">Penggunaan Pribadi</span> adalah penggunaan kendaraan untuk kepentingan pribadi pengguna kendaraan. Contoh: kendaraan harian, ke kantor, dan aktivitas keluarga.
+                              <span className="font-semibold text-slate-800">Penggunaan Pribadi</span> adalah kebutuhan pribadi pemilik, seperti berkendara harian, ke kantor, dan aktivitas keluarga.
                             </div>
                           ) : null}
                           {selected.quote.usage === "Komersial" ? (
                             <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                              <span className="font-semibold text-slate-800">Penggunaan Komersial</span> adalah penggunaan kendaraan untuk disewakan atau digunakan untuk menerima balas jasa. Contoh: ojek, rental, antar barang, dan kendaraan operasional usaha.
+                              <span className="font-semibold text-slate-800">Penggunaan Komersial</span> adalah penyewaan atau layanan jasa usaha, seperti ojek, rental, antar barang, dan operasional usaha.
                             </div>
                           ) : null}
                         </div>
                       </div>
-                      {flowType === "carTlo" && selected.quote.vehicleType ? (
-                        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                          Sistem mengenali kendaraan ini sebagai <span className="font-semibold text-slate-700">{selectedPassengerCarMeta?.category}</span> dengan jenis bahan bakar <span className="font-semibold text-slate-700">{selectedPassengerCarMeta?.fuelType}</span>.
-                        </div>
-                      ) : null}
                       {!showPremiumDetails ? (
-                        <div className="mt-5 flex justify-end">
-                          <button type="button" disabled={!(Boolean(selected.quote.plateRegion) && Boolean(selected.quote.year) && isYearEligible(flowType, selected.quote.year) && Boolean(String(selected.quote.marketValue || "").trim()) && validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) && Boolean(selected.quote.usage) && (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) && (flowType !== "carTlo" || Boolean(selected.quote.vehicleType)))} onClick={() => setShowPremiumDetails(true)} className={cls("flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-sm", Boolean(selected.quote.plateRegion) && Boolean(selected.quote.year) && isYearEligible(flowType, selected.quote.year) && Boolean(String(selected.quote.marketValue || "").trim()) && validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) && Boolean(selected.quote.usage) && (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) && (flowType !== "carTlo" || Boolean(selected.quote.vehicleType)) ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}><Wallet className="h-4 w-4" />CEK PREMI</button>
+                        <div className="mt-5">
+                          <div className="flex justify-end">
+                            <button type="button" disabled={!(Boolean(selected.quote.plateRegion) && Boolean(selected.quote.year) && isYearEligible(flowType, selected.quote.year) && Boolean(String(selected.quote.marketValue || "").trim()) && validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) && Boolean(selected.quote.usage) && (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) && (flowType !== "carTlo" || Boolean(selected.quote.vehicleType)))} onClick={() => setShowPremiumDetails(true)} className={cls("flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-sm", Boolean(selected.quote.plateRegion) && Boolean(selected.quote.year) && isYearEligible(flowType, selected.quote.year) && Boolean(String(selected.quote.marketValue || "").trim()) && validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) && Boolean(selected.quote.usage) && (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) && (flowType !== "carTlo" || Boolean(selected.quote.vehicleType)) ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}><Wallet className="h-4 w-4" />CEK PREMI</button>
+                          </div>
+                          {flowType === "carTlo" && selected.quote.vehicleType ? (
+                            <p className="mt-2 text-right text-xs leading-5 text-slate-500">
+                              Sistem mengenali kendaraan ini sebagai{" "}
+                              <span className="font-semibold text-slate-700">{selectedPassengerCarMeta?.category}</span> dengan jenis bahan bakar{" "}
+                              <span className="font-semibold text-slate-700">{selectedPassengerCarMeta?.fuelType}</span>.
+                            </p>
+                          ) : null}
                         </div>
                       ) : null}
                     </ActionCard>
@@ -1600,6 +1606,7 @@ Penggunaan Komersial adalah penggunaan kendaraan untuk disewakan atau digunakan 
     </div>
   );
 }
+
 
 
 

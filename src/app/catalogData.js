@@ -66,19 +66,19 @@ export const PROPERTY_PRODUCTS = [
 export const VEHICLE_PRODUCTS = [
   {
     key: "motor-tlo",
-    title: "Asuransi Motor TLO",
+    title: "Asuransi TLO Motor",
     category: "Kendaraan Bermotor",
     subtitle: "Simulasi produk Motor TLO sudah bisa dibuka.",
-    description: "Perlindungan motor untuk risiko kehilangan total dan pencurian sesuai ketentuan polis yang berlaku.",
+    description: "Perlindungan total kerugian untuk motor jika terjadi kerusakan menyeluruh, termasuk kebakaran dan pencurian sesuai ketentuan polis.",
     image: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=80",
     active: true,
   },
   {
     key: "mobil-tlo",
-    title: "Asuransi Mobil TLO",
+    title: "Asuransi TLO Mobil",
     category: "Kendaraan Bermotor",
     subtitle: "Simulasi produk Mobil TLO sudah bisa dibuka.",
-    description: "Perlindungan mobil untuk risiko kehilangan total dan pencurian sesuai ketentuan polis yang berlaku.",
+    description: "Perlindungan total kerugian untuk mobil jika terjadi kerusakan menyeluruh, termasuk kebakaran dan pencurian sesuai ketentuan polis.",
     image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80",
     active: true,
   },

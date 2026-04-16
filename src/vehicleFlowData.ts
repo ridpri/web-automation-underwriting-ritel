@@ -7,9 +7,10 @@ export const MIN_YEAR_COMP = CURRENT_YEAR - 15;
 export const PRODUCTS = [
   {
     id: "motor",
-    title: "Total Loss Kendaraan - Motor",
+    title: "Asuransi TLO Motor",
     category: "Kendaraan",
-    subtitle: "Perlindungan motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
+    subtitle:
+      "Perlindungan total kerugian untuk motor bila terjadi kerusakan total, termasuk risiko kebakaran dan pencurian sesuai ketentuan polis.",
     gradient: "from-slate-700 via-slate-600 to-slate-500",
   },
   {
@@ -21,9 +22,10 @@ export const PRODUCTS = [
   },
   {
     id: "carTlo",
-    title: "Total Loss Kendaraan - Mobil",
+    title: "Asuransi TLO Mobil",
     category: "Kendaraan",
-    subtitle: "Perlindungan mobil untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
+    subtitle:
+      "Perlindungan total kerugian untuk mobil bila terjadi kerusakan total, termasuk risiko kebakaran dan pencurian sesuai ketentuan polis.",
     gradient: "from-slate-900 via-slate-800 to-slate-700",
   },
 ] as const;

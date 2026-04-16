@@ -56,9 +56,9 @@ const MOCK_CIF = [
 ];
 
 const MOCK_SENT_OFFERS = [
-  { id: "OFR-001", name: "Sony Laksono", product: "Property Safe", status: "Dibuka, menunggu jawaban" },
-  { id: "OFR-002", name: "PT Maju Sentosa", product: "Property Safe", status: "Sudah jawab, minta revisi" },
-  { id: "OFR-003", name: "Siti Rahma", product: "Property Safe", status: "Sudah setuju, menunggu bayar" },
+  { id: "OFR-001", name: "Sony Laksono", product: "Asuransi Properti - Kebakaran", status: "Dibuka, menunggu jawaban" },
+  { id: "OFR-002", name: "PT Maju Sentosa", product: "Asuransi Properti - Kebakaran", status: "Sudah jawab, minta revisi" },
+  { id: "OFR-003", name: "Siti Rahma", product: "Asuransi Properti - Kebakaran", status: "Sudah setuju, menunggu bayar" },
 ];
 
 const CONSTRUCTION_GUIDE = [
@@ -113,17 +113,17 @@ const PERSONAL_PRODUCTS = [
 
 const PROPERTY_PRODUCTS = [
   {
-    title: "Property Safe",
+    title: "Asuransi Properti - Kebakaran",
     category: "Harta Benda",
-    subtitle: "Perlindungan bangunan dan isi properti.",
+    subtitle: "Perlindungan untuk bangunan dan isi properti terhadap risiko kebakaran, dengan tambahan perlindungan yang bisa dipilih sesuai kebutuhan.",
     image: "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=900&q=80",
     active: true,
     variantKey: "property-safe",
   },
   {
-    title: "Property All Risk",
+    title: "Asuransi Properti All Risk",
     category: "Harta Benda",
-    subtitle: "Perlindungan all risk untuk bangunan dan isi properti.",
+    subtitle: "Perlindungan lebih luas untuk bangunan dan isi properti, mencakup kerusakan fisik lebih lengkap dan perluasan yang bisa disesuaikan kebutuhan Anda.",
     image: "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=900&q=80",
     active: true,
     variantKey: "property-all-risk",
@@ -562,10 +562,23 @@ function SummaryEditButton({ onClick }) {
   );
 }
 
-function OfferSummaryKeyValue({ label, value }) {
+function SummaryGuaranteeItem({ title, icon: Icon = Shield }) {
   return (
-    <div className="grid gap-y-0 gap-x-4 md:grid-cols-[220px_minmax(0,1fr)]">
-      <div className="text-[14px] font-medium leading-[1.45] text-slate-600">{label}</div>
+    <div className="flex items-center gap-2.5">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#D6E0EA] bg-[#F8FBFE] text-[#0A4D82]">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="text-[15px] font-semibold leading-[1.35] text-slate-900">{title}</div>
+    </div>
+  );
+}
+
+function OfferSummaryKeyValue({ label, value }) {
+  const normalizedLabel = String(label || "").replace(/:\s*$/, "");
+  return (
+    <div className="grid grid-cols-[150px_14px_minmax(0,1fr)] gap-y-0 gap-x-2 md:grid-cols-[220px_14px_minmax(0,1fr)]">
+      <div className="text-[14px] font-medium leading-[1.45] text-slate-600">{normalizedLabel}</div>
+      <div className="text-[14px] font-medium leading-[1.45] text-slate-600">:</div>
       <div className="text-[15px] font-semibold leading-[1.45] text-slate-900">{value}</div>
     </div>
   );
@@ -972,8 +985,8 @@ function UnderwritingSections({
         <div className="grid gap-4 md:grid-cols-2">
           <div><FieldLabel label="Status kepemilikan bangunan / isi properti" required /><SelectInput value={uwForm.ownership} onChange={(value) => setUwField("ownership", value)} options={OWNERSHIP_TYPES} placeholder="Properti ini milik sendiri, sewa, atau lainnya?" /></div>
           <div><FieldLabel label="Perlindungan kebakaran yang tersedia" required /><SelectInput value={uwForm.fireProtection} onChange={(value) => setUwField("fireProtection", value)} options={PROTECTION_OPTIONS} placeholder="Perlindungan kebakaran apa yang tersedia di lokasi?" /></div>
-        <div><FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" required /><TextInput type="date" value={uwForm.coverageStartDate} onChange={(value) => setUwField("coverageStartDate", value)} /></div>
-        <div><FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" /><TextInput value={coverageEndDate} onChange={() => {}} placeholder="Otomatis 1 tahun" readOnly={true} /></div>
+ <div><FieldLabel label="Jangka Waktu Mulai Pertanggungan" required /><TextInput type="date" value={uwForm.coverageStartDate} onChange={(value) => setUwField("coverageStartDate", value)} /></div>
+ <div><FieldLabel label="Jangka Waktu Akhir Pertanggungan" /><TextInput value={coverageEndDate} onChange={() => {}} placeholder="Otomatis 1 tahun" readOnly={true} /></div>
           <div><FieldLabel label="Riwayat klaim 3 tahun terakhir" required /><SelectInput value={uwForm.claimHistory} onChange={(value) => setUwField("claimHistory", value)} options={CLAIM_HISTORY_OPTIONS} placeholder="Bagaimana riwayat klaim properti ini?" /></div>
         <div className="md:col-span-2"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, optionalUw: !prev.optionalUw }))} className="flex w-full items-center justify-between rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-4 py-3 text-left"><div><div className="text-[15px] font-semibold text-slate-900">Informasi Tambahan Properti</div><div className="text-sm text-slate-500">Opsional, tetapi membantu penilaian risiko.</div></div><ChevronDown className={cls("h-4 w-4 text-slate-500 transition", expandedRows.optionalUw && "rotate-180")} /></button>{expandedRows.optionalUw ? <div className="mt-3 grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><FieldLabel label="Risiko di Sekitar Lokasi" /><TextAreaInput value={uwForm.surroundingRisk} onChange={(value) => setUwField("surroundingRisk", value)} placeholder="Contoh: berdekatan dengan pasar, bengkel, gudang bahan mudah terbakar, atau area padat penduduk" rows={3} /></div><div className="md:col-span-2"><FieldLabel label="Catatan Tambahan" /><TextAreaInput value={uwForm.additionalNotes} onChange={(value) => setUwField("additionalNotes", value)} placeholder="Tambahkan informasi penting lain yang perlu diketahui tim peninjau" rows={3} /></div></div> : null}</div>
         </div>
@@ -1113,6 +1126,14 @@ function ExternalProposalPage({
     const source = extensionOptions.find((item) => item.title === title);
     return { title, icon: source?.icon || Shield };
   });
+  const fallbackGuaranteeSummaryVisualItems =
+    !guaranteeSummaryVisualItems.length && activeVariant.key === "property-safe"
+      ? ["riot", "flood"]
+        .map((key) => extensionOptions.find((item) => item.key === key))
+        .filter(Boolean)
+        .map((item) => ({ title: item.title, icon: item.icon || Shield }))
+      : [];
+  const displayedGuaranteeSummaryVisualItems = guaranteeSummaryVisualItems.length ? guaranteeSummaryVisualItems : fallbackGuaranteeSummaryVisualItems;
   const constructionSummaryLabel = constructionClass || "Belum dipilih";
   const showAdvancedAccordions = !isIndicative && (hasAnyAdvancedData || uploads.frontView || uploads.sideRightView || uploads.sideLeftView);
   const occupancyOptions = OCCUPANCY_MAP[propertyType] || [];
@@ -1243,19 +1264,30 @@ function ExternalProposalPage({
             subtitle="Informasi utama penawaran yang sedang Anda terima."
             action={
               !isInternalPreview ? (
-                <button
-                  type="button"
-                  disabled={!canProceed || (!isIndicative && offerMeta.isExpired)}
-                  onClick={onPrimary}
-                  className={cls(
-                    "inline-flex h-10 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-white shadow-sm",
-                    canProceed && (isIndicative || !offerMeta.isExpired)
-                      ? "bg-[#F5A623] hover:brightness-105"
-                      : "cursor-not-allowed bg-slate-400"
-                  )}
-                >
-                  {primaryLabel}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    disabled={isIndicative ? false : !canProceed || offerMeta.isExpired}
+                    onClick={onPrimary}
+                    className={cls(
+                      "inline-flex h-10 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-white shadow-sm",
+                      isIndicative || (!isIndicative && canProceed && !offerMeta.isExpired)
+                        ? "bg-[#F5A623] hover:brightness-105"
+                        : "cursor-not-allowed bg-slate-400"
+                    )}
+                  >
+                    {primaryLabel}
+                  </button>
+                  {isIndicative ? (
+                    <button
+                      type="button"
+                      onClick={onSecondary}
+                      className="inline-flex h-10 items-center justify-center rounded-[10px] border border-[#D5DEEA] bg-white px-4 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+                    >
+                      Minta Bantuan
+                    </button>
+                  ) : null}
+                </div>
               ) : null
             }
           >
@@ -1267,6 +1299,8 @@ function ExternalProposalPage({
                 >
                   <OfferSummaryGrid>
                     <OfferSummaryField label="Nama Tertanggung" value={customerDisplay} />
+                    <OfferSummaryField label="Alamat Email" value={emailDisplay} />
+                    <OfferSummaryField label="Nomor Handphone" value={phoneDisplay} />
                   </OfferSummaryGrid>
                 </OfferSummarySection>
 
@@ -1297,42 +1331,40 @@ function ExternalProposalPage({
                     />
                     <OfferSummaryKeyValue label="Total Harga Pertanggungan:" value={coverageValue} />
                     <OfferSummaryKeyValue
-                      label="Kelas Konstruksi:"
-                      value={constructionInfo ? `${constructionSummaryLabel}, yaitu ${constructionInfo.desc}` : constructionSummaryLabel}
+                      label="Kelas Konstruksi"
+                      value={
+                        constructionInfo && constructionSummaryLabel !== "Belum dipilih"
+                          ? `Kelas ${constructionSummaryLabel.replace(/^Kelas\s*/i, "")} dengan ${constructionInfo.desc}`
+                          : constructionSummaryLabel
+                      }
                     />
-
-                    <div className="border-t border-[#E3E9F0] pt-4">
-                      <div className="space-y-2.5">
-                        <OfferSummaryField
-                          label="Syarat dan Ketentuan"
-                          value={activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}
-                        />
-                        <OfferSummaryField
-                          label="Perluasan Jaminan"
-                          value={
-                            guaranteeSummaryVisualItems.length ? (
-                              <div className="space-y-2">
-                                {guaranteeSummaryVisualItems.map((item) => {
-                                  const Icon = item.icon || Shield;
-                                  return (
-                                    <div key={item.title} className="flex items-center gap-2 text-[15px] font-semibold leading-[1.35] text-slate-900">
-                                      <Icon className="h-4 w-4 shrink-0 text-[#0A4D82]" />
-                                      <span>{item.title}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              "Belum ada perluasan yang dipilih"
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
                   </div>
                 </OfferSummarySection>
 
-                <OfferSummarySection title="Ringkasan Biaya">
+                <OfferSummarySection
+                  title="Syarat dan Ketentuan:"
+                  action={<SummaryEditButton onClick={() => startEditingSection("guarantee")} />}
+                >
+                  <div className="space-y-2.5">
+                    <div className="text-[15px] font-semibold leading-[1.4] text-slate-900">
+                      {activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}
+                    </div>
+                    {displayedGuaranteeSummaryVisualItems.length ? (
+                      <OfferSummaryKeyValue
+                        label="Perluasan Jaminan"
+                        value={
+                          <div className="space-y-1">
+                            {displayedGuaranteeSummaryVisualItems.map((item) => (
+                              <SummaryGuaranteeItem key={item.title} title={item.title} icon={item.icon} />
+                            ))}
+                          </div>
+                        }
+                      />
+                    ) : null}
+                  </div>
+                </OfferSummarySection>
+
+                <OfferSummarySection title="Ringkasan Biaya" subtitle={isIndicative && blockingMessage ? blockingMessage : undefined}>
                   <div className="space-y-2.5">
                     <OfferSummaryKeyValue label="Premi Dasar:" value={"Rp " + formatRupiah(basePremium)} />
                     <OfferSummaryKeyValue label="Premi Perluasan:" value={"Rp " + formatRupiah(extensionPremium)} />
@@ -1404,17 +1436,24 @@ function ExternalProposalPage({
                     <div className="mt-3 space-y-3">
                       {objectRows.map((row) => (
                         <div key={row.id} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <div>
-                              <FieldLabel label="Jenis Objek" />
-                              <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Pilih jenis objek" />
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <div>
+                                <FieldLabel label="Jenis Objek" required />
+                                <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Pilih jenis objek" />
+                              </div>
+                              <div>
+                                <FieldLabel label="Nilai Pertanggungan" required />
+                                <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Masukkan nilai pertanggungan" />
+                              </div>
                             </div>
                             <div>
-                              <FieldLabel label="Nilai Pertanggungan" />
-                              <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Masukkan nilai pertanggungan" />
+                              <FieldLabel
+                                label="Keterangan"
+                                required={requiresObjectNote(row.type)}
+                                helpText={requiresObjectNote(row.type) ? "Wajib untuk jenis objek Stok." : ""}
+                              />
+                              <TextInput value={row.note || ""} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} />
                             </div>
-                          </div>
-                          <TextInput value={row.note || ""} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder="Keterangan singkat" />
                           {objectRows.length > 1 ? (
                             <div className="flex justify-end">
                               <button
@@ -1488,8 +1527,8 @@ function ExternalProposalPage({
                         <div className="space-y-1">
                           <ProposalRow label="Status Kepemilikan Properti" value={uwForm.ownership || "-"} />
                           <ProposalRow label="Proteksi Kebakaran" value={uwForm.fireProtection || "-"} />
-                          <ProposalRow label="Jangka Waktu Pertanggungan (Mulai)" value={uwForm.coverageStartDate || "-"} />
-                          <ProposalRow label="Jangka Waktu Pertanggungan (Akhir)" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
+            <ProposalRow label="Jangka Waktu Mulai Pertanggungan" value={uwForm.coverageStartDate || "-"} />
+            <ProposalRow label="Jangka Waktu Akhir Pertanggungan" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
                           <ProposalRow label="Riwayat Klaim 3 Tahun Terakhir" value={uwForm.claimHistory || "-"} />
                           <ProposalRow label="Risiko di Sekitar Lokasi" value={uwForm.surroundingRisk || "-"} />
                           <ProposalRow label="Catatan Tambahan" value={uwForm.additionalNotes || "-"} />
@@ -2411,7 +2450,56 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                       <div><FieldLabel label="Kelas Konstruksi" required /><div className="space-y-2"><SelectInput value={form.constructionClass} onChange={(value) => setField("constructionClass", value)} options={CONSTRUCTION_CLASSES} placeholder="Pilih sesuai material utama bangunan." /><button type="button" onClick={() => setShowConstructionGuide((prev) => !prev)} className="text-sm font-medium text-[#0A4D82] hover:underline">{showConstructionGuide ? "Sembunyikan panduan kelas konstruksi" : "Lihat panduan kelas konstruksi"}</button>{showConstructionGuide ? <div className="grid gap-2 rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] p-3">{CONSTRUCTION_GUIDE.map((item) => <div key={item.title} className="rounded-lg bg-white p-3 ring-1 ring-slate-200"><div className="text-[13px] font-semibold text-[#0A4D82]">{item.title}</div><div className="mt-1 text-[12px] leading-5 text-slate-600">{item.desc}</div></div>)}</div> : null}</div></div>
                       <div><FieldLabel label="Alamat / Lokasi Properti" required /><TextInput value={form.locationSearch} onChange={(value) => setField("locationSearch", value)} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} /><div className="mt-2 flex flex-wrap gap-2.5"><button type="button" onClick={() => { setField("locationSearch", "Lokasi GPS tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Jl. Sudirman Kav. 44, Jakarta Selatan", source: "gps" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Ambil Lokasi Sekarang</button><button type="button" onClick={() => { setField("locationSearch", "Pin peta tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading", source: "map" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Pilih di Peta</button></div></div>
                     </div>
-                    <div className="mt-4 rounded-xl border border-[#D5DDE6] bg-[#FAFBFC] p-4"><div className="flex items-center justify-between gap-3"><div className="text-[15px] font-bold text-slate-900">Rincian Properti</div><button type="button" onClick={() => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }))} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-4 w-4" />Tambah Objek</button></div><div className="mt-3 space-y-2.5">{objectRows.map((row) => <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3"><div className="grid gap-2.5 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-center"><SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" /><CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" /><TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} /><button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek"><Trash2 className="h-4 w-4" /></button></div></div>)}</div><div className="mt-3 rounded-[10px] bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200"><div className="flex flex-col gap-1.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><span>Total Nilai yang Dilindungi</span><span className="break-words text-left text-[18px] font-bold text-[#E8A436] sm:text-right">Rp {formatRupiah(totalValue)}</span></div></div></div>
+                    <div className="mt-4 rounded-xl border border-[#D5DDE6] bg-[#FAFBFC] p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-[15px] font-bold text-slate-900">Rincian Properti</div>
+                        <button
+                          type="button"
+                          onClick={() => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }))}
+                          className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          <Plus className="h-4 w-4" />Tambah Objek
+                        </button>
+                      </div>
+                      <div className="mt-3 space-y-2.5">
+                        {objectRows.map((row) => (
+                          <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                            <div className="grid gap-2.5 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-start">
+                              <div>
+                                <FieldLabel label="Jenis Objek" required />
+                                <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" />
+                              </div>
+                              <div>
+                                <FieldLabel label="Nilai Pertanggungan" required />
+                                <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" />
+                              </div>
+                              <div>
+                                <FieldLabel
+                                  label="Keterangan"
+                                  required={requiresObjectNote(row.type)}
+                                  helpText={requiresObjectNote(row.type) ? "Wajib untuk jenis objek Stok." : ""}
+                                />
+                                <TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeObjectRow(row.id)}
+                                className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50"
+                                title="Hapus objek"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 rounded-[10px] bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200">
+                        <div className="flex flex-col gap-1.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                          <span>Total Nilai yang Dilindungi</span>
+                          <span className="break-words text-left text-[18px] font-bold text-[#E8A436] sm:text-right">Rp {formatRupiah(totalValue)}</span>
+                        </div>
+                      </div>
+                    </div>
                 </SectionCard>
                   <div className={cls("flex justify-stretch gap-3", quoted ? "justify-stretch sm:justify-end" : "sm:justify-end sm:gap-3")}>
                     {!quoted ? <button type="button" disabled={!canAdvanceInternalStepOne} onClick={() => setQuoted(true)} className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Cek Premi</button> : null}
@@ -2491,8 +2579,8 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
               <div className="border-t border-white/15 pt-3">
                 <SummaryRow label={form.customerType === "Badan Usaha" ? "NPWP" : "NIK"} value={uwForm.idNumber || "-"} />
                 <SummaryRow label="Kontak di Lokasi" value={uwForm.picName || "-"} />
-                <SummaryRow label="Jangka Waktu Pertanggungan (Mulai)" value={uwForm.coverageStartDate || "-"} />
-                <SummaryRow label="Jangka Waktu Pertanggungan (Akhir)" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
+            <SummaryRow label="Jangka Waktu Mulai Pertanggungan" value={uwForm.coverageStartDate || "-"} />
+            <SummaryRow label="Jangka Waktu Akhir Pertanggungan" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
               </div>
               <SummarySidebarAlert items={underwritingPendingItems} />
               <div className="space-y-2">
