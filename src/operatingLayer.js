@@ -189,7 +189,7 @@ export function canProceedToPaymentFromOperating(record) {
 
 export function paymentBlockMessage(record) {
   if (!record) return "";
-  if (record.status === "Pending Review Internal") return "Transaksi ini masih dalam review internal dan belum dapat dilanjutkan ke pembayaran.";
+  if (record.status === "Pending Review Internal") return "Status internal belum disetujui. Penawaran menunggu tindak lanjut tim internal sebelum bisa lanjut ke pembayaran.";
   if (record.status === "Perlu Revisi") return "Transaksi ini masih perlu revisi sebelum dapat dilanjutkan ke pembayaran.";
   if (record.status === "Rejected") return "Transaksi ini telah ditolak dan tidak dapat dilanjutkan ke pembayaran.";
   if (record.status === "Expired") return "Versi transaksi ini sudah expired. Buat versi penawaran terbaru sebelum melanjutkan pembayaran.";

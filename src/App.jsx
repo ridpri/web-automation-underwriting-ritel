@@ -9,7 +9,6 @@ import {
   MotorInternalPrototype,
   MotorLatestExact,
   PartnerConfigStudio,
-  PropertyExternalPrototype,
   PropertySafeBrdPage,
   PropertyPrototype,
   ReviewWorkbench,
@@ -303,7 +302,13 @@ export default function App() {
   if (activeJourney === "property-external") {
     return (
       <Suspense fallback={<JourneyFallback />}>
-        <PropertyExternalPrototype entryMode={sessionRole} productVariant="property-safe" onExit={() => setActiveJourney("")} />
+        <PropertyPrototype
+          embedded
+          entryMode="external"
+          productVariant="property-safe"
+          sessionName={activeSessionName}
+          onExit={() => setActiveJourney("")}
+        />
       </Suspense>
     );
   }
@@ -327,7 +332,13 @@ export default function App() {
   if (activeJourney === "property-all-risk-external") {
     return (
       <Suspense fallback={<JourneyFallback />}>
-        <PropertyExternalPrototype entryMode={sessionRole} productVariant="property-all-risk" onExit={() => setActiveJourney("")} />
+        <PropertyPrototype
+          embedded
+          entryMode="external"
+          productVariant="property-all-risk"
+          sessionName={activeSessionName}
+          onExit={() => setActiveJourney("")}
+        />
       </Suspense>
     );
   }

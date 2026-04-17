@@ -2,11 +2,14 @@
 import { createEmptyDocumentCheck, createLocationEvidence, createPhotoEvidence, createTransactionAuthority, summarizeFraudSignals } from "./platform/securityControls.js";
 import {
   AlertTriangle,
+  Atom,
   ArrowLeft,
   Bell,
   Building2,
   Camera,
   CameraOff,
+  CalendarDays,
+  Check,
   CheckCircle2,
   ChevronDown,
   FileText,
@@ -15,6 +18,7 @@ import {
   Mail,
   MapPin,
   Package,
+  Plane,
   Phone,
   Plus,
   Search,
@@ -25,6 +29,7 @@ import {
   Wallet,
   Waves,
   X,
+  Zap,
   Car,
 } from "lucide-react";
 import { canProceedToPaymentFromOperating, paymentBlockMessage } from "./operatingLayer.js";
@@ -37,9 +42,21 @@ const CONSTRUCTION_CLASSES = ["Kelas 1", "Kelas 2", "Kelas 3"];
 const OBJECT_TYPES = ["Bangunan", "Inventaris / Isi", "Stok", "Mesin / Peralatan"];
 const CUSTOMER_TYPES = ["Nasabah Perorangan", "Badan Usaha"];
 const OWNERSHIP_TYPES = ["Milik Sendiri", "Sewa", "Kontrak", "Lainnya"];
-const PROTECTION_OPTIONS = ["Tidak Ada", "APAR", "Hydrant", "Sprinkler", "APAR + Hydrant", "Lengkap"];
+const PROTECTION_OPTIONS = ["APAR", "Hydrant", "Sprinkler"];
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
 const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
+const STOCK_TYPE_OPTIONS = [
+  { label: "Sembako", risk: "Tidak mudah terbakar" },
+  { label: "Minuman Kemasan", risk: "Tidak mudah terbakar" },
+  { label: "Bahan Bangunan", risk: "Tidak mudah terbakar" },
+  { label: "Sparepart / Logam", risk: "Tidak mudah terbakar" },
+  { label: "Elektronik", risk: "Tidak mudah terbakar" },
+  { label: "Obat / Kosmetik", risk: "Tidak mudah terbakar" },
+  { label: "Pakaian / Tekstil", risk: "Mudah terbakar" },
+  { label: "Kertas / Buku", risk: "Mudah terbakar" },
+  { label: "Furniture / Kayu", risk: "Mudah terbakar" },
+  { label: "Plastik / Karet", risk: "Mudah terbakar" },
+];
 const ICON_MAP = { shield: Shield, waves: Waves, sparkles: Sparkles };
 const REJECT_REASONS = [
   "Premi belum sesuai anggaran",
@@ -74,6 +91,14 @@ const CONSTRUCTION_GUIDE = [
     title: "Kelas 3",
     desc: "Semua bangunan selain Kelas 1 dan Kelas 2.",
   },
+];
+
+const BASIC_COVERAGE_HIGHLIGHTS = [
+  { title: "Kebakaran", icon: Flame },
+  { title: "Petir", icon: Zap },
+  { title: "Ledakan", icon: Sparkles },
+  { title: "Kejatuhan Pesawat", icon: Plane },
+  { title: "Asap", icon: Waves },
 ];
 
 const OCCUPANCY_MAP = {
@@ -344,7 +369,7 @@ function shortObjectLabel(type) {
 }
 
 function requiresObjectNote(type) {
-  return type === "Stok";
+  return false;
 }
 
 function isFloorRelevant(propertyType, occupancy) {
@@ -365,21 +390,32 @@ function calculateCoverageEnd(startDate) {
   const date = new Date(startDate + "T00:00:00");
   if (Number.isNaN(date.getTime())) return "";
   date.setFullYear(date.getFullYear() + 1);
-  date.setDate(date.getDate() - 1);
   return formatDateInput(date);
 }
 
-function SectionCard({ title, subtitle, children, action }) {
+function SectionCard({ title, subtitle, children, action, headerAlign = "left", className = "", compactHeader = false }) {
   return (
-    <section className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="text-[18px] font-bold text-slate-900">{title}</div>
-          {subtitle ? <div className="mt-1 text-sm text-slate-500">{subtitle}</div> : null}
+    <section
+      className={cls(
+        compactHeader
+          ? "rounded-2xl border border-[#D8E1EA] bg-white px-4 py-3.5 md:px-5"
+          : "rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5",
+        className,
+      )}
+    >
+      <div
+        className={cls(
+          "flex items-start gap-4",
+          action ? "justify-between" : headerAlign === "center" ? "justify-center" : "justify-start",
+        )}
+      >
+        <div className={headerAlign === "center" ? "text-center" : ""}>
+          <div className={cls(compactHeader ? "text-[15px] font-semibold" : "text-[18px] font-bold", "text-slate-900")}>{title}</div>
+          {subtitle ? <div className={cls(compactHeader ? "mt-1 text-[13px] leading-5" : "mt-1 text-sm", "text-slate-500")}>{subtitle}</div> : null}
         </div>
         {action ? <div>{action}</div> : null}
       </div>
-      <div className="mt-4">{children}</div>
+      <div className={compactHeader ? "mt-3" : "mt-4"}>{children}</div>
     </section>
   );
 }
@@ -441,10 +477,54 @@ function SelectInput({ value, onChange, options, placeholder = "Pilih opsi yang 
           value ? "text-slate-800" : "text-slate-500"
         )}
       >
-        <option value="" disabled hidden>{placeholder}</option>
+        <option value="" disabled>{placeholder}</option>
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
       <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+    </div>
+  );
+}
+
+function MultiSelectInput({ value = [], onChange, options, noneOption = "Tidak Ada" }) {
+  const selectedValues = Array.isArray(value) ? value : [];
+  const toggleOption = (option) => {
+    const isSelected = selectedValues.includes(option);
+    const nextValues = selectedValues.filter((item) => item !== noneOption);
+    if (isSelected) {
+      onChange(nextValues.filter((item) => item !== option));
+      return;
+    }
+    onChange(nextValues.concat(option));
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-2 sm:grid-cols-3">
+        {options.map((option) => {
+          const isSelected = selectedValues.includes(option);
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => toggleOption(option)}
+              className={cls(
+                "flex min-h-[44px] items-center justify-between rounded-[12px] border px-4 py-2.5 text-sm font-medium transition",
+                isSelected ? "border-[#0A4D82] bg-[#EEF6FD] text-[#0A4D82]" : "border-[#D5DDE6] bg-white text-slate-700 hover:border-[#A9C7E3] hover:bg-[#F8FBFE]",
+              )}
+            >
+              <span>{option}</span>
+              <span className={cls("ml-3 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border", isSelected ? "border-[#0A4D82] bg-[#0A4D82]" : "border-slate-300 bg-white")}>
+                {isSelected ? <CheckCircle2 className="h-3.5 w-3.5 text-white" /> : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {selectedValues.length ? (
+        <div className="rounded-xl border border-[#D8E1EA] bg-white px-3 py-2 text-sm text-slate-600">
+          Dipilih: <span className="font-medium text-slate-900">{selectedValues.join(", ")}</span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -525,12 +605,12 @@ function SummarySidebarAlert({ items, successText }) {
 
 function OfferSummarySection({ title, action, children }) {
   return (
-    <div className="rounded-2xl border border-[#D8E1EA] bg-white px-4 py-3.5 md:px-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[15px] font-semibold text-slate-900">{title}</div>
+    <div className="rounded-[22px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFDFF_100%)] px-4 py-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition-shadow duration-200 hover:shadow-[0_16px_34px_rgba(15,23,42,0.07)] md:px-5">
+      <div className="flex items-center justify-between gap-3 border-b border-[#EEF3F8] pb-3">
+        <div className="text-[15px] font-semibold tracking-tight text-slate-900">{title}</div>
         {action ? action : null}
       </div>
-      <div className="mt-3">{children}</div>
+      <div className="mt-3.5">{children}</div>
     </div>
   );
 }
@@ -555,31 +635,67 @@ function SummaryEditButton({ onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]"
+      className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-sm font-medium text-[#0A4D82] shadow-sm transition hover:border-[#BFD4E8] hover:bg-[#F8FBFE] hover:shadow-[0_8px_18px_rgba(10,77,130,0.08)]"
     >
       Edit
     </button>
   );
 }
 
-function SummaryGuaranteeItem({ title, icon: Icon = Shield }) {
+function SummaryGuaranteeItem({ title, icon: Icon = Shield, compact = false }) {
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#D6E0EA] bg-[#F8FBFE] text-[#0A4D82]">
-        <Icon className="h-4 w-4" />
+    <div className={cls("flex items-start", compact ? "gap-2" : "gap-2.5")}>
+      <div className={cls("mt-0.5 flex shrink-0 items-center justify-center border border-[#D6E0EA] bg-[#F8FBFE] text-[#0A4D82]", compact ? "h-6 w-6 rounded-md" : "h-7 w-7 rounded-lg")}>
+        <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
       </div>
-      <div className="text-[15px] font-semibold leading-[1.35] text-slate-900">{title}</div>
+      <div className={cls("min-w-0 text-slate-900", compact ? "text-[14px] leading-[1.35]" : "text-[15px] leading-[1.45]")}>{title}</div>
     </div>
   );
 }
 
 function OfferSummaryKeyValue({ label, value }) {
   const normalizedLabel = String(label || "").replace(/:\s*$/, "");
+  const shouldEmphasizeValue = ["Objek Pertanggungan", "Kelas Konstruksi"].includes(normalizedLabel);
   return (
-    <div className="grid grid-cols-[150px_14px_minmax(0,1fr)] gap-y-0 gap-x-2 md:grid-cols-[220px_14px_minmax(0,1fr)]">
-      <div className="text-[14px] font-medium leading-[1.45] text-slate-600">{normalizedLabel}</div>
-      <div className="text-[14px] font-medium leading-[1.45] text-slate-600">:</div>
-      <div className="text-[15px] font-semibold leading-[1.45] text-slate-900">{value}</div>
+    <div className={cls("border-t border-slate-100 first:border-t-0 first:pt-0 last:pb-0", shouldEmphasizeValue ? "py-4" : "py-3")}>
+      <div className="space-y-1.5 md:grid md:grid-cols-[220px_14px_minmax(0,1fr)] md:gap-y-0 md:gap-x-2 md:space-y-0">
+      <div className="text-[13px] font-medium leading-[1.45] text-slate-500">
+        {normalizedLabel}
+        <span className="md:hidden">:</span>
+      </div>
+      <div className="hidden text-[13px] font-medium leading-[1.45] text-slate-400 md:block">:</div>
+      <div
+        className={cls(
+          "text-[15px] font-medium leading-[1.6] text-slate-900",
+          shouldEmphasizeValue && "leading-[1.75]",
+        )}
+      >
+        {value}
+      </div>
+      </div>
+    </div>
+  );
+}
+
+function PremiumPriceHero({ label, value, tooltipText }) {
+  return (
+    <div className="rounded-2xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4F8FD_100%)] px-5 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)] md:px-7 md:py-6">
+      <div className="mx-auto flex max-w-[460px] flex-col items-center text-center">
+        {label ? <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</div> : null}
+        <div className={cls("flex items-center justify-center gap-2", label ? "mt-2" : "")}>
+          <div className="text-[24px] font-bold tracking-tight text-[#0A4D82] md:text-[28px]">{value}</div>
+          {tooltipText ? <TooltipDot text={tooltipText} /> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PremiumBreakdown({ children }) {
+  return (
+    <div className="mt-4 border-t border-slate-100 pt-3">
+      <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Rincian</div>
+      <div className="mt-1">{children}</div>
     </div>
   );
 }
@@ -635,12 +751,12 @@ function TooltipDot({ text }) {
           window.setTimeout(() => setOpen(false), 120);
         }}
         aria-label="Lihat penjelasan estimasi premi"
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/35 text-[10px] font-semibold text-white/85"
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[#BFD0E0] bg-white text-[10px] font-semibold text-[#5E7BA6]"
       >
         !
       </button>
       {open ? (
-        <span className="absolute right-0 top-[calc(100%+8px)] z-20 w-[240px] rounded-xl bg-white px-3 py-2 text-left text-[12px] font-medium leading-5 text-slate-700 shadow-[0_18px_40px_rgba(15,23,42,0.18)] ring-1 ring-slate-200">
+        <span className="absolute left-0 top-[calc(100%+8px)] z-20 w-[240px] rounded-xl bg-white px-3 py-2 text-left text-[12px] font-medium leading-5 text-slate-700 shadow-[0_18px_40px_rgba(15,23,42,0.18)] ring-1 ring-slate-200">
           {text}
         </span>
       ) : null}
@@ -935,14 +1051,13 @@ function CameraCaptureCard({ title, description, image, onCapture }) {
     }
   };
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className="flex items-start justify-between gap-3"><div><div className="text-[15px] font-semibold text-slate-900">{title}</div><div className="mt-1 text-sm text-slate-500">{description}</div></div><Camera className="h-5 w-5 text-slate-400" /></div>
-      {image ? <img src={image} alt={title} className="mt-3 h-40 w-full rounded-xl object-cover" /> : isCameraOn ? <video ref={videoRef} className="mt-3 h-40 w-full rounded-xl bg-slate-900 object-cover" muted playsInline /> : <div className="mt-3 flex h-40 w-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-center text-sm text-slate-400">{showGalleryFallback ? "Belum ada foto. Kamera tidak bisa dipakai, Anda bisa gunakan upload cadangan." : "Belum ada foto. Aktifkan kamera untuk mengambil foto."}</div>}
+    <div className="rounded-2xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFDFF_100%)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition-shadow duration-200 hover:shadow-[0_16px_30px_rgba(15,23,42,0.07)]">
+      <div className="flex items-start justify-between gap-3"><div><div className="text-[15px] font-semibold tracking-tight text-slate-900">{title}</div><div className="mt-1 text-sm text-slate-500">{description}</div></div><Camera className="h-5 w-5 text-slate-400" /></div>
+      {image ? <div className="mt-3 overflow-hidden rounded-2xl border border-[#D8E1EA] bg-white shadow-[0_10px_22px_rgba(15,23,42,0.08)]"><img src={image} alt={title} className="h-40 w-full object-cover" /></div> : isCameraOn ? <div className="mt-3 overflow-hidden rounded-2xl border border-[#BFD4E8] bg-slate-900 shadow-[0_10px_22px_rgba(15,23,42,0.12)]"><video ref={videoRef} className="h-40 w-full object-cover" muted playsInline /></div> : <button type="button" onClick={showGalleryFallback ? () => fileInputRef.current && fileInputRef.current.click() : startCamera} className="mt-3 flex h-40 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#C9D6E4] bg-[linear-gradient(180deg,#FAFCFF_0%,#F4F8FC_100%)] px-4 text-center transition hover:border-[#AFC7DD] hover:bg-[#F7FAFD]"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#DCE6F0]"><Camera className="h-5 w-5 text-[#0A4D82]" /></span><span className="mt-3 text-sm font-medium text-slate-700">{showGalleryFallback ? "Unggah foto dari galeri" : "Ambil foto properti"}</span><span className="mt-1 text-xs leading-5 text-slate-500">{showGalleryFallback ? "Ketuk untuk memilih gambar." : "Ketuk area ini untuk membuka kamera."}</span></button>}
       {errorText ? <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{errorText}</div> : null}
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
       <div className="mt-3 flex flex-wrap gap-2">
-        {!isCameraOn ? <button type="button" onClick={startCamera} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><Camera className="h-4 w-4" />Aktifkan Kamera</button> : <><button type="button" onClick={capturePhoto} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-medium text-white hover:brightness-105"><Camera className="h-4 w-4" />Ambil Foto</button><button type="button" onClick={stopCamera} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><CameraOff className="h-4 w-4" />Tutup Kamera</button></>}
-        {showGalleryFallback ? <button type="button" onClick={() => fileInputRef.current && fileInputRef.current.click()} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><Camera className="h-4 w-4" />Upload dari Galeri</button> : null}
+        {isCameraOn ? <><button type="button" onClick={capturePhoto} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-medium text-white hover:brightness-105"><Camera className="h-4 w-4" />Ambil Foto</button><button type="button" onClick={stopCamera} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><CameraOff className="h-4 w-4" />Tutup Kamera</button></> : null}
         {image ? <button type="button" onClick={() => onCapture("")} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><Trash2 className="h-4 w-4" />Hapus Foto</button> : null}
       </div>
     </div>
@@ -953,6 +1068,7 @@ function UnderwritingSections({
   form,
   customerType,
   selectedCustomer,
+  objectRows,
   uwForm,
   setUwField,
   uploads,
@@ -963,36 +1079,166 @@ function UnderwritingSections({
   external = false,
 }) {
   const identityLabel = customerType === "Badan Usaha" ? "NPWP" : "NIK";
+  const coverageDateFieldRef = useRef(null);
   const insuredName = selectedCustomer ? selectedCustomer.name : form.identity;
   const coverageEndDate = calculateCoverageEnd(uwForm.coverageStartDate);
-  const customerSectionTitle = external ? "Lengkapi Informasi Nasabah" : "Informasi Nasabah Lanjutan";
-  const propertySectionTitle = external ? "Lengkapi Informasi Properti" : "Informasi Properti Lanjutan";
-  const photoSectionTitle = external ? "Lampiran Foto Properti" : "Foto Properti";
+  const coverageStartDisplay = uwForm.coverageStartDate ? formatDisplayDate(new Date(`${uwForm.coverageStartDate}T00:00:00`)) : "-";
+  const coverageEndDisplay = coverageEndDate ? formatDisplayDate(new Date(`${coverageEndDate}T00:00:00`)) : "-";
+  const coveragePeriodDisplay = uwForm.coverageStartDate ? `${coverageStartDisplay} - ${coverageEndDisplay}` : "Pilih tanggal mulai pertanggungan";
+  const hasStockObject = objectRows.some((row) => row.type === "Stok");
+  const selectedStockTypeMeta = STOCK_TYPE_OPTIONS.find((item) => item.label === uwForm.stockType);
+  const customerSectionTitle = "Informasi Nasabah Lanjutan";
+  const propertySectionTitle = "Informasi Properti Lanjutan";
+  const photoSectionTitle = "Foto Properti Lanjutan";
+  const customerSectionSubtitle = undefined;
+  const propertySectionSubtitle = undefined;
   const photoSectionSubtitle = external
-    ? "Tambahkan foto properti agar penawaran dapat dilanjutkan ke versi final."
+    ? undefined
     : "Wajib diisi oleh petugas internal.";
+  const externalSectionClassName = external ? "border-[#CFE0F0] bg-[#F8FBFE] shadow-[0_12px_30px_rgba(15,23,42,0.06)]" : "";
 
   return (
     <div className="space-y-5">
-      <SectionCard title={customerSectionTitle}>
+      <SectionCard title={customerSectionTitle} subtitle={customerSectionSubtitle} className={externalSectionClassName} compactHeader={external}>
         <div className="grid gap-4 md:grid-cols-2">
           <div><FieldLabel label={identityLabel} /><TextInput value={uwForm.idNumber} onChange={(value) => setUwField("idNumber", onlyDigits(value))} placeholder={customerType === "Badan Usaha" ? "Masukkan NPWP" : "Masukkan NIK"} icon={<User className="h-4 w-4" />} /></div>
           {customerType === "Badan Usaha" ? <div><FieldLabel label="Kontak di Lokasi" required /><div className="space-y-2"><TextInput value={uwForm.picName} onChange={(value) => setUwField("picName", value)} placeholder={insuredName || "Nama kontak yang bisa dihubungi di lokasi"} icon={<User className="h-4 w-4" />} /><label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={uwForm.sameAsInsured} onChange={(event) => setUwField("sameAsInsured", event.target.checked)} />Sama dengan pemegang polis</label></div></div> : null}
+          <div className="md:col-span-2">
+            <FieldLabel label="Alamat Tertanggung" required />
+            <div className="space-y-2.5">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={Boolean(uwForm.sameAsPropertyAddress)}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setUwField("sameAsPropertyAddress", checked);
+                    if (checked) setUwField("insuredAddress", form.locationSearch || "");
+                  }}
+                />
+                Sama dengan alamat properti
+              </label>
+              {!uwForm.sameAsPropertyAddress ? (
+                <>
+                  <TextInput
+                    value={uwForm.insuredAddress || ""}
+                    onChange={(value) => {
+                      if (uwForm.sameAsPropertyAddress) setUwField("sameAsPropertyAddress", false);
+                      setUwField("insuredAddress", value);
+                    }}
+                    placeholder="Ketik alamat tertanggung"
+                    icon={<MapPin className="h-4 w-4" />}
+                  />
+                  <div className="flex flex-wrap gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const gpsAddress = "Lokasi tertanggung tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan";
+                        setUwField("sameAsPropertyAddress", false);
+                        setUwField("insuredAddress", gpsAddress);
+                      }}
+                      className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      Ambil Lokasi Sekarang
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const mapAddress = "Pin lokasi tertanggung tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading";
+                        setUwField("sameAsPropertyAddress", false);
+                        setUwField("insuredAddress", mapAddress);
+                      }}
+                      className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      Pilih di Peta
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
         </div>
       </SectionCard>
 
-      <SectionCard title={propertySectionTitle}>
+      <SectionCard title={propertySectionTitle} subtitle={propertySectionSubtitle} className={externalSectionClassName} compactHeader={external}>
         <div className="grid gap-4 md:grid-cols-2">
-          <div><FieldLabel label="Status kepemilikan bangunan / isi properti" required /><SelectInput value={uwForm.ownership} onChange={(value) => setUwField("ownership", value)} options={OWNERSHIP_TYPES} placeholder="Properti ini milik sendiri, sewa, atau lainnya?" /></div>
-          <div><FieldLabel label="Perlindungan kebakaran yang tersedia" required /><SelectInput value={uwForm.fireProtection} onChange={(value) => setUwField("fireProtection", value)} options={PROTECTION_OPTIONS} placeholder="Perlindungan kebakaran apa yang tersedia di lokasi?" /></div>
- <div><FieldLabel label="Jangka Waktu Mulai Pertanggungan" required /><TextInput type="date" value={uwForm.coverageStartDate} onChange={(value) => setUwField("coverageStartDate", value)} /></div>
- <div><FieldLabel label="Jangka Waktu Akhir Pertanggungan" /><TextInput value={coverageEndDate} onChange={() => {}} placeholder="Otomatis 1 tahun" readOnly={true} /></div>
+          <div className="md:col-span-2">
+            <FieldLabel label="Perlindungan kebakaran yang tersedia" required />
+            <div className="space-y-3">
+              <SelectInput
+                value={uwForm.fireProtectionChoice}
+                onChange={(value) => {
+                  setUwField("fireProtectionChoice", value);
+                  if (value !== "Ada") setUwField("fireProtection", []);
+                }}
+                options={["Ada", "Tidak Ada"]}
+                placeholder="Pilih apakah tersedia perlindungan kebakaran"
+              />
+              {uwForm.fireProtectionChoice === "Ada" ? (
+                <div className="rounded-xl border border-[#D8E1EA] bg-[#F8FBFE] p-3">
+                  <div className="mb-3 text-sm font-medium text-slate-700">Pilih fasilitas yang tersedia</div>
+                  <MultiSelectInput value={uwForm.fireProtection} onChange={(value) => setUwField("fireProtection", value)} options={PROTECTION_OPTIONS} />
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div>
+            <FieldLabel label="Jangka Waktu Pertanggungan" required />
+            <input
+              ref={coverageDateFieldRef}
+              type="date"
+              value={uwForm.coverageStartDate}
+              onChange={(event) => setUwField("coverageStartDate", event.target.value)}
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (coverageDateFieldRef.current?.showPicker) {
+                  coverageDateFieldRef.current.showPicker();
+                } else if (coverageDateFieldRef.current) {
+                  coverageDateFieldRef.current.focus();
+                  coverageDateFieldRef.current.click();
+                }
+              }}
+              className={cls(
+                "flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[12px] border border-[#D5DDE6] bg-white px-4 py-3 text-left text-[14px] transition hover:border-[#A9C7E3] hover:bg-[#F8FBFE]",
+                uwForm.coverageStartDate ? "text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.04)]" : "text-slate-400",
+              )}
+            >
+              <span className={cls("block", uwForm.coverageStartDate ? "font-medium text-slate-900" : "font-normal text-slate-400")}>
+                {coveragePeriodDisplay}
+              </span>
+              <span className="inline-flex shrink-0 items-center rounded-full bg-[#EEF6FD] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#0A4D82]">
+                1 Tahun
+              </span>
+            </button>
+            {uwForm.coverageStartDate ? (
+              <div className="mt-1.5 text-[12px] leading-5 text-slate-500">
+                Berlaku sampai pukul 12.00 siang pada {coverageEndDisplay}.
+              </div>
+            ) : null}
+          </div>
           <div><FieldLabel label="Riwayat klaim 3 tahun terakhir" required /><SelectInput value={uwForm.claimHistory} onChange={(value) => setUwField("claimHistory", value)} options={CLAIM_HISTORY_OPTIONS} placeholder="Bagaimana riwayat klaim properti ini?" /></div>
-        <div className="md:col-span-2"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, optionalUw: !prev.optionalUw }))} className="flex w-full items-center justify-between rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-4 py-3 text-left"><div><div className="text-[15px] font-semibold text-slate-900">Informasi Tambahan Properti</div><div className="text-sm text-slate-500">Opsional, tetapi membantu penilaian risiko.</div></div><ChevronDown className={cls("h-4 w-4 text-slate-500 transition", expandedRows.optionalUw && "rotate-180")} /></button>{expandedRows.optionalUw ? <div className="mt-3 grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><FieldLabel label="Risiko di Sekitar Lokasi" /><TextAreaInput value={uwForm.surroundingRisk} onChange={(value) => setUwField("surroundingRisk", value)} placeholder="Contoh: berdekatan dengan pasar, bengkel, gudang bahan mudah terbakar, atau area padat penduduk" rows={3} /></div><div className="md:col-span-2"><FieldLabel label="Catatan Tambahan" /><TextAreaInput value={uwForm.additionalNotes} onChange={(value) => setUwField("additionalNotes", value)} placeholder="Tambahkan informasi penting lain yang perlu diketahui tim peninjau" rows={3} /></div></div> : null}</div>
+          {hasStockObject ? (
+            <div>
+              <FieldLabel label="Jenis Stok" required helpText="Wajib diisi bila ada obyek pertanggungan jenis stok." />
+              <SelectInput value={uwForm.stockType || ""} onChange={(value) => setUwField("stockType", value)} options={STOCK_TYPE_OPTIONS.map((item) => item.label)} placeholder="Pilih jenis stok" />
+              {!external && selectedStockTypeMeta ? (
+                <div className="mt-2 rounded-xl border border-[#D8E1EA] bg-white px-3 py-2 text-sm text-slate-700">
+                  Kategori stok ini termasuk <span className="font-semibold text-slate-900">{selectedStockTypeMeta.risk.toLowerCase()}</span>.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </SectionCard>
 
-      <SectionCard title={photoSectionTitle} subtitle={photoSectionSubtitle}>
+      <SectionCard title={photoSectionTitle} subtitle={photoSectionSubtitle} className={externalSectionClassName} compactHeader={external}>
         <div className="grid gap-4 md:grid-cols-3"><CameraCaptureCard title="Foto Tampak Depan" description="Wajib diisi." image={uploads.frontView} onCapture={(value) => { setUploads((prev) => ({ ...prev, frontView: value })); setEvidence((prev) => ({ ...prev, photos: { ...prev.photos, frontView: value ? createPhotoEvidence({ label: "Foto Tampak Depan", declaredAddress: form.locationSearch }) : null } })); }} /><CameraCaptureCard title="Foto Samping Kanan" description="Wajib diisi." image={uploads.sideRightView} onCapture={(value) => { setUploads((prev) => ({ ...prev, sideRightView: value })); setEvidence((prev) => ({ ...prev, photos: { ...prev.photos, sideRightView: value ? createPhotoEvidence({ label: "Foto Samping Kanan", declaredAddress: form.locationSearch }) : null } })); }} /><CameraCaptureCard title="Foto Samping Kiri" description="Wajib diisi." image={uploads.sideLeftView} onCapture={(value) => { setUploads((prev) => ({ ...prev, sideLeftView: value })); setEvidence((prev) => ({ ...prev, photos: { ...prev.photos, sideLeftView: value ? createPhotoEvidence({ label: "Foto Samping Kiri", declaredAddress: form.locationSearch }) : null } })); }} /></div>
       </SectionCard>
     </div>
@@ -1058,13 +1304,17 @@ function ExternalProposalPage({
   const operatingValidUntil = operatingRecord?.validUntil;
   const operatingOwner = operatingRecord?.owner;
   const operatingId = operatingRecord?.id;
-  const coverageLabel = isIndicative ? "Estimasi Premi 1 Tahun" : "Premi 1 Tahun";
-  const primaryLabel = isIndicative ? "Isi Data" : "Pembayaran";
+  const showEstimatedPremium = !canProceed;
+  const coverageLabel = showEstimatedPremium ? "Estimasi Premi 1 Tahun" : "Premi 1 Tahun";
+  const primaryLabel = isIndicative ? "Data Lanjutan" : "Pembayaran";
+  const primaryActionLabel = isIndicative ? "Lanjut ke Data Lanjutan" : "Lanjut ke Pembayaran";
   const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === constructionClass);
   const [sectionOpen, setSectionOpen] = useState({ property: false, insured: false, guarantee: false });
   const [editingSections, setEditingSections] = useState({ property: false, guarantee: false, insured: false });
   const [objectOpen, setObjectOpen] = useState({ detail: false, main: false, exclusions: false, extension: false });
   const [insuredOpen, setInsuredOpen] = useState({ profile: false, advanced: false, photos: false });
+  const isInternalDataFlow = viewerMode === "internal";
+
   const offerMeta = useMemo(() => {
     const now = new Date();
     const validity = resolveOfferValidity(isIndicative, uwForm.coverageStartDate);
@@ -1087,8 +1337,10 @@ function ExternalProposalPage({
   const hasAnyAdvancedData = Boolean(
     uwForm.idNumber ||
       uwForm.picName ||
+      uwForm.insuredAddress ||
       uwForm.ownership ||
-      uwForm.fireProtection ||
+      uwForm.fireProtectionChoice ||
+      (Array.isArray(uwForm.fireProtection) ? uwForm.fireProtection.length > 0 : Boolean(uwForm.fireProtection)) ||
       uwForm.coverageStartDate ||
       uwForm.claimHistory ||
       uwForm.surroundingRisk ||
@@ -1126,21 +1378,25 @@ function ExternalProposalPage({
     const source = extensionOptions.find((item) => item.title === title);
     return { title, icon: source?.icon || Shield };
   });
-  const fallbackGuaranteeSummaryVisualItems =
-    !guaranteeSummaryVisualItems.length && activeVariant.key === "property-safe"
-      ? ["riot", "flood"]
-        .map((key) => extensionOptions.find((item) => item.key === key))
-        .filter(Boolean)
-        .map((item) => ({ title: item.title, icon: item.icon || Shield }))
-      : [];
-  const displayedGuaranteeSummaryVisualItems = guaranteeSummaryVisualItems.length ? guaranteeSummaryVisualItems : fallbackGuaranteeSummaryVisualItems;
+  const displayedGuaranteeSummaryVisualItems = guaranteeSummaryVisualItems;
   const constructionSummaryLabel = constructionClass || "Belum dipilih";
+  const fireProtectionSummary =
+    uwForm.fireProtectionChoice === "Ada"
+      ? Array.isArray(uwForm.fireProtection) && uwForm.fireProtection.length
+        ? uwForm.fireProtection.join(", ")
+        : "Ada"
+      : uwForm.fireProtectionChoice || "-";
+  const claimHistorySummary = uwForm.claimHistory || "-";
+  const hasStockObject = objectRows.some((row) => row.type === "Stok");
+  const stockTypeSummary = hasStockObject ? uwForm.stockType || "-" : "";
   const showAdvancedAccordions = !isIndicative && (hasAnyAdvancedData || uploads.frontView || uploads.sideRightView || uploads.sideLeftView);
   const occupancyOptions = OCCUPANCY_MAP[propertyType] || [];
   const constructionOptions = CONSTRUCTION_GUIDE.map((item) => item.title);
   const startEditingSection = (section) => {
-    setSectionOpen((prev) => ({ ...prev, [section]: true, property: section === "property" ? true : prev.property, guarantee: section === "guarantee" ? true : prev.guarantee, insured: section === "insured" ? true : prev.insured }));
-    setEditingSections((prev) => ({ ...prev, [section]: true }));
+    setEditingSections({ property: false, guarantee: false, insured: false, [section]: true });
+  };
+  const finishEditingSection = (section) => {
+    setEditingSections((prev) => ({ ...prev, [section]: false }));
   };
   const headerUserLabel = isInternalPreview ? senderName || "Taqwim (Internal)" : greetingRecipientName;
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
@@ -1251,7 +1507,13 @@ function ExternalProposalPage({
             <div className="flex flex-col gap-6 rounded-[18px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-5 md:flex-row md:items-center md:gap-4 md:px-6">
               <StepNode step="Langkah 1" title="Tinjau Penawaran" subtitle={isIndicative ? "Sedang dibuka" : "Selesai"} active={isIndicative} done={!isIndicative} icon={<FileText className="h-4 w-4" />} onClick={isIndicative ? undefined : onSecondary} />
               <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-              <StepNode step="Langkah 2" title="Pembayaran" subtitle={isIndicative ? "Menunggu" : "Siap dilanjutkan"} active={!isIndicative} done={false} icon={<Wallet className="h-4 w-4" />} />
+              <StepNode step="Langkah 2" title="Data Lanjutan" subtitle={isIndicative ? "Menunggu" : "Selesai"} active={!isIndicative} done={false} icon={<FileText className="h-4 w-4" />} />
+              {!isInternalDataFlow ? (
+                <>
+                  <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
+                  <StepNode step="Langkah 3" title="Pembayaran" subtitle={isIndicative ? "Menunggu" : "Siap dilanjutkan"} active={!isIndicative} done={false} icon={<Wallet className="h-4 w-4" />} />
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1260,385 +1522,34 @@ function ExternalProposalPage({
       <div className="mx-auto max-w-[860px] px-4 py-6 md:px-6">
         <div className="space-y-3">
           <SectionCard
-            title="Ringkasan Penawaran"
-            subtitle="Informasi utama penawaran yang sedang Anda terima."
-            action={
-              !isInternalPreview ? (
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    disabled={isIndicative ? false : !canProceed || offerMeta.isExpired}
-                    onClick={onPrimary}
-                    className={cls(
-                      "inline-flex h-10 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-white shadow-sm",
-                      isIndicative || (!isIndicative && canProceed && !offerMeta.isExpired)
-                        ? "bg-[#F5A623] hover:brightness-105"
-                        : "cursor-not-allowed bg-slate-400"
-                    )}
-                  >
-                    {primaryLabel}
-                  </button>
-                  {isIndicative ? (
-                    <button
-                      type="button"
-                      onClick={onSecondary}
-                      className="inline-flex h-10 items-center justify-center rounded-[10px] border border-[#D5DEEA] bg-white px-4 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
-                    >
-                      Minta Bantuan
-                    </button>
-                  ) : null}
-                </div>
-              ) : null
-            }
+            title="Ringkasan Penawaran Anda"
+            subtitle="Rangkuman utama penawaran yang sedang Anda tinjau."
+            headerAlign="center"
           >
-            <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
+            <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
               <div className="space-y-3">
                 <OfferSummarySection
-                  title="Ringkasan Nasabah"
-                  action={<SummaryEditButton onClick={() => startEditingSection("insured")} />}
+                  title="Ringkasan Informasi Nasabah"
+                  action={editingSections.insured ? null : <SummaryEditButton onClick={() => startEditingSection("insured")} />}
                 >
-                  <OfferSummaryGrid>
-                    <OfferSummaryField label="Nama Tertanggung" value={customerDisplay} />
-                    <OfferSummaryField label="Alamat Email" value={emailDisplay} />
-                    <OfferSummaryField label="Nomor Handphone" value={phoneDisplay} />
-                  </OfferSummaryGrid>
-                </OfferSummarySection>
-
-                <OfferSummarySection
-                  title="Ringkasan Properti"
-                  action={<SummaryEditButton onClick={() => startEditingSection("property")} />}
-                >
-                  <div className="space-y-2.5">
-                    <OfferSummaryKeyValue label="Jenis Bangunan:" value={propertyType || "-"} />
-                    <OfferSummaryKeyValue label="Penggunaan bangunan:" value={occupancy || "-"} />
-                    <OfferSummaryKeyValue
-                      label="Objek Pertanggungan:"
-                      value={
-                        objectRows.length ? (
-                          <div className="space-y-0.5">
-                            {objectRows.map((row) => (
-                              <div key={row.id}>
-                                <span>{row.type || "Objek"}</span>
-                                <span> senilai Rp{formatRupiah(parseNumber(row.amount))}</span>
-                                {row.note ? <span className="font-medium text-slate-600">, {row.note}</span> : null}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          objectTypeSummary
-                        )
-                      }
-                    />
-                    <OfferSummaryKeyValue label="Total Harga Pertanggungan:" value={coverageValue} />
-                    <OfferSummaryKeyValue
-                      label="Kelas Konstruksi"
-                      value={
-                        constructionInfo && constructionSummaryLabel !== "Belum dipilih"
-                          ? `Kelas ${constructionSummaryLabel.replace(/^Kelas\s*/i, "")} dengan ${constructionInfo.desc}`
-                          : constructionSummaryLabel
-                      }
-                    />
-                  </div>
-                </OfferSummarySection>
-
-                <OfferSummarySection
-                  title="Syarat dan Ketentuan:"
-                  action={<SummaryEditButton onClick={() => startEditingSection("guarantee")} />}
-                >
-                  <div className="space-y-2.5">
-                    <div className="text-[15px] font-semibold leading-[1.4] text-slate-900">
-                      {activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}
-                    </div>
-                    {displayedGuaranteeSummaryVisualItems.length ? (
-                      <OfferSummaryKeyValue
-                        label="Perluasan Jaminan"
-                        value={
-                          <div className="space-y-1">
-                            {displayedGuaranteeSummaryVisualItems.map((item) => (
-                              <SummaryGuaranteeItem key={item.title} title={item.title} icon={item.icon} />
-                            ))}
-                          </div>
-                        }
-                      />
-                    ) : null}
-                  </div>
-                </OfferSummarySection>
-
-                <OfferSummarySection title="Ringkasan Biaya" subtitle={isIndicative && blockingMessage ? blockingMessage : undefined}>
-                  <div className="space-y-2.5">
-                    <OfferSummaryKeyValue label="Premi Dasar:" value={"Rp " + formatRupiah(basePremium)} />
-                    <OfferSummaryKeyValue label="Premi Perluasan:" value={"Rp " + formatRupiah(extensionPremium)} />
-                    <OfferSummaryKeyValue label="Biaya Meterai:" value={"Rp " + formatRupiah(stampDuty)} />
-                    <OfferSummaryKeyValue
-                      label={coverageLabel + ":"}
-                      value={
-                        <span className="inline-flex items-center gap-2">
-                          <span>{"Rp " + formatRupiah(estimatedTotal)}</span>
-                          {isIndicative ? <TooltipDot text="Nilai ini masih berupa estimasi awal. Premi final dapat menyesuaikan setelah informasi properti dilengkapi lebih rinci." /> : null}
-                        </span>
-                      }
-                    />
-                  </div>
-
-                  {!isInternalPreview && !isIndicative ? (
-                    <button
-                      type="button"
-                      onClick={onSecondary}
-                      className="mt-3 flex h-[42px] w-full items-center justify-center rounded-[12px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
-                    >
-                      Kembali
-                    </button>
-                  ) : null}
-                </OfferSummarySection>
-              </div>
-            </div>
-          </SectionCard>
-
-          <div className="space-y-3">
-            <ProposalAccordion
-              title="Informasi Properti"
-              open={sectionOpen.property}
-              onToggle={() => setSectionOpen((prev) => ({ ...prev, property: !prev.property }))}
-              action={<SummaryEditButton onClick={() => startEditingSection("property")} />}
-            >
-              {editingSections.property ? (
-                <div className="space-y-4">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <FieldLabel label="Jenis Bangunan" required />
-                      <SelectInput value={propertyType} onChange={setPropertyType} options={propertyOptions} placeholder="Pilih jenis bangunan" />
-                    </div>
-                    <div>
-                      <FieldLabel label="Penggunaan Bangunan" required />
-                      <SelectInput value={occupancy} onChange={setOccupancy} options={occupancyOptions} placeholder="Pilih penggunaan bangunan" />
-                    </div>
-                    <div>
-                      <FieldLabel label="Kelas Konstruksi" required />
-                      <SelectInput
-                        value={constructionClass}
-                        onChange={(value) => setField("constructionClass", value)}
-                        options={constructionOptions}
-                        placeholder="Pilih kelas konstruksi"
-                      />
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-[15px] font-semibold text-slate-900">Objek yang Dilindungi</div>
-                        <div className="text-sm text-slate-500">Anda bisa langsung edit jenis dan nilai pertanggungan.</div>
-                      </div>
-                      <button type="button" onClick={addObjectRow} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]">
-                        <Plus className="h-4 w-4" />
-                        Tambah Objek
-                      </button>
-                    </div>
-                    <div className="mt-3 space-y-3">
-                      {objectRows.map((row) => (
-                        <div key={row.id} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
-                            <div className="grid gap-3 md:grid-cols-2">
-                              <div>
-                                <FieldLabel label="Jenis Objek" required />
-                                <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Pilih jenis objek" />
-                              </div>
-                              <div>
-                                <FieldLabel label="Nilai Pertanggungan" required />
-                                <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Masukkan nilai pertanggungan" />
-                              </div>
-                            </div>
-                            <div>
-                              <FieldLabel
-                                label="Keterangan"
-                                required={requiresObjectNote(row.type)}
-                                helpText={requiresObjectNote(row.type) ? "Wajib untuk jenis objek Stok." : ""}
-                              />
-                              <TextInput value={row.note || ""} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} />
-                            </div>
-                          {objectRows.length > 1 ? (
-                            <div className="flex justify-end">
-                              <button
-                                type="button"
-                                onClick={() => removeObjectRow(row.id)}
-                                className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-red-200 bg-white px-2.5 text-xs font-medium text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Hapus Objek
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setEditingSections((prev) => ({ ...prev, property: false }))}
-                      className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
-                    >
-                      Selesai
-                    </button>
-                  </div>
-                  <div className="text-sm text-slate-500">Perubahan akan langsung disinkronkan ke ringkasan penawaran.</div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <ProposalRow label="Jenis Bangunan" value={propertyType} strong={true} />
-                      <ProposalRow label="Penggunaan Bangunan" value={occupancy} strong={true} />
-                      <div className="space-y-3">
-                        <ProposalRow label="Kelas Bangunan" value={constructionClass} strong={true} />
-                        {constructionInfo ? <div className="rounded-xl border border-[#CFE0F0] bg-white px-4 py-3 text-sm leading-6 text-slate-600"><span className="font-semibold text-slate-900">{constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
-                      </div>
-                      <ProposalRow label="Harga Pertanggungan" value={"Rp " + formatRupiah(totalValue)} strong={true} />
-                    </div>
-                  </div>
-
-                  <ProposalAccordion
-                    title="Objek yang Dilindungi"
-                    subtitle="Lihat daftar objek dan nilai pertanggungannya."
-                    open={objectOpen.detail}
-                    onToggle={() => setObjectOpen((prev) => ({ ...prev, detail: !prev.detail }))}
-                  >
-                    <div className="space-y-3">
-                      {objectRows.map((row, index) => (
-                        <div key={row.id} className="rounded-xl border border-slate-200 bg-[#FCFDFE] p-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0 flex-1">
-                              <div className="text-[15px] font-semibold text-slate-900">Objek {index + 1} - {row.type || "Objek"}</div>
-                              <div className="mt-1 text-sm text-slate-500">{row.note || "Belum ada keterangan tambahan."}</div>
-                            </div>
-                            <div className="shrink-0 whitespace-nowrap text-right text-[15px] font-semibold leading-none text-[#0A4D82]">Rp {formatRupiah(parseNumber(row.amount))}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ProposalAccordion>
-
-                  {showAdvancedAccordions ? (
-                    <ProposalAccordion
-                      title="Detail Properti"
-                      subtitle="Informasi lanjutan mengenai properti dan masa pertanggungannya."
-                      open={insuredOpen.advanced}
-                      onToggle={() => setInsuredOpen((prev) => ({ ...prev, advanced: !prev.advanced }))}
-                    >
-                      {hasAnyAdvancedData ? (
-                        <div className="space-y-1">
-                          <ProposalRow label="Status Kepemilikan Properti" value={uwForm.ownership || "-"} />
-                          <ProposalRow label="Proteksi Kebakaran" value={uwForm.fireProtection || "-"} />
-            <ProposalRow label="Jangka Waktu Mulai Pertanggungan" value={uwForm.coverageStartDate || "-"} />
-            <ProposalRow label="Jangka Waktu Akhir Pertanggungan" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
-                          <ProposalRow label="Riwayat Klaim 3 Tahun Terakhir" value={uwForm.claimHistory || "-"} />
-                          <ProposalRow label="Risiko di Sekitar Lokasi" value={uwForm.surroundingRisk || "-"} />
-                          <ProposalRow label="Catatan Tambahan" value={uwForm.additionalNotes || "-"} />
-                        </div>
-                      ) : (
-                        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">Belum ada detail properti tambahan pada penawaran ini.</div>
-                      )}
-                    </ProposalAccordion>
-                  ) : null}
-                </div>
-              )}
-            </ProposalAccordion>
-
-            <ProposalAccordion
-              title="Jaminan"
-              open={sectionOpen.guarantee}
-              onToggle={() => setSectionOpen((prev) => ({ ...prev, guarantee: !prev.guarantee }))}
-              action={<SummaryEditButton onClick={() => startEditingSection("guarantee")} />}
-            >
-              <div className="space-y-5">
-                <div>
-                  <div className="text-[15px] font-semibold tracking-tight text-slate-900">Jaminan Utama</div>
-                  <div className="mt-3">
-                    <AccordionRiskRow title={activeVariant.primaryCoverageTitle} icon={Flame} premium={"Rp " + formatRupiah(basePremium)} detail={activeVariant.primaryCoverageDescription} deductible={constructionInfo && constructionInfo.title === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther} alwaysIncluded={true} expanded={expandedRows.fire} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, fire: !prev.fire }))} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
-                  <div className="mt-3 space-y-2.5">
-                    {extensionOptions.map((item) => {
-                      const premiumValue = Math.round(totalValue * item.rate);
-                      const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible;
-                      const checked = Boolean(selectedGuarantees[item.key]);
-                      return (
-                        <div key={item.key} className="rounded-xl border border-slate-200 bg-white p-3">
-                          <label className={cls("mb-3 flex items-start gap-2 text-sm font-medium", checked ? "text-[#0A4D82]" : "text-slate-700")}>
-                            <input
-                              type="checkbox"
-                              className="mt-0.5"
-                              checked={checked}
-                              onChange={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
-                            />
-                            <span>{item.title}</span>
-                          </label>
-                          <AccordionRiskRow
-                            title={item.title}
-                            icon={item.icon}
-                            premium={"Rp " + formatRupiah(premiumValue)}
-                            detail={item.detail}
-                            deductible={deductibleValue}
-                            checked={checked}
-                            expanded={expandedRows[item.key]}
-                            onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
-                            extra={item.key === "earthquake" && checked && isFloorRelevant(propertyType, occupancy) ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Wajib untuk simulasi gempa bumi pada objek bertingkat." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {activeVariant.importantExclusions.length ? (
-                  <div className="pt-1">
-                    <div className="text-[14px] font-semibold text-slate-900">{activeVariant.exclusionsSectionTitle}</div>
-                    <div className="mt-2 space-y-2">
-                      {activeVariant.importantExclusions.map((item) => (
-                        <div key={item} className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                          <AlertTriangle className="mt-1 h-4 w-4 shrink-0 text-amber-500" />
-                          <span>{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </ProposalAccordion>
-
-            {hasInsuredSummaryData ? (
-              <ProposalAccordion
-                title="Informasi Tertanggung"
-                open={sectionOpen.insured}
-                onToggle={() => setSectionOpen((prev) => ({ ...prev, insured: !prev.insured }))}
-                action={<SummaryEditButton onClick={() => startEditingSection("insured")} />}
-              >
-                <div className="space-y-4">
                   {editingSections.insured ? (
-                    <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
-                      <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-4">
+                      <OfferSummaryKeyValue label="Nama Tertanggung" value={customerDisplay} />
+                      <div className="grid gap-3 md:grid-cols-2">
                         <div>
-                          <FieldLabel label="Nama Tertanggung" required />
-                          <TextInput value={form.identity} onChange={(value) => setField("identity", value)} icon={<User className="h-4 w-4" />} />
-                        </div>
-                        <div>
-                          <FieldLabel label="Jenis Tertanggung" required />
-                          <SelectInput value={customerType} onChange={(value) => setField("customerType", value)} options={CUSTOMER_TYPES} placeholder="Pilih jenis tertanggung" />
+                          <FieldLabel label="Alamat Email" required />
+                          <TextInput value={form.email} onChange={(value) => setField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" />
                         </div>
                         <div>
                           <FieldLabel label="Nomor Handphone" required />
-                          <TextInput value={form.phone} onChange={(value) => setField("phone", value)} icon={<Phone className="h-4 w-4" />} />
-                        </div>
-                        <div>
-                          <FieldLabel label="Alamat Email" required />
-                          <TextInput value={form.email} onChange={(value) => setField("email", value)} icon={<Mail className="h-4 w-4" />} />
+                          <TextInput value={form.phone} onChange={(value) => setField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} />
                         </div>
                       </div>
-                      <div className="mt-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm text-slate-500">Yang bisa diubah di bagian ini hanya alamat email dan nomor handphone.</div>
                         <button
                           type="button"
-                          onClick={() => setEditingSections((prev) => ({ ...prev, insured: false }))}
+                          onClick={() => finishEditingSection("insured")}
                           className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
                         >
                           Selesai
@@ -1646,80 +1557,492 @@ function ExternalProposalPage({
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <ProposalRow label="Nama Tertanggung" value={customerName || "-"} strong={true} />
-                        <ProposalRow label="Jenis Tertanggung" value={customerType || "-"} strong={true} />
-                        <ProposalRow label="Nomor Handphone" value={phoneDisplay} />
-                        <ProposalRow label="Alamat Email" value={emailDisplay} />
-                      </div>
+                    <div className="space-y-2.5">
+                      <OfferSummaryKeyValue label="Nama Tertanggung" value={customerDisplay} />
+                      <OfferSummaryKeyValue label="Alamat Email" value={emailDisplay} />
+                      <OfferSummaryKeyValue label="Nomor Handphone" value={phoneDisplay} />
                     </div>
                   )}
+                </OfferSummarySection>
 
-                  {showAdvancedAccordions ? (
-                    <div className="space-y-3">
-                      <ProposalAccordion
-                        title="Identitas Tertanggung"
-                        subtitle={editingSections.insured ? "" : "Rincian identitas dan kontak tertanggung."}
-                        open={insuredOpen.profile}
-                        onToggle={() => setInsuredOpen((prev) => ({ ...prev, profile: !prev.profile }))}
-                      >
-                        {hasAnyAdvancedData ? (
-                          <div className="space-y-1">
-                            <ProposalRow label={customerType === "Badan Usaha" ? "NPWP" : "NIK"} value={uwForm.idNumber || "-"} />
-                            {customerType === "Badan Usaha" ? <ProposalRow label="Kontak di Lokasi" value={uwForm.picName || "-"} /> : null}
+                <OfferSummarySection
+                  title="Ringkasan Informasi Properti"
+                  action={editingSections.property ? null : <SummaryEditButton onClick={() => startEditingSection("property")} />}
+                >
+                  {editingSections.property ? (
+                    <div className="space-y-4">
+                      <OfferSummaryKeyValue label="Jenis Bangunan:" value={propertyType || "-"} />
+                      <OfferSummaryKeyValue label="Penggunaan bangunan:" value={occupancy || "-"} />
+                      <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-[15px] text-slate-900">Obyek Pertanggungan</div>
+                            <div className="mt-1 text-sm text-slate-500">Bagian ini bisa langsung diubah dari ringkasan penawaran.</div>
                           </div>
-                        ) : <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">Belum ada identitas tambahan tertanggung pada penawaran ini.</div>}
-                      </ProposalAccordion>
-
-                      <ProposalAccordion
-                        title="Foto Properti"
-                        subtitle={editingSections.insured ? "" : "Status foto yang sudah dilampirkan pada penawaran."}
-                        open={insuredOpen.photos}
-                        onToggle={() => setInsuredOpen((prev) => ({ ...prev, photos: !prev.photos }))}
-                      >
-                        <div className="grid gap-3 md:grid-cols-3">
-                          {[
-                            { label: "Tampak Depan", value: uploads.frontView },
-                            { label: "Samping Kanan", value: uploads.sideRightView },
-                            { label: "Samping Kiri", value: uploads.sideLeftView },
-                          ].map((item) => (
-                            <div key={item.label} className={cls("rounded-xl border p-4", item.value ? "border-green-200 bg-green-50" : "border-slate-200 bg-slate-50")}>
-                              <div className="text-sm font-semibold text-slate-900">{item.label}</div>
-                              <div className={cls("mt-2 text-sm", item.value ? "text-green-700" : "text-slate-500")}>{item.value ? "Sudah terlampir" : "Belum dilampirkan"}</div>
+                          <button type="button" onClick={addObjectRow} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]">
+                            <Plus className="h-4 w-4" />
+                            Tambah Obyek
+                          </button>
+                        </div>
+                        <div className="mt-3 space-y-3">
+                          {objectRows.map((row) => (
+                            <div key={row.id} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <div>
+                                  <FieldLabel label="Jenis Obyek" required />
+                                  <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Pilih jenis obyek" />
+                                </div>
+                                <div>
+                                  <FieldLabel label="Nilai Pertanggungan" required />
+                                  <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Masukkan nilai pertanggungan" />
+                                </div>
+                              </div>
+                              <div>
+                                <FieldLabel label="Keterangan" required={requiresObjectNote(row.type)} helpText={requiresObjectNote(row.type) ? "Wajib untuk jenis obyek Stok." : ""} />
+                                <TextInput value={row.note || ""} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} />
+                              </div>
+                              {objectRows.length > 1 ? (
+                                <div className="flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeObjectRow(row.id)}
+                                    className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-red-200 bg-white px-2.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Hapus Obyek
+                                  </button>
+                                </div>
+                              ) : null}
                             </div>
                           ))}
                         </div>
-                      </ProposalAccordion>
+                      </div>
+                      <OfferSummaryKeyValue label="Total Harga Pertanggungan:" value={coverageValue} />
+                      <OfferSummaryKeyValue label="Perlindungan Kebakaran:" value={fireProtectionSummary} />
+                      <OfferSummaryKeyValue label="Riwayat Klaim 3 Tahun Terakhir:" value={claimHistorySummary} />
+                      {hasStockObject ? <OfferSummaryKeyValue label="Jenis Stok:" value={stockTypeSummary} /> : null}
+                      <OfferSummaryKeyValue
+                        label="Kelas Konstruksi"
+                        value={
+                          constructionInfo && constructionSummaryLabel !== "Belum dipilih"
+                            ? `Kelas ${constructionSummaryLabel.replace(/^Kelas\s*/i, "")} dengan ${constructionInfo.desc}`
+                            : constructionSummaryLabel
+                        }
+                      />
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm text-slate-500">Yang bisa diubah di bagian ini hanya obyek pertanggungan.</div>
+                        <button
+                          type="button"
+                          onClick={() => finishEditingSection("property")}
+                          className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
+                        >
+                          Selesai
+                        </button>
+                      </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="space-y-2.5">
+                      <OfferSummaryKeyValue label="Jenis Bangunan:" value={propertyType || "-"} />
+                      <OfferSummaryKeyValue label="Penggunaan bangunan:" value={occupancy || "-"} />
+                      <OfferSummaryKeyValue
+                        label="Objek Pertanggungan:"
+                        value={
+                          objectRows.length ? (
+                            <div className="space-y-0.5">
+                              {objectRows.map((row) => (
+                                <div key={row.id}>
+                                  <span>{row.type || "Objek"}</span>
+                                  <span> senilai Rp{formatRupiah(parseNumber(row.amount))}</span>
+                                  {row.note ? <span className="font-medium text-slate-600">, {row.note}</span> : null}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            objectTypeSummary
+                          )
+                        }
+                      />
+                      <OfferSummaryKeyValue label="Total Harga Pertanggungan:" value={coverageValue} />
+                      <OfferSummaryKeyValue label="Perlindungan Kebakaran:" value={fireProtectionSummary} />
+                      <OfferSummaryKeyValue label="Riwayat Klaim 3 Tahun Terakhir:" value={claimHistorySummary} />
+                      {hasStockObject ? <OfferSummaryKeyValue label="Jenis Stok:" value={stockTypeSummary} /> : null}
+                      <OfferSummaryKeyValue
+                        label="Kelas Konstruksi"
+                        value={
+                          constructionInfo && constructionSummaryLabel !== "Belum dipilih"
+                            ? `Kelas ${constructionSummaryLabel.replace(/^Kelas\s*/i, "")} dengan ${constructionInfo.desc}`
+                            : constructionSummaryLabel
+                        }
+                      />
+                  </div>
+                  )}
+                </OfferSummarySection>
+
+                <OfferSummarySection
+                  title="Ringkasan Syarat dan Ketentuan"
+                >
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F7FAFD_100%)] px-4 py-3">
+                      <div className="text-[15px] font-medium leading-[1.4] text-slate-900">
+                        {activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-[14px] font-medium text-slate-600">Risiko yang dijamin</div>
+                      <div className="flex flex-wrap gap-2">
+                        {BASIC_COVERAGE_HIGHLIGHTS.map((item) => (
+                          <div key={item.title} className="rounded-full border border-[#D8E1EA] bg-[#F8FBFE] px-3 py-1.5">
+                            <SummaryGuaranteeItem title={item.title} icon={item.icon} compact />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-[14px] font-medium text-slate-600">Perluasan Jaminan</div>
+                        <div className="mt-0.5 text-[12px] leading-5 text-slate-500">Pilih perluasan jaminan yang ingin ditambahkan.</div>
+                      </div>
+                      {extensionOptions.map((item) => (
+                        <div
+                          key={item.key}
+                          className={cls(
+                            "group relative overflow-hidden rounded-xl border px-3 py-2.5 transition-all duration-200",
+                            selectedGuarantees[item.key]
+                              ? "border-[#AFCFEA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4FAFF_100%)] shadow-[0_12px_26px_rgba(10,77,130,0.10)]"
+                              : "border-slate-200 bg-white hover:border-[#C8D9EA] hover:bg-[#FBFDFF] hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]",
+                          )}
+                        >
+                          {selectedGuarantees[item.key] ? <div className="absolute inset-y-0 left-0 w-1 rounded-l-xl bg-[#0A4D82]" /> : null}
+                          <div className={cls("flex items-start gap-2.5", selectedGuarantees[item.key] && "pl-1")}>
+                            <button
+                              type="button"
+                              aria-pressed={Boolean(selectedGuarantees[item.key])}
+                              onClick={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                              className={cls(
+                                "mt-0.5 flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-md border transition-all duration-200",
+                                selectedGuarantees[item.key]
+                                  ? "border-[#0A4D82] bg-[#0A4D82] text-white shadow-[0_6px_12px_rgba(10,77,130,0.22)]"
+                                  : "border-[#CAD6E3] bg-white text-transparent group-hover:border-[#9DB8D4]",
+                              )}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                                className="flex w-full items-start justify-between gap-2 text-left"
+                              >
+                                <SummaryGuaranteeItem title={item.title} icon={item.icon} compact />
+                                <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition duration-200", expandedRows[item.key] && "rotate-180")} />
+                              </button>
+                              {expandedRows[item.key] ? <div className="mt-1.5 pl-[30px] text-[13px] leading-5 text-slate-500">{item.detail}</div> : null}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedGuarantees.earthquake && isFloorRelevant(propertyType, occupancy) ? (
+                      <div className="max-w-sm rounded-xl border border-amber-200 bg-white p-3">
+                        <FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Diisi hanya bila objek bertingkat dan gempa bumi dipilih." />
+                        <TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} />
+                      </div>
+                    ) : null}
+                  </div>
+                </OfferSummarySection>
+
+                <OfferSummarySection title="Ringkasan Biaya" subtitle={isIndicative && blockingMessage ? blockingMessage : undefined}>
+                  <PremiumPriceHero
+                    label=""
+                    value={`Rp ${formatRupiah(estimatedTotal)}`}
+                    tooltipText={showEstimatedPremium ? "Nilai ini masih perkiraan awal. Jumlahnya bisa menyesuaikan setelah Anda melengkapi informasi di halaman Data Lanjutan." : undefined}
+                  />
+                  <PremiumBreakdown>
+                    <OfferSummaryKeyValue label="Premi:" value={"Rp " + formatRupiah(basePremium)} />
+                    {extensionPremium > 0 ? <OfferSummaryKeyValue label="Premi Perluasan:" value={"Rp " + formatRupiah(extensionPremium)} /> : null}
+                    <OfferSummaryKeyValue label="Biaya Meterai:" value={"Rp " + formatRupiah(stampDuty)} />
+                  </PremiumBreakdown>
+                </OfferSummarySection>
+
+                <div className="rounded-[24px] border border-[#D8E1EA] bg-white p-5 shadow-sm">
+                  <div className="text-[18px] font-bold text-slate-900">Aksi Selanjutnya</div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={onSecondary}
+                      className="inline-flex h-[48px] items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]"
+                    >
+                      Minta Bantuan Staff Asuransi
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isIndicative ? false : !canProceed || offerMeta.isExpired}
+                      onClick={onPrimary}
+                      className={cls(
+                        "inline-flex h-[48px] items-center justify-center rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm",
+                        isIndicative || (!isIndicative && canProceed && !offerMeta.isExpired)
+                          ? "bg-[#F5A623] hover:brightness-105"
+                          : "cursor-not-allowed bg-slate-400"
+                      )}
+                    >
+                      {primaryActionLabel}
+                    </button>
+                  </div>
+                  <div className="mt-3 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={onReject}
+                      className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+                    >
+                      Tidak mau melanjutkan penawaran
+                    </button>
+                  </div>
                 </div>
-              </ProposalAccordion>
-            ) : null}
-          </div>
+              </div>
+            </div>
+          </SectionCard>
+
         </div>
       </div>
     </div>
   );
 }
 
-function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSelectMethod, onBack, onProceedPayment, paymentStatus, operatingRecord, isExpired }) {
+function ExternalPaymentPage({
+  productTitle,
+  customerName,
+  form,
+  uwForm,
+  propertyType,
+  occupancy,
+  objectRows,
+  selectedGuarantees,
+  extensionOptions,
+  totalValue,
+  estimatedTotal,
+  basePremium,
+  extensionPremium,
+  stampDuty,
+  paymentMethod,
+  onSelectMethod,
+  onBack,
+  policyConsentApproved,
+  onOpenConsent,
+  onConfirmPayment,
+  paymentStatus,
+  operatingRecord,
+  isExpired,
+}) {
   const operatingBlockedMessage = paymentBlockMessage(operatingRecord);
   const canProceedPayment = canProceedToPaymentFromOperating(operatingRecord);
+  const customerDisplay = customerName || form.identity || "Calon tertanggung";
+  const coverageEndDate = calculateCoverageEnd(uwForm.coverageStartDate);
+  const coveragePeriod = uwForm.coverageStartDate && coverageEndDate
+    ? `${formatDisplayDate(new Date(`${uwForm.coverageStartDate}T00:00:00`))} - ${formatDisplayDate(new Date(`${coverageEndDate}T00:00:00`))}`
+    : "-";
+  const selectedExtensionTitles = extensionOptions.filter((item) => selectedGuarantees[item.key]).map((item) => item.title);
+  const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
+  const guaranteeSummaryVisualItems = selectedExtensions.map((item) => ({ title: item.title, icon: item.icon || Shield }));
+  const fireProtectionSummary =
+    uwForm.fireProtectionChoice === "Ada"
+      ? Array.isArray(uwForm.fireProtection) && uwForm.fireProtection.length
+        ? uwForm.fireProtection.join(", ")
+        : "Ada"
+      : uwForm.fireProtectionChoice || "-";
+  const claimHistorySummary = uwForm.claimHistory || "-";
+  const hasStockObject = objectRows.some((row) => row.type === "Stok");
+  const stockTypeSummary = hasStockObject ? uwForm.stockType || "-" : "";
+  const objectSummary = objectRows.length
+    ? objectRows
+        .map((row) => {
+          const pieces = [row.type || "Objek", `Rp ${formatRupiah(parseNumber(row.amount))}`];
+          if (row.note) pieces.push(row.note);
+          return pieces.join(" - ");
+        })
+        .join(", ")
+    : "-";
+  const canConfirmPayment = Boolean(paymentMethod) && policyConsentApproved && canProceedPayment && !isExpired && !paymentStatus;
+  const phoneDisplay = form.phone || "-";
+  const emailDisplay = form.email || "-";
+  const coverageValue = `Rp ${formatRupiah(totalValue)}`;
+  const guaranteedRisks = [
+    { title: "Kebakaran", icon: Flame },
+    { title: "Petir", icon: Zap },
+    { title: "Ledakan", icon: Atom },
+    { title: "Kejatuhan Pesawat", icon: Plane },
+    { title: "Asap", icon: Waves },
+  ];
+
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-4 md:px-6"><div className="flex items-center gap-3"><div className="text-[18px] font-black leading-tight text-[#0A4D82]">Danantara<div className="-mt-1">Indonesia</div></div><div className="text-[16px] font-semibold text-slate-700">asuransi jasindo</div></div><button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Kembali</button></div>
+        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-4 md:px-6">
+          <div className="flex items-center gap-3">
+            <div className="text-[18px] font-black leading-tight text-[#0A4D82]">Danantara<div className="-mt-1">Indonesia</div></div>
+            <div className="text-[16px] font-semibold text-slate-700">asuransi jasindo</div>
+          </div>
+          <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Kembali ke Data Lanjutan</button>
+        </div>
       </div>
-      <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <SectionCard title="Pembayaran" subtitle="Halaman ini hanya muncul untuk calon tertanggung, bukan untuk user internal.">
-            <div className="space-y-3">{PAYMENT_OPTIONS.map((item) => <button key={item} type="button" onClick={() => onSelectMethod(item)} className={cls("flex w-full items-center justify-between rounded-xl border px-4 py-4 text-left", paymentMethod === item ? "border-[#0A4D82] bg-[#F8FBFE]" : "border-slate-200 bg-white")}><span className="font-semibold text-slate-900">{item}</span>{paymentMethod === item ? <CheckCircle2 className="h-5 w-5 text-[#0A4D82]" /> : null}</button>)}</div>
+
+      <div className="bg-[#0A4D82] pb-8">
+        <div className="mx-auto max-w-[1280px] px-4 pt-5 md:px-6">
+          <div className="mt-5 text-center text-white">
+            <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Halo, {String(customerDisplay).trim().split(/\s+/)[0] || "Calon Tertanggung"}</div>
+            <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{productTitle}</h1>
+            <p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">Pilih metode pembayaran dan tinjau ringkasan singkat penawaran Anda sebelum melanjutkan.</p>
+          </div>
+
+          <div className="mx-auto mt-6 max-w-[860px] rounded-[28px] bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-6 rounded-[18px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-5 md:flex-row md:items-center md:gap-4 md:px-6">
+              <StepNode step="Langkah 1" title="Tinjau Penawaran" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
+              <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
+              <StepNode step="Langkah 2" title="Data Lanjutan" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
+              <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
+              <StepNode step="Langkah 3" title="Pembayaran" subtitle={paymentStatus ? "Selesai" : "Sedang dibuka"} active={!paymentStatus} done={Boolean(paymentStatus)} icon={<Wallet className="h-4 w-4" />} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[860px] px-4 py-8 md:px-6">
+        <div className="space-y-5">
+          <SectionCard
+            title="Penawaran Final Anda"
+            subtitle="Tinjau kembali ringkasan final penawaran Anda sebelum memilih metode pembayaran."
+            headerAlign="center"
+          >
+            <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <div className="space-y-3">
+                <OfferSummarySection title="Ringkasan Informasi Nasabah">
+                  <div className="space-y-2.5">
+                    <OfferSummaryKeyValue label="Nama Tertanggung" value={customerDisplay} />
+                    <OfferSummaryKeyValue label="Alamat Email" value={emailDisplay} />
+                    <OfferSummaryKeyValue label="Nomor Handphone" value={phoneDisplay} />
+                  </div>
+                </OfferSummarySection>
+
+                <OfferSummarySection title="Ringkasan Informasi Properti">
+                  <div className="space-y-2.5">
+                    <OfferSummaryKeyValue label="Jenis Bangunan" value={propertyType || "-"} />
+                    <OfferSummaryKeyValue label="Penggunaan bangunan" value={occupancy || "-"} />
+                    <OfferSummaryKeyValue label="Objek Pertanggungan" value={objectSummary} />
+                    <OfferSummaryKeyValue label="Total Harga Pertanggungan" value={coverageValue} />
+                    <OfferSummaryKeyValue label="Perlindungan Kebakaran" value={fireProtectionSummary} />
+                    <OfferSummaryKeyValue label="Riwayat Klaim 3 Tahun Terakhir" value={claimHistorySummary} />
+                    {hasStockObject ? <OfferSummaryKeyValue label="Jenis Stok" value={stockTypeSummary} /> : null}
+                    <OfferSummaryKeyValue label="Jangka Waktu Pertanggungan" value={coveragePeriod} />
+                  </div>
+                </OfferSummarySection>
+
+                <OfferSummarySection title="Ringkasan Syarat dan Ketentuan">
+                  <div className="space-y-4">
+                    <div className="text-[15px] font-medium text-slate-900">Polis Standar Asuransi Kebakaran Indonesia</div>
+                    <div>
+                      <div className="mb-2 text-[13px] font-medium text-slate-500">Risiko yang dijamin</div>
+                      <div className="flex flex-wrap gap-2">
+                        {guaranteedRisks.map((item) => (
+                          <div key={item.title} className="inline-flex items-center gap-2 rounded-full border border-[#D8E1EA] bg-white px-3 py-2 text-[13px] text-slate-800">
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EEF6FD] text-[#0A4D82]">
+                              <item.icon className="h-3 w-3" />
+                            </div>
+                            <span>{item.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {guaranteeSummaryVisualItems.length ? (
+                      <div>
+                        <div className="mb-2 text-[13px] font-medium text-slate-500">Perluasan Jaminan</div>
+                        <div className="space-y-2">
+                          {guaranteeSummaryVisualItems.map((item) => (
+                            <div key={item.title} className="rounded-xl border border-[#D8E1EA] bg-white px-3.5 py-3">
+                              <SummaryGuaranteeItem title={item.title} icon={item.icon} compact />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </OfferSummarySection>
+
+                <OfferSummarySection title="Ringkasan Biaya">
+                  <PremiumPriceHero label="" value={`Rp ${formatRupiah(estimatedTotal)}`} />
+                  <PremiumBreakdown>
+                    <OfferSummaryKeyValue label="Premi" value={`Rp ${formatRupiah(basePremium)}`} />
+                    {extensionPremium > 0 ? <OfferSummaryKeyValue label="Premi Perluasan" value={`Rp ${formatRupiah(extensionPremium)}`} /> : null}
+                    <OfferSummaryKeyValue label="Biaya Meterai" value={`Rp ${formatRupiah(stampDuty)}`} />
+                  </PremiumBreakdown>
+                </OfferSummarySection>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Pilih Metode Pembayaran" subtitle="Pilih metode pembayaran yang ingin Anda gunakan untuk melanjutkan proses polis.">
+            <div className="space-y-3">
+              {PAYMENT_OPTIONS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => onSelectMethod(item)}
+                  className={cls(
+                    "flex w-full items-center justify-between rounded-xl border px-4 py-4 text-left transition",
+                    paymentMethod === item ? "border-[#0A4D82] bg-[#F8FBFE] shadow-sm" : "border-slate-200 bg-white hover:border-[#C9D5E3] hover:bg-[#FBFDFF]",
+                  )}
+                >
+                  <span className="font-semibold text-slate-900">{item}</span>
+                  {paymentMethod === item ? <CheckCircle2 className="h-5 w-5 text-[#0A4D82]" /> : null}
+                </button>
+              ))}
+            </div>
             {operatingBlockedMessage ? <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{operatingBlockedMessage}</div> : null}
             {isExpired ? <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Masa berlaku penawaran ini sudah berakhir. Silakan minta versi penawaran terbaru sebelum melanjutkan pembayaran.</div> : null}
             {paymentStatus ? <div className="mt-4 rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{paymentStatus}</div> : null}
           </SectionCard>
-    <aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg lg:sticky lg:top-24"><div className="text-[18px] font-bold">Ringkasan Pembayaran</div><div className="mt-4 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Nasabah</div><div className="mt-1 font-semibold">{customerName || "Calon nasabah"}</div></div><div className="mt-3 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Total yang Dibayar</div><div className="mt-2 text-[30px] font-bold leading-none">Rp {formatRupiah(estimatedTotal)}</div></div><div className="mt-3 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Metode Pembayaran</div><div className="mt-1 font-semibold">{paymentMethod || "Pilih metode pembayaran"}</div></div><button type="button" disabled={!paymentMethod || !canProceedPayment || isExpired} onClick={onProceedPayment} className={cls("mt-4 flex h-[48px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", paymentMethod && canProceedPayment && !isExpired ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Pembayaran</button></aside>
+
+          <SectionCard title="Lanjutkan Pembayaran" subtitle="Selesaikan persetujuan kebijakan terlebih dahulu, lalu lanjutkan pembayaran.">
+            <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-3">
+              <OfferSummaryKeyValue label="Metode Pembayaran" value={paymentMethod || "Pilih metode pembayaran terlebih dahulu"} />
+              <OfferSummaryKeyValue
+                label="Persetujuan Kebijakan"
+                value={policyConsentApproved ? "Sudah disetujui" : "Belum disetujui"}
+              />
+            </div>
+            <div className="mt-3 rounded-2xl border border-[#D8E1EA] bg-white px-4 py-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-[14px] font-semibold text-slate-900">Persetujuan Kebijakan</div>
+                  <div className="mt-1 text-sm leading-6 text-slate-500">
+                    Buka dan baca persetujuan kebijakan sebelum melanjutkan pembayaran.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onOpenConsent}
+                  className="inline-flex h-[44px] items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]"
+                >
+                  {policyConsentApproved ? "Lihat Persetujuan Kebijakan" : "Buka Persetujuan Kebijakan"}
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-center text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE] sm:flex-1"
+              >
+                Kembali ke Data Lanjutan
+              </button>
+              <button
+                type="button"
+                disabled={!canConfirmPayment}
+                onClick={onConfirmPayment}
+                className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-bold uppercase tracking-wide text-white shadow-sm sm:flex-1", canConfirmPayment ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+              >
+                {paymentStatus ? "Pembayaran Selesai" : "Lanjutkan Pembayaran"}
+              </button>
+            </div>
+          </SectionCard>
         </div>
       </div>
     </div>
@@ -1793,6 +2116,7 @@ export default function PropertyStepOneFrontendCompact({
   const [rejectReason, setRejectReason] = useState("");
   const [rejectCustomReason, setRejectCustomReason] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [policyConsentApproved, setPolicyConsentApproved] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState("");
   const [shareFeedback, setShareFeedback] = useState("");
   const [rejectionStatus, setRejectionStatus] = useState("");
@@ -1803,6 +2127,7 @@ export default function PropertyStepOneFrontendCompact({
   const [sharedSenderName, setSharedSenderName] = useState("");
   const [sharedCustomerName, setSharedCustomerName] = useState("");
   const [sharedOfferSnapshot, setSharedOfferSnapshot] = useState(null);
+  const isInternalUnderwritingContext = entryMode === "internal" || externalViewerMode === "internal";
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedGuarantees, setSelectedGuarantees] = useState({ riot: false, flood: false, tsfwd: false, earthquake: false });
   const [expandedRows, setExpandedRows] = useState({ fire: false, riot: false, flood: false, tsfwd: false, earthquake: false, exclusions: false, optionalUw: false });
@@ -1837,16 +2162,19 @@ export default function PropertyStepOneFrontendCompact({
       exclusions: false,
     }));
   }, [currentProductVariant]);
-  const today = formatDateInput(new Date());
   const [objectRows, setObjectRows] = useState([{ id: "obj-1", type: "", amount: "", note: "" }]);
   const [uwForm, setUwForm] = useState({
     idNumber: "",
     sameAsInsured: true,
+    sameAsPropertyAddress: false,
     picName: "",
-    ownership: "Milik Sendiri",
-    coverageStartDate: today,
-    fireProtection: "Tidak Ada",
-    claimHistory: "Tidak Ada",
+    insuredAddress: "",
+    ownership: "",
+    coverageStartDate: "",
+    fireProtectionChoice: "",
+    fireProtection: [],
+    claimHistory: "",
+    stockType: "",
     surroundingRisk: "",
     additionalNotes: "",
   });
@@ -1923,11 +2251,20 @@ export default function PropertyStepOneFrontendCompact({
     }
   }, [uwForm.sameAsInsured, form.identity, selectedCustomer]);
   useEffect(() => {
+    if (uwForm.sameAsPropertyAddress) {
+      setUwForm((prev) => ({ ...prev, insuredAddress: form.locationSearch || "" }));
+    }
+  }, [uwForm.sameAsPropertyAddress, form.locationSearch]);
+  useEffect(() => {
     if (!showIndicationModal) setShareFeedback("");
   }, [showIndicationModal]);
   useEffect(() => {
     const { view, viewer, referral, sender, customer, offer } = readShareContextFromUrl();
-    if (view === "offer-indicative" || view === "offer-final" || view === "external-underwriting" || view === "payment") {
+    if (
+      view === "offer-indicative" ||
+      view === "external-underwriting" ||
+      (!isInternalUnderwritingContext && (view === "offer-final" || view === "payment"))
+    ) {
       setExternalView(view);
     }
     if (viewer === "internal" || viewer === "customer") {
@@ -1979,7 +2316,6 @@ export default function PropertyStepOneFrontendCompact({
     }
     if (!shouldShowFloorField) previousFloorFieldVisibleRef.current = false;
   }, [selectedGuarantees.earthquake, showFloorInput, quoted, externalView, form.propertyType, form.occupancy]);
-
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
   const setUwField = (key, value) => setUwForm((prev) => ({ ...prev, [key]: value }));
   const updateObjectRow = (id, patch) => setObjectRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
@@ -1995,8 +2331,8 @@ export default function PropertyStepOneFrontendCompact({
   const estimatedTotalNumber = hasQuoteBasis ? basePremiumNumber + additionalPremiumNumber + stampDutyNumber : 0;
   const customerName = selectedCustomer ? selectedCustomer.name : form.identity;
   const effectiveCustomerName = customerName || sharedCustomerName;
-  const currentExternalTarget = internalStep === 2 ? "offer-final" : "offer-indicative";
   const referralCode = createReferralCode(sessionName, transactionAuthority.transactionId);
+  const shareJourneyKey = currentProductVariant === "property-all-risk" ? "property-all-risk-external" : "property-external";
   const shareSnapshot = encodeShareSnapshot({
     identity: customerName,
     customerType: form.customerType,
@@ -2010,15 +2346,17 @@ export default function PropertyStepOneFrontendCompact({
     selectedGuarantees,
     floorCount,
   });
-  const shareUrl = getShareUrl(currentExternalTarget, {
+  const shareUrl = getShareUrl("offer-indicative", {
+    journey: shareJourneyKey,
     viewer: "customer",
     referral: referralCode,
     sender: sessionName,
     customer: customerName,
     offer: shareSnapshot,
   });
-  const previewUrl = getShareUrl(currentExternalTarget, {
-    viewer: "internal",
+  const previewUrl = getShareUrl("offer-indicative", {
+    journey: shareJourneyKey,
+    viewer: "customer",
     referral: referralCode,
     sender: sessionName,
     customer: customerName,
@@ -2032,29 +2370,64 @@ export default function PropertyStepOneFrontendCompact({
   const hasValidStepOneContact = hasValidPhoneContact && hasValidEmailContact;
   const hasValidStepOneLocation = Boolean(form.locationSearch.trim());
   const hasValidObjects = totalValue > 0 && objectRows.every((row) => parseNumber(row.amount) > 0);
+  const hasStockObject = objectRows.some((row) => row.type === "Stok");
   const hasRequiredObjectNotes = objectRows.every((row) => !requiresObjectNote(row.type) || Boolean(String(row.note || "").trim()));
   const hasRequiredFloorCount = !showFloorInput || Number(floorCount) > 0;
   const canAdvanceInternalStepOne = hasValidStepOneIdentity && hasValidStepOneContact && hasValidStepOneLocation && hasValidObjects && hasRequiredObjectNotes && hasRequiredFloorCount;
   const hasValidUwIdentity = !uwForm.idNumber.trim() || isValidIdNumber(form.customerType, uwForm.idNumber);
   const hasValidPicName = form.customerType !== "Badan Usaha" || Boolean(uwForm.picName.trim());
-  const hasValidUnderwriting = Boolean(uwForm.coverageStartDate) && Boolean(uwForm.ownership) && Boolean(uwForm.fireProtection) && Boolean(uwForm.claimHistory);
+  const hasValidInsuredAddress = Boolean(String(uwForm.insuredAddress || "").trim());
+  const hasValidStockType = !hasStockObject || Boolean(String(uwForm.stockType || "").trim());
+  const hasClaimHistoryReviewBlock = Boolean(uwForm.claimHistory) && uwForm.claimHistory !== "Tidak Ada";
+  const operatingPaymentBlockMessage = paymentBlockMessage(operatingRecord);
+  const hasOperatingPaymentBlock = Boolean(operatingPaymentBlockMessage) && operatingRecord && !canProceedToPaymentFromOperating(operatingRecord);
+  const canProceedUnderwritingPayment = !hasOperatingPaymentBlock;
+  const hasValidFireProtection = uwForm.fireProtectionChoice === "Tidak Ada" || (uwForm.fireProtectionChoice === "Ada" && Array.isArray(uwForm.fireProtection) && uwForm.fireProtection.length > 0);
+  const hasValidUnderwriting = hasValidInsuredAddress && Boolean(uwForm.coverageStartDate) && hasValidFireProtection && Boolean(uwForm.claimHistory) && hasValidStockType;
   const hasCompleteUploads = hasRequiredUploads(uploads);
-  const canAdvanceUnderwriting = hasValidUwIdentity && hasValidPicName && hasValidUnderwriting && hasCompleteUploads;
+  const canAdvanceUnderwriting = hasValidUwIdentity && hasValidPicName && hasValidUnderwriting && hasCompleteUploads && !hasClaimHistoryReviewBlock && canProceedUnderwritingPayment;
+  const shouldShowPaymentPage = (externalView === "offer-final" || externalView === "payment") && canAdvanceUnderwriting && canProceedToPaymentFromOperating(operatingRecord);
   const stepOnePendingItems = [];
   if (!hasValidStepOneIdentity) stepOnePendingItems.push("Isi nama nasabah atau pilih CIF.");
 if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone dan alamat email yang valid.");
   if (!hasValidStepOneLocation) stepOnePendingItems.push("Isi lokasi properti atau gunakan tombol lokasi cepat.");
   if (!hasValidObjects) stepOnePendingItems.push("Setiap objek harus punya nilai yang ingin dilindungi.");
-  if (!hasRequiredObjectNotes) stepOnePendingItems.push("Objek jenis stok wajib dilengkapi dengan keterangan.");
+  if (!hasRequiredObjectNotes) stepOnePendingItems.push("Lengkapi keterangan objek yang masih wajib.");
   if (!hasRequiredFloorCount) stepOnePendingItems.push("Lengkapi jumlah lantai pada perluasan Risiko Gempa Bumi.");
   const underwritingPendingItems = [];
   if (uwForm.idNumber.trim() && !hasValidUwIdentity) underwritingPendingItems.push(form.customerType === "Badan Usaha" ? "NPWP yang diisi minimal 15 digit." : "NIK yang diisi harus 16 digit.");
   if (!hasValidPicName) underwritingPendingItems.push("Lengkapi kontak di lokasi.");
-  if (!hasValidUnderwriting) underwritingPendingItems.push("Lengkapi data tambahan yang wajib.");
+  if (!hasValidInsuredAddress) underwritingPendingItems.push("Lengkapi alamat tertanggung.");
+  if (!hasValidUnderwriting) underwritingPendingItems.push("Masih ada data lanjutan wajib yang perlu diisi.");
+  if (!hasValidStockType) underwritingPendingItems.push("Pilih jenis stok agar sistem bisa mengkategorikan stok mudah terbakar atau tidak mudah terbakar.");
   if (!hasCompleteUploads) underwritingPendingItems.push("Unggah tiga foto properti: depan, samping kanan, dan samping kiri.");
+  if (hasClaimHistoryReviewBlock) underwritingPendingItems.push("Riwayat klaim terdeteksi. Penawaran perlu dikembalikan ke tim internal untuk ditinjau sebelum bisa lanjut ke pembayaran.");
+  if (hasOperatingPaymentBlock && operatingPaymentBlockMessage) {
+    underwritingPendingItems.push(
+      operatingRecord?.status === "Pending Review Internal"
+        ? "Status internal belum disetujui. Penawaran menunggu tindak lanjut tim internal sebelum bisa lanjut ke pembayaran."
+        : operatingPaymentBlockMessage,
+    );
+  }
+  useEffect(() => {
+    if (isInternalUnderwritingContext) {
+      if (externalView !== "" && externalView !== "offer-indicative" && externalView !== "external-underwriting") {
+        setExternalView("external-underwriting");
+        replaceViewerModeInUrl(externalViewerMode, "external-underwriting");
+      }
+      return;
+    }
+
+    if (
+      (externalView === "offer-final" || externalView === "payment") &&
+      (!canAdvanceUnderwriting || !canProceedToPaymentFromOperating(operatingRecord))
+    ) {
+      setExternalView("external-underwriting");
+      replaceViewerModeInUrl(externalViewerMode, "external-underwriting");
+    }
+  }, [externalView, canAdvanceUnderwriting, externalViewerMode, isInternalUnderwritingContext]);
   const shouldShowQuotedPricing = quoted && hasQuoteBasis;
   const shouldShowSidebarPricing = (quoted || internalStep > 1 || externalView === "offer-indicative" || externalView === "offer-final" || externalView === "payment") && hasQuoteBasis;
-  const showStepOneSummarySidebar = quoted;
   const pricingSummaryValue = shouldShowSidebarPricing ? "Rp " + formatRupiah(basePremiumNumber) : "-";
   const extensionPremiumSummaryValue = shouldShowSidebarPricing && additionalPremiumNumber > 0 ? "Rp " + formatRupiah(additionalPremiumNumber) : null;
   const stampDutySummaryValue = shouldShowSidebarPricing ? "Rp " + formatRupiah(stampDutyNumber) : "-";
@@ -2133,11 +2506,15 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
     setUwForm({
       idNumber: "3173010101010001",
       sameAsInsured: true,
+      sameAsPropertyAddress: true,
       picName: demoCustomer.name,
+      insuredAddress: demoAddress,
       ownership: "Milik Sendiri",
       coverageStartDate: selectedCoverageDate,
-      fireProtection: "APAR + Hydrant",
+      fireProtectionChoice: "Ada",
+      fireProtection: ["APAR", "Hydrant"],
       claimHistory: "Tidak Ada",
+      stockType: "",
       surroundingRisk: "",
       additionalNotes: "Isi otomatis prototype untuk verifikasi proses.",
     });
@@ -2199,14 +2576,14 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           constructionClass={form.constructionClass}
           floorCount={floorCount}
           setFloorCount={setFloorCount}
-          canProceed={hasRequiredFloorCount}
+          canProceed={false}
           blockingMessage={!hasRequiredFloorCount ? "Isi jumlah lantai jika Anda memilih perlindungan gempa bumi untuk bangunan bertingkat." : ""}
           showFloorInput={showFloorInput}
           floorFieldRef={floorFieldRef}
           onEditObject={() => {}}
           onEditInsured={() => setExternalView("external-underwriting")}
           onBack={() => {
-            if (embedded && entryMode === "external") {
+            if (embedded && (entryMode === "external" || (entryMode === "internal" && externalViewerMode === "customer"))) {
               if (onExit) onExit();
               return;
             }
@@ -2233,81 +2610,51 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
     );
   }
 
-  if (externalView === "offer-final") {
+  if (shouldShowPaymentPage) {
     return (
       <>
-        <ConsentModal agreed={false} open={showConsentModal} onClose={() => setShowConsentModal(false)} onAgree={() => { setShowConsentModal(false); setExternalView("payment"); }} />
-        <RejectModal open={showRejectModal} onClose={() => setShowRejectModal(false)} reason={rejectReason} setReason={setRejectReason} customReason={rejectCustomReason} setCustomReason={setRejectCustomReason} onSubmit={() => { const finalReason = rejectReason === "Alasan lainnya" ? rejectCustomReason.trim() : rejectReason; setRejectionStatus("Alasan penolakan tersimpan: " + finalReason + ". Ini masih simulasi untuk handoff ke tim IT."); setShowRejectModal(false); }} />
-        <ExternalProposalPage
-          mode="final"
+        <ConsentModal
+          agreed={policyConsentApproved}
+          open={showConsentModal}
+          onClose={() => setShowConsentModal(false)}
+          onAgree={() => {
+            setShowConsentModal(false);
+            setPolicyConsentApproved(true);
+          }}
+        />
+        <ExternalPaymentPage
+          productTitle={activeVariant.title}
           customerName={effectiveCustomerName || uwForm.picName}
-          customerType={form.customerType}
           form={form}
           uwForm={uwForm}
-          uploads={uploads}
-          propertyOptions={availablePropertyTypes}
           propertyType={form.propertyType}
-          setPropertyType={(value) => setField("propertyType", value)}
           occupancy={form.occupancy}
-          setOccupancy={(value) => setField("occupancy", value)}
-          setField={setField}
-          setUwField={setUwField}
           objectRows={objectRows}
-          updateObjectRow={updateObjectRow}
-          addObjectRow={addObjectRow}
-          removeObjectRow={removeObjectRow}
           totalValue={totalValue}
+          selectedGuarantees={selectedGuarantees}
+          extensionOptions={activeGuarantees}
           estimatedTotal={estimatedTotalNumber}
           basePremium={basePremiumNumber}
           extensionPremium={additionalPremiumNumber}
           stampDuty={stampDutyNumber}
-          guarantees={guaranteeList}
-          selectedGuarantees={selectedGuarantees}
-          setSelectedGuarantees={setSelectedGuarantees}
-          expandedRows={expandedRows}
-          setExpandedRows={setExpandedRows}
-          constructionClass={form.constructionClass}
-          floorCount={floorCount}
-          setFloorCount={setFloorCount}
-          canProceed={hasRequiredFloorCount}
-          blockingMessage={!hasRequiredFloorCount ? "Isi jumlah lantai jika Anda memilih perlindungan gempa bumi untuk bangunan bertingkat." : ""}
-          showFloorInput={showFloorInput}
-          floorFieldRef={floorFieldRef}
-          onEditObject={() => setExternalView("offer-indicative")}
-          onEditInsured={() => setExternalView("external-underwriting")}
-          onBack={() => {
-            if (embedded && entryMode === "external") {
-              if (onExit) onExit();
-              return;
-            }
-            setExternalView("");
+          paymentMethod={paymentMethod}
+          onSelectMethod={(value) => {
+            setPaymentMethod(value);
+            setPaymentStatus("");
           }}
-          onPrimary={() => setShowConsentModal(true)}
-          onSecondary={() => setExternalView("offer-indicative")}
-          onReject={() => setShowRejectModal(true)}
-          helpRequestSent={helpRequestSent}
-          preparedBy={sessionName}
+          onBack={() => setExternalView("external-underwriting")}
+          policyConsentApproved={policyConsentApproved}
+          onOpenConsent={() => setShowConsentModal(true)}
+          onConfirmPayment={() => setPaymentStatus(`${activeVariant.paymentSuccessMessage} Integrasi pembayaran online akan disambungkan pada tahap berikutnya.`)}
+          paymentStatus={paymentStatus}
           operatingRecord={operatingRecord}
-          transactionAuthority={transactionAuthority}
-          productConfig={activeVariant}
-          extensionOptions={activeGuarantees}
-          viewerMode={externalViewerMode}
-          referralCode={effectiveReferralCode}
-          senderName={effectiveSenderName}
-          onViewerModeChange={(mode) => {
-            setExternalViewerMode(mode);
-            replaceViewerModeInUrl(mode);
-          }}
+          isExpired={operatingRecord?.status === "Expired"}
         />
       </>
     );
   }
 
-  if (externalView === "payment") {
-    return <ExternalPaymentPage customerName={effectiveCustomerName} estimatedTotal={estimatedTotalNumber} paymentMethod={paymentMethod} onSelectMethod={(value) => { setPaymentMethod(value); setPaymentStatus(""); }} onBack={() => setExternalView("offer-final")} onProceedPayment={() => setPaymentStatus(`${activeVariant.paymentSuccessMessage} Integrasi pembayaran online akan disambungkan pada tahap berikutnya.`)} paymentStatus={paymentStatus} operatingRecord={operatingRecord} isExpired={operatingRecord?.status === "Expired"} />;
-  }
-
-  if (externalView === "external-underwriting") {
+  if (externalView === "external-underwriting" || externalView === "offer-final" || externalView === "payment" || !canAdvanceUnderwriting) {
     const externalDataValidity = resolveOfferValidity(true, uwForm.coverageStartDate);
     const externalDataObjectLabel =
       [form.propertyType, form.occupancy].filter(Boolean).join(" - ") ||
@@ -2316,13 +2663,13 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
       reference: transactionAuthority.transactionId,
       version: "Rev 1",
       validUntil: formatDisplayDate(externalDataValidity.expiresAt),
-      statusLabel: underwritingPendingItems.length ? "Menunggu data tambahan" : "Siap ditinjau",
+      statusLabel: underwritingPendingItems.length ? "Menunggu data tambahan" : "Siap dilanjutkan",
     };
 
     return (
       <CustomerDataJourneyShell
         productName={activeVariant.title}
-        heroDescription="Lengkapi data singkat berikut agar penawaran ini siap diperbarui menjadi penawaran final yang rapi dan siap dibayar."
+          heroDescription="Data lanjutan berikut diperlukan untuk melanjutkan proses penawaran ke tahap pembayaran."
         customerName={effectiveCustomerName || "Calon tertanggung"}
         objectLabel={externalDataObjectLabel}
         sumInsuredLabel="Nilai yang Dilindungi"
@@ -2333,22 +2680,47 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
         version={externalDataOfferMeta.version}
         validUntil={externalDataOfferMeta.validUntil}
         statusLabel={externalDataOfferMeta.statusLabel}
-        guidanceText="Informasi yang Anda isi di halaman ini akan dipakai untuk menyiapkan penawaran final dan tahap pembayaran."
+        guidanceText={
+          hasClaimHistoryReviewBlock
+            ? "Riwayat klaim yang Anda isi perlu ditinjau kembali oleh tim internal, sehingga penawaran belum bisa dilanjutkan ke pembayaran."
+            : hasOperatingPaymentBlock
+              ? operatingPaymentBlockMessage || "Penawaran ini masih perlu ditinjau internal sebelum lanjut ke pembayaran."
+              : "Informasi yang Anda isi di halaman ini akan dipakai untuk menyiapkan tahap pembayaran."
+        }
+        showSidebar={false}
         summaryRows={[
           { label: activeVariant.primaryCoveragePremiumLabel, value: `Rp ${formatRupiah(basePremiumNumber)}` },
           ...(additionalPremiumNumber > 0 ? [{ label: "Premi Perluasan", value: `Rp ${formatRupiah(additionalPremiumNumber)}` }] : []),
           { label: "Biaya Meterai", value: `Rp ${formatRupiah(stampDutyNumber)}` },
         ]}
         pendingItems={underwritingPendingItems}
-        canContinue={canAdvanceUnderwriting}
-        continueLabel="Tinjau Penawaran Final"
-        onContinue={() => setExternalView("offer-final")}
+        canContinue={!isInternalUnderwritingContext && canAdvanceUnderwriting}
+        continueLabel="Lanjut ke Pembayaran"
+        onContinue={isInternalUnderwritingContext ? undefined : () => setExternalView("payment")}
+        secondaryLabel={
+          isInternalUnderwritingContext
+            ? "Kembali ke Tinjau Penawaran"
+            : hasClaimHistoryReviewBlock || hasOperatingPaymentBlock
+              ? "Minta Staff Asuransi Review Ulang"
+              : undefined
+        }
+        onSecondary={
+          isInternalUnderwritingContext
+            ? () => setExternalView("offer-indicative")
+            : hasClaimHistoryReviewBlock || hasOperatingPaymentBlock
+              ? (() => setHelpRequestSent(true))
+              : undefined
+        }
         onBack={() => setExternalView("offer-indicative")}
+        topActionLabel="Simulasi Isi Otomatis"
+        onTopAction={fillStepTwoDemoData}
+        showPaymentStep={!isInternalUnderwritingContext}
       >
         <UnderwritingSections
           form={form}
           customerType={form.customerType}
           selectedCustomer={selectedCustomer}
+          objectRows={objectRows}
           uwForm={uwForm}
           setUwField={setUwField}
           uploads={uploads}
@@ -2365,7 +2737,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <SentOffersModal open={showSentOffers} onClose={() => setShowSentOffers(false)} />
-      <IndicationModal open={showIndicationModal} onClose={() => { setShowIndicationModal(false); setShareFeedback(""); }} onOpenIndicativeOffer={() => { setExternalViewerMode("internal"); setShowIndicationModal(false); setExternalView("offer-indicative"); openShareWindow(previewUrl); }} onOpenFinalOffer={internalStep === 2 ? () => { setExternalViewerMode("internal"); setShowIndicationModal(false); setExternalView("offer-final"); openShareWindow(getShareUrl("offer-final", { viewer: "internal", referral: referralCode, sender: sessionName, customer: customerName, offer: shareSnapshot })); } : null} customerName={effectiveCustomerName} shareUrl={shareUrl} onShowQrInfo={() => setQrInfoVisible((prev) => !prev)} onCopyLink={handleCopyLink} copyStatus={shareFeedback} shareLabel={activeVariant.shareLabel} shareSubject={activeVariant.shareSubject} />
+        <IndicationModal open={showIndicationModal} onClose={() => { setShowIndicationModal(false); setShareFeedback(""); }} onOpenIndicativeOffer={() => { setExternalViewerMode("customer"); setShowIndicationModal(false); setExternalView("offer-indicative"); openShareWindow(previewUrl); }} onOpenFinalOffer={null} customerName={effectiveCustomerName} shareUrl={shareUrl} onShowQrInfo={() => setQrInfoVisible((prev) => !prev)} onCopyLink={handleCopyLink} copyStatus={shareFeedback} shareLabel={activeVariant.shareLabel} shareSubject={activeVariant.shareSubject} />
 
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
         <div className="mx-auto flex max-w-[1800px] items-center justify-between px-4 py-3 md:px-6">
@@ -2424,16 +2796,43 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                 <button type="button" tabIndex={-1} aria-hidden="true" className="pointer-events-none invisible inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
               </div>
               <div className="mt-6 text-center text-white"><div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Selamat datang kembali, {sessionName}</div><h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{activeVariant.title}</h1><p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{activeVariant.heroSubtitle}</p></div>
-              <div className="mx-auto mt-6 max-w-3xl rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-4xl md:p-5"><div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5"><div className="flex flex-col gap-5 md:flex-row md:gap-5"><StepNode step="Langkah 1" title="Simulasi Premi" subtitle={internalStep === 1 ? "Sedang diisi" : "Selesai"} active={internalStep === 1} done={internalStep > 1} icon={<Wallet className="h-4 w-4" />} onClick={() => { if (internalStep !== 1) setInternalStep(1); }} /><div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /><StepNode step="Langkah 2" title="Isi Data" subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={false} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted) setInternalStep(2); }} /></div></div></div>
+              <div className="mx-auto mt-6 max-w-[860px] rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-[960px] md:p-5">
+                <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5">
+                  <div className="flex flex-col gap-5 md:flex-row md:gap-5">
+                    <StepNode
+                      step="Langkah 1"
+                      title="Tinjau Penawaran"
+                      subtitle={internalStep === 1 ? "Sedang dibuka" : "Selesai"}
+                      active={internalStep === 1}
+                      done={internalStep > 1}
+                      icon={<FileText className="h-4 w-4" />}
+                      onClick={() => {
+                        if (internalStep !== 1) setInternalStep(1);
+                      }}
+                    />
+                    <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
+                    <StepNode
+                      step="Langkah 2"
+                      title="Data Lanjutan"
+                      subtitle={internalStep === 2 ? (canAdvanceUnderwriting ? "Siap dikirim" : "Sedang diisi") : "Menunggu"}
+                      active={internalStep === 2}
+                      done={false}
+                      icon={<FileText className="h-4 w-4" />}
+                      onClick={() => {
+                        if (quoted) setInternalStep(2);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {rejectionStatus ? <div className="mx-auto mt-6 max-w-[1280px] rounded-2xl border border-[#CFE0F0] bg-[#F8FBFE] px-4 py-3 text-sm text-[#0A4D82]">{rejectionStatus}</div> : null}
-          {qrInfoVisible ? <div className="mx-auto mt-4 max-w-[1280px] rounded-2xl border border-[#CFE0F0] bg-white px-4 py-4 text-sm text-slate-700 shadow-sm"><div className="font-semibold text-slate-900">QR Code belum digenerate otomatis.</div><div className="mt-1">Untuk handoff ke IT, tautan yang akan diencode adalah: <span className="break-all text-[#0A4D82]">{shareUrl}</span></div></div> : null}
+          {rejectionStatus ? <div className="mx-auto mt-6 max-w-[860px] rounded-2xl border border-[#CFE0F0] bg-[#F8FBFE] px-4 py-3 text-sm text-[#0A4D82]">{rejectionStatus}</div> : null}
+          {qrInfoVisible ? <div className="mx-auto mt-4 max-w-[860px] rounded-2xl border border-[#CFE0F0] bg-white px-4 py-4 text-sm text-slate-700 shadow-sm"><div className="font-semibold text-slate-900">QR Code belum digenerate otomatis.</div><div className="mt-1">Untuk handoff ke IT, tautan yang akan diencode adalah: <span className="break-all text-[#0A4D82]">{shareUrl}</span></div></div> : null}
           {internalStep === 1 ? (
-            <div className={cls("mx-auto px-4 md:px-6", showStepOneSummarySidebar ? "max-w-[1280px]" : "max-w-4xl")}>
-              <div className={cls("mt-6 grid items-start gap-5", showStepOneSummarySidebar ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
-                <div className="space-y-5">
+            <div className="mx-auto mt-6 max-w-[860px] px-4 md:px-6">
+              <div className="space-y-5">
                   <SectionCard title="Informasi Nasabah">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="md:col-span-2"><FieldLabel label="Nama / CIF" required helpText="Ketik nama untuk mencari data CIF, atau lanjutkan sebagai nasabah baru." /><div className="relative"><TextInput value={form.identity} onChange={(value) => { setSelectedCustomer(null); setField("identity", value); }} placeholder="Masukkan nama nasabah atau kode CIF" icon={<User className="h-4 w-4" />} />{form.identity && customerSuggestions.length > 0 && !selectedCustomer ? <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">{customerSuggestions.map((item) => <button key={item.cif} type="button" onClick={() => { setSelectedCustomer(item); setForm((prev) => ({ ...prev, identity: item.name + " - " + item.cif, customerType: item.type, phone: item.phone || prev.phone, email: item.email || prev.email })); }} className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"><div><div className="font-semibold text-slate-900">{item.name}</div><div className="text-xs text-slate-500">{item.type}</div></div><div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div></button>)}</div> : null}</div>{selectedCustomer ? <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div> : form.identity ? <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div> : null}</div>
@@ -2521,74 +2920,121 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                         onClick={() => { setQuoted(true); setInternalStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                         className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                       >
-                        Isi Data
+                        Lanjut ke Data Lanjutan
                       </button>
                     ) : null}
                   </div>
-                  {quoted ? <div ref={resultsRef} className="space-y-5"><SectionCard title="Rincian Jaminan" subtitle="Klik setiap baris untuk melihat penjelasan detailnya."><div className="space-y-5"><div><div className="text-[15px] font-semibold tracking-tight text-slate-900">{activeVariant.insuredRisksSectionTitle}</div><div className="mt-3"><AccordionRiskRow title={activeVariant.primaryCoverageTitle} icon={Flame} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(basePremiumNumber) : "-"} detail={activeVariant.primaryCoverageDescription} deductible={form.constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther} alwaysIncluded={true} expanded={expandedRows.fire} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, fire: !prev.fire }))} /></div></div>{activeVariant.importantExclusions.length ? <div><div className="text-[15px] font-semibold tracking-tight text-slate-900">{activeVariant.exclusionsSectionTitle}</div><div className="mt-1 text-sm leading-6 text-slate-500">{activeVariant.exclusionsSectionSubtitle}</div><div className="mt-3 rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, exclusions: !prev.exclusions }))} className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left"><div className="text-[15px] font-semibold text-[#0A4D82]">Ringkasan pengecualian utama</div><ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expandedRows.exclusions && "rotate-180")} /></button>{expandedRows.exclusions ? <div className="border-t border-[#D6E0EA] px-3.5 py-3"><div className="space-y-2">{activeVariant.importantExclusions.map((item) => <div key={item} className="flex items-start gap-2 text-[13px] leading-5 text-slate-700"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" /><span>{item}</span></div>)}</div></div> : null}</div></div> : null}<div><div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div><div className="mt-3 space-y-2.5">{activeGuarantees.map((item) => { const checked = selectedGuarantees[item.key]; const premiumValue = Math.round(totalValue * item.rate); const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible; return <AccordionRiskRow key={item.key} title={item.title} icon={item.icon} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(premiumValue) : "-"} detail={item.detail} deductible={deductibleValue} checked={checked} onToggleChecked={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} expanded={expandedRows[item.key]} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} extra={item.key === "earthquake" && checked && isFloorRelevant(form.propertyType, form.occupancy) ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Diisi hanya bila objek bertingkat dan gempa bumi dipilih." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null} />; })}</div></div></div></SectionCard></div> : null}
-                </div>
-                {showStepOneSummarySidebar ? <SummarySidebarShell title="Ringkasan">
-                  <div className="border-t border-white/15 pt-3">
-                    <SummaryRow label={selectedCustomer || isDigitsOnly(form.identity.trim()) ? "Kode CIF / Nama" : "Nama Nasabah"} value={form.identity || "-"} />
-                    <SummaryRow label="Jenis Bangunan" value={form.propertyType} />
-                    <SummaryRow label="Penggunaan bangunan" value={form.occupancy} />
-                    <SummaryRow label="Kelas Konstruksi" value={form.constructionClass} />
-                  </div>
-                  <div className="border-t border-white/15 pt-3">
-                    <SummaryRow label={activeVariant.primaryCoveragePremiumLabel} value={pricingSummaryValue} />
-                    {extensionPremiumSummaryValue ? <SummaryRow label="Premi Perluasan" value={extensionPremiumSummaryValue} /> : null}
-                    <SummaryRow label="Biaya Meterai" value={stampDutySummaryValue} />
-                  </div>
-                  <div className="mt-4 space-y-2.5">
-                    <button
-                      type="button"
-                      disabled={!canAdvanceInternalStepOne}
-                      onClick={() => {
-                        setQuoted(true);
-                        setShowIndicationModal(true);
-                      }}
-                      className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
-                    >
-                      Kirim Indikasi
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canAdvanceInternalStepOne}
-                      onClick={() => {
-                        setQuoted(true);
-                        setInternalStep(2);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceInternalStepOne ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
-                    >
-                      Isi Data
-                    </button>
-                  </div>
-                  <SummarySidebarAlert items={stepOnePendingItems} />
-                </SummarySidebarShell> : null}
+                  {quoted ? (
+                    <div ref={resultsRef} className="space-y-5">
+                      <SectionCard title="Rincian Jaminan" subtitle="Klik setiap baris untuk melihat penjelasan detailnya.">
+                        <div className="space-y-5">
+                          <div>
+                            <div className="text-[15px] font-semibold tracking-tight text-slate-900">{activeVariant.insuredRisksSectionTitle}</div>
+                            <div className="mt-3">
+                              <AccordionRiskRow title={activeVariant.primaryCoverageTitle} icon={Flame} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(basePremiumNumber) : "-"} detail={activeVariant.primaryCoverageDescription} deductible={form.constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther} alwaysIncluded={true} expanded={expandedRows.fire} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, fire: !prev.fire }))} />
+                            </div>
+                          </div>
+                          {activeVariant.importantExclusions.length ? <div><div className="text-[15px] font-semibold tracking-tight text-slate-900">{activeVariant.exclusionsSectionTitle}</div><div className="mt-1 text-sm leading-6 text-slate-500">{activeVariant.exclusionsSectionSubtitle}</div><div className="mt-3 rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, exclusions: !prev.exclusions }))} className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left"><div className="text-[15px] font-semibold text-[#0A4D82]">Ringkasan pengecualian utama</div><ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expandedRows.exclusions && "rotate-180")} /></button>{expandedRows.exclusions ? <div className="border-t border-[#D6E0EA] px-3.5 py-3"><div className="space-y-2">{activeVariant.importantExclusions.map((item) => <div key={item} className="flex items-start gap-2 text-[13px] leading-5 text-slate-700"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" /><span>{item}</span></div>)}</div></div> : null}</div></div> : null}
+                          <div>
+                            <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
+                            <div className="mt-3 space-y-2.5">
+                              {activeGuarantees.map((item) => {
+                                const checked = selectedGuarantees[item.key];
+                                const premiumValue = Math.round(totalValue * item.rate);
+                                const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible;
+                                return <AccordionRiskRow key={item.key} title={item.title} icon={item.icon} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(premiumValue) : "-"} detail={item.detail} deductible={deductibleValue} checked={checked} onToggleChecked={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} expanded={expandedRows[item.key]} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} extra={item.key === "earthquake" && checked && isFloorRelevant(form.propertyType, form.occupancy) ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Diisi hanya bila objek bertingkat dan gempa bumi dipilih." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null} />;
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </SectionCard>
+
+                      <SectionCard title="Ringkasan Penawaran">
+                        <div className="divide-y divide-slate-100 rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-2">
+                          <ProposalRow label={selectedCustomer || isDigitsOnly(form.identity.trim()) ? "Kode CIF / Nama" : "Nama Nasabah"} value={form.identity || "-"} strong />
+                          <ProposalRow label="Jenis Bangunan" value={form.propertyType || "-"} />
+                          <ProposalRow label="Penggunaan bangunan" value={form.occupancy || "-"} />
+                          <ProposalRow label="Kelas Konstruksi" value={form.constructionClass || "-"} />
+                          <ProposalRow label="Nilai yang Dilindungi" value={`Rp ${formatRupiah(totalValue)}`} strong />
+                        </div>
+                      </SectionCard>
+
+                      <SectionCard title="Ringkasan Biaya">
+                        <PremiumPriceHero label="" value={pricingSummaryValue} />
+                        <PremiumBreakdown>
+                          <ProposalRow label="Premi" value={pricingSummaryValue} />
+                          {extensionPremiumSummaryValue ? <ProposalRow label="Premi Perluasan" value={extensionPremiumSummaryValue} /> : null}
+                          <ProposalRow label="Biaya Meterai" value={stampDutySummaryValue} />
+                        </PremiumBreakdown>
+                        <div className="mt-4">
+                          <SummarySidebarAlert items={stepOnePendingItems} successText="Data awal penawaran sudah lengkap dan siap dilanjutkan ke data lanjutan." />
+                        </div>
+                      </SectionCard>
+                    </div>
+                  ) : null}
               </div>
             </div>
           ) : (
-                <div className="mx-auto mt-6 max-w-[1280px] px-4 md:px-6"><div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]"><div className="space-y-5"><UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} uwForm={uwForm} setUwField={setUwField} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} expandedRows={expandedRows} setExpandedRows={setExpandedRows} /></div><SummarySidebarShell title="Ringkasan">
-              <div className="border-t border-white/15 pt-3">
-                <SummaryRow label="Nasabah" value={customerName || "-"} />
-                <SummaryRow label="Jenis Bangunan" value={form.propertyType} />
-                <SummaryRow label="Penggunaan bangunan" value={form.occupancy} />
-                <SummaryRow label="Nilai yang Dilindungi" value={"Rp " + formatRupiah(totalValue)} />
+            <div className="mx-auto mt-6 max-w-[860px] px-4 md:px-6">
+              <div className="space-y-5">
+                <SectionCard
+                  title="Data Lanjutan Penawaran Anda"
+                  subtitle="Informasi berikut diperlukan agar indikasi siap dikirim ke calon tertanggung."
+                  headerAlign="center"
+                >
+                  <UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} objectRows={objectRows} uwForm={uwForm} setUwField={setUwField} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} expandedRows={expandedRows} setExpandedRows={setExpandedRows} external={true} />
+                </SectionCard>
+
+                <SectionCard title="Ringkasan Biaya">
+                  <PremiumPriceHero label="" value={`Rp ${formatRupiah(estimatedTotalNumber)}`} />
+                  <PremiumBreakdown>
+                    <ProposalRow label="Premi" value={`Rp ${formatRupiah(basePremiumNumber)}`} />
+                    {additionalPremiumNumber > 0 ? <ProposalRow label="Premi Perluasan" value={`Rp ${formatRupiah(additionalPremiumNumber)}`} /> : null}
+                    <ProposalRow label="Biaya Meterai" value={`Rp ${formatRupiah(stampDutyNumber)}`} />
+                  </PremiumBreakdown>
+                </SectionCard>
+
+                <SectionCard
+                  title="Tindak Lanjuti Penawaran"
+                  subtitle={hasClaimHistoryReviewBlock ? "Riwayat klaim yang Anda isi perlu ditinjau kembali oleh tim internal sebelum indikasi dikirim ke calon tertanggung." : "Periksa kelengkapan data lalu kirim indikasi ke calon tertanggung."}
+                >
+                  <SummarySidebarAlert
+                    items={underwritingPendingItems}
+                    successText="Data sudah lengkap dan siap dikirim sebagai indikasi."
+                  />
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setInternalStep(1)}
+                      className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-center text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]"
+                    >
+                      Kembali ke Tinjau Penawaran
+                    </button>
+                    <button
+                      type="button"
+                      disabled={hasClaimHistoryReviewBlock ? false : !canAdvanceUnderwriting}
+                      onClick={() => {
+                        if (hasClaimHistoryReviewBlock) {
+                          setHelpRequestSent(true);
+                          return;
+                        }
+                        setShowIndicationModal(true);
+                      }}
+                      className={cls(
+                        "flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-bold uppercase tracking-wide text-white shadow-sm transition",
+                        hasClaimHistoryReviewBlock
+                          ? "bg-[#0A4D82] hover:brightness-105"
+                          : canAdvanceUnderwriting
+                          ? "bg-[#F5A623] hover:brightness-105"
+                          : "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400",
+                      )}
+                    >
+                      {hasClaimHistoryReviewBlock ? "Minta Staff Asuransi Review Ulang" : "Kirim Indikasi"}
+                    </button>
+                  </div>
+                </SectionCard>
               </div>
-              <div className="border-t border-white/15 pt-3">
-                <SummaryRow label={form.customerType === "Badan Usaha" ? "NPWP" : "NIK"} value={uwForm.idNumber || "-"} />
-                <SummaryRow label="Kontak di Lokasi" value={uwForm.picName || "-"} />
-            <SummaryRow label="Jangka Waktu Mulai Pertanggungan" value={uwForm.coverageStartDate || "-"} />
-            <SummaryRow label="Jangka Waktu Akhir Pertanggungan" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
-              </div>
-              <SummarySidebarAlert items={underwritingPendingItems} />
-              <div className="space-y-2">
-                <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setShowIndicationModal(true)} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Kirim Indikasi</button>
-                <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setExternalView("offer-final")} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] border border-white/20 text-sm font-bold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20", canAdvanceUnderwriting ? "bg-[#0A4D82] hover:brightness-110" : "cursor-not-allowed bg-slate-500/70")}>Pembayaran</button>
-                <button type="button" onClick={() => setInternalStep(1)} className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-white/20 bg-[#0A4D82] text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali</button>
-              </div>
-            </SummarySidebarShell></div></div>
+            </div>
           )}
         </div>
       )}
