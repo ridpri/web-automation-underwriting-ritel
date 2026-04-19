@@ -66,28 +66,28 @@ export const PROPERTY_PRODUCTS = [
 export const VEHICLE_PRODUCTS = [
   {
     key: "motor-tlo",
-    title: "Asuransi TLO Motor",
+    title: "Asuransi Sepeda Motor - Total Loss",
     category: "Kendaraan Bermotor",
-    subtitle: "Simulasi produk Motor TLO sudah bisa dibuka.",
-    description: "Perlindungan total kerugian untuk motor jika terjadi kerusakan menyeluruh, termasuk kebakaran dan pencurian sesuai ketentuan polis.",
+    subtitle: "Perlindungan untuk sepeda motor terhadap kehilangan akibat pencurian atau kerusakan berat yang termasuk total loss sesuai ketentuan polis.",
+    description: "Perlindungan untuk sepeda motor terhadap kehilangan akibat pencurian atau kerusakan berat yang termasuk total loss sesuai ketentuan polis.",
     image: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=80",
     active: true,
   },
   {
     key: "mobil-tlo",
-    title: "Asuransi TLO Mobil",
+    title: "Asuransi Mobil - Total Loss",
     category: "Kendaraan Bermotor",
-    subtitle: "Simulasi produk Mobil TLO sudah bisa dibuka.",
-    description: "Perlindungan total kerugian untuk mobil jika terjadi kerusakan menyeluruh, termasuk kebakaran dan pencurian sesuai ketentuan polis.",
+    subtitle: "Perlindungan mobil terhadap kerugian total akibat risiko yang dijamin polis.",
+    description: "Perlindungan mobil terhadap kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80",
     active: true,
   },
   {
     key: "mobil-comp",
-    title: "Asuransi Mobil Komprehensif",
+    title: "Comprehensive Kendaraan - Mobil",
     category: "Kendaraan Bermotor",
-    subtitle: "Simulasi internal untuk mobil comprehensive.",
-    description: "Perlindungan mobil untuk risiko kerusakan dan kehilangan sesuai ketentuan polis yang berlaku.",
+    subtitle: "Perlindungan mobil terhadap kerusakan dan kehilangan akibat risiko yang dijamin polis.",
+    description: "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran.",
     image: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=80",
     active: true,
   },
@@ -108,13 +108,13 @@ export function buildPropertyCatalog(propertyItems) {
 export function buildVehicleCatalog({ motorItem, carTloItem, carCompItem, sessionRole }) {
   return VEHICLE_PRODUCTS.map((item) => ({
     ...item,
-    active: item.key === "mobil-comp" ? sessionRole === "internal" : item.active,
+    active: item.active,
     key:
-      item.title === "Asuransi Motor TLO"
+      item.key === "motor-tlo"
         ? motorItem
-        : item.title === "Asuransi Mobil TLO"
+        : item.key === "mobil-tlo"
           ? carTloItem
-          : item.title === "Asuransi Mobil Komprehensif"
+          : item.key === "mobil-comp"
             ? carCompItem
             : item.key,
   }));

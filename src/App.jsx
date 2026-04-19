@@ -14,7 +14,7 @@ import {
   ReviewWorkbench,
   SelfCarePortalBridge,
 } from "./app/lazyJourneys.js";
-import { resolveSessionDescription, resolveSessionName, SESSION_OPTIONS } from "./app/sessionConfig.js";
+import { resolveSessionDescription, resolveSessionName, resolveSessionProfile, SESSION_OPTIONS } from "./app/sessionConfig.js";
 
 function cls() {
   return Array.from(arguments).filter(Boolean).join(" ");
@@ -22,6 +22,15 @@ function cls() {
 
 function isExternalUrl(value) {
   return typeof value === "string" && /^https?:\/\//.test(value);
+}
+
+function clearSharedJourneyParams() {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  ["view", "viewer", "share", "referral", "sender", "customer", "offer"].forEach((key) => {
+    url.searchParams.delete(key);
+  });
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 function ProductCard({ item, onClick }) {
@@ -117,6 +126,7 @@ export default function App() {
   const [operatingRecords, setOperatingRecords] = useState(OPERATING_QUEUE_SEED);
   const [activeTransactionId, setActiveTransactionId] = useState(OPERATING_QUEUE_SEED[0]?.id || "");
   const activeSessionName = resolveSessionName(sessionRole);
+  const activeSessionProfile = resolveSessionProfile(sessionRole);
   const isInternalSession = sessionRole === "internal";
   const isGuestSession = sessionRole === "guest";
   const propertyItems = useMemo(
@@ -134,10 +144,10 @@ export default function App() {
     [activeSessionName, operatingRecords],
   );
   const accountPrimaryDestination = isInternalSession ? "internal-workspace" : "self-care-portal";
-  const accountPrimaryLabel = isInternalSession ? "Ruang Kerja Saya" : "Portal Saya";
+  const accountPrimaryLabel = isInternalSession ? "Ruang Kerja Saya" : "Polis Saya";
   const externalAccountMenuItems = [
     {
-      label: "Portal Saya",
+      label: "Polis Saya",
       primary: true,
       onClick: () => setActiveJourney("self-care-portal"),
     },
@@ -157,6 +167,7 @@ export default function App() {
       window.open(target, "_blank", "noopener,noreferrer");
       return;
     }
+    clearSharedJourneyParams();
     const matchingRecord = operatingRecords.find((item) => item.journeyKey === target);
     if (matchingRecord) setActiveTransactionId(matchingRecord.id);
     setRoleMenuOpen(false);
@@ -218,17 +229,24 @@ export default function App() {
           onOpenWorkbench={() => setActiveJourney("review-internal")}
           sessionName={activeSessionName}
         >
-          {nodeFactory(activeRecord, (signal) =>
+          {nodeFactory(activeRecord, (signal) => {
+            const signalChanged =
+              (signal.status || "") !== (activeRecord.status || "") ||
+              (signal.reason || "") !== (activeRecord.reason || "") ||
+              (signal.notes || "") !== (activeRecord.notes || "") ||
+              JSON.stringify(signal.authority || null) !== JSON.stringify(activeRecord.authority || null) ||
+              JSON.stringify(signal.flags || []) !== JSON.stringify(activeRecord.flags || []);
+
             updateOperatingRecord(activeRecord.id, {
               ...signal,
               owner: activeSessionName,
               timeline:
                 signal.timeline ||
-                (signal.status || signal.reason
+                (signalChanged && (signal.status || signal.reason)
                   ? [buildTimelineEvent(signal.reason || "Status transaksi diperbarui.", activeSessionName), ...activeRecord.timeline]
                   : activeRecord.timeline),
-            }),
-          )}
+            });
+          })}
         </InternalOperatingShell>
       </Suspense>
     );
@@ -307,7 +325,9 @@ export default function App() {
           entryMode="external"
           productVariant="property-safe"
           sessionName={activeSessionName}
+          sessionProfile={sessionRole === "external" ? activeSessionProfile : null}
           onExit={() => setActiveJourney("")}
+          onOpenPolicies={() => setActiveJourney("self-care-portal")}
         />
       </Suspense>
     );
@@ -337,7 +357,9 @@ export default function App() {
           entryMode="external"
           productVariant="property-all-risk"
           sessionName={activeSessionName}
+          sessionProfile={sessionRole === "external" ? activeSessionProfile : null}
           onExit={() => setActiveJourney("")}
+          onOpenPolicies={() => setActiveJourney("self-care-portal")}
         />
       </Suspense>
     );
@@ -360,6 +382,7 @@ export default function App() {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <MotorLatestExact
+          entryMode="external"
           onExit={() => setActiveJourney("")}
           accountMenuItems={externalAccountMenuItems}
         />
@@ -398,7 +421,20 @@ export default function App() {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <MotorLatestExact
+          entryMode="external"
           initialFlow="carTlo"
+          onExit={() => setActiveJourney("")}
+          accountMenuItems={externalAccountMenuItems}
+        />
+      </Suspense>
+    );
+  }
+  if (activeJourney === "mobil-comp") {
+    return (
+      <Suspense fallback={<JourneyFallback />}>
+        <MotorLatestExact
+          entryMode="external"
+          initialFlow="carComp"
           onExit={() => setActiveJourney("")}
           accountMenuItems={externalAccountMenuItems}
         />

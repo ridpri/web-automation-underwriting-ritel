@@ -66,7 +66,7 @@ export const MOTOR_EXTENSIONS = [
     key: "tpl",
     title: "Jaminan Tanggung Jawab Hukum terhadap Pihak Ketiga",
     detail:
-      "Menjamin tanggung jawab hukum Tertanggung atas kematian, cidera badan, biaya perawatan/pengobatan, serta kerugian atau kerusakan harta benda milik penumpang atau pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis.",
+      "Menjamin tanggung jawab hukum Tertanggung terhadap kerusakan harta benda, biaya pengobatan, cedera badan, atau kematian pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis, dengan nilai pertanggungan maksimum Rp1.000.000 untuk setiap kejadian.",
     deductible: "Jaminan ini tidak dikenakan risiko sendiri",
     type: "amount",
   },

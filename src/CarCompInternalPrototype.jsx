@@ -12,6 +12,7 @@ export default function CarCompInternalPrototype({
 }) {
   return (
     <MotorLatestExact
+      entryMode="internal"
       initialFlow="carComp"
       sessionName={sessionName}
       onExit={onExit}

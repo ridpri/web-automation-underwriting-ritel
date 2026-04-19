@@ -73,7 +73,7 @@ export const OPERATING_QUEUE_SEED = [
   {
     id: "TRX-PAR-2026-003",
     journeyKey: "property-all-risk-internal",
-    product: "Asuransi Properti All Risk",
+    product: "Asuransi Properti - All Risk",
     channel: "Internal Assisted",
     customer: "PT Arunika Properti",
     owner: "Taqwim (Internal)",
@@ -86,18 +86,18 @@ export const OPERATING_QUEUE_SEED = [
     validUntil: "16 Apr 2026, 23:59",
     flags: ["Butuh verifikasi detail material damage", "Perlu konfirmasi perluasan yang dipilih"],
     notes:
-      "Pengajuan Asuransi Properti All Risk menunggu tinjauan internal untuk memastikan rincian objek dan perluasan masih selaras dengan kebutuhan proteksi properti.",
+      "Pengajuan Asuransi Properti - All Risk menunggu tinjauan internal untuk memastikan rincian objek dan perluasan masih selaras dengan kebutuhan proteksi properti.",
     timeline: [
-      { at: "11 Apr 2026, 09:05", actor: "Taqwim (Internal)", text: "Draft Asuransi Properti All Risk dibuat." },
+      { at: "11 Apr 2026, 09:05", actor: "Taqwim (Internal)", text: "Draft Asuransi Properti - All Risk dibuat." },
       { at: "11 Apr 2026, 10:10", actor: "Taqwim (Internal)", text: "Indikasi Rev 1 dikirim." },
       { at: "11 Apr 2026, 13:10", actor: "Calon tertanggung", text: "Data lanjutan dan pilihan perluasan diperbarui." },
-      { at: "11 Apr 2026, 13:40", actor: "System", text: "Masuk pending review internal untuk validasi Asuransi Properti All Risk." },
+      { at: "11 Apr 2026, 13:40", actor: "System", text: "Masuk pending review internal untuk validasi Asuransi Properti - All Risk." },
     ],
   },
   {
     id: "TRX-MTR-2026-014",
     journeyKey: "motor-internal",
-    product: "Asuransi Motor TLO",
+    product: "Asuransi Sepeda Motor - Total Loss",
     channel: "Internal Assisted",
     customer: "Rizki Maulana",
     owner: "Taqwim (Internal)",
@@ -120,7 +120,7 @@ export const OPERATING_QUEUE_SEED = [
   {
     id: "TRX-CAR-2026-006",
     journeyKey: "car-tlo-internal",
-    product: "Asuransi Mobil TLO",
+    product: "Asuransi Mobil - Total Loss",
     channel: "Internal Assisted",
     customer: "PT Cakra Sentosa",
     owner: "Taqwim (Internal)",
@@ -143,7 +143,7 @@ export const OPERATING_QUEUE_SEED = [
   {
     id: "TRX-CMP-2026-002",
     journeyKey: "car-comp-internal",
-    product: "Asuransi Mobil Comprehensive",
+    product: "Comprehensive Kendaraan - Mobil",
     channel: "Internal Assisted",
     customer: "Budi Santoso",
     owner: "Taqwim (Internal)",

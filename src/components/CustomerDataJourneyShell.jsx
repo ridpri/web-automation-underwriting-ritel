@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileText, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bell, CheckCircle2, FileText, Home, Package, Wallet } from "lucide-react";
 
 function DetailRow({ label, value }) {
   return (
@@ -44,6 +44,7 @@ function StepNode({ step, title, subtitle, active, done, icon }) {
 export function CustomerDataJourneyShell({
   productName,
   heroDescription,
+  contentDescription,
   customerName,
   objectLabel,
   objectValue,
@@ -51,7 +52,7 @@ export function CustomerDataJourneyShell({
   sumInsuredValue,
   premiumLabel,
   premiumValue,
-  badgeLabel = "Data Lanjutan Penawaran",
+  badgeLabel = "Data Lanjutan",
   offerReference,
   version,
   validUntil,
@@ -68,52 +69,91 @@ export function CustomerDataJourneyShell({
   topActionLabel,
   onTopAction,
   backLabel = "Kembali",
+  stepOneTitle = "Tinjau Penawaran",
   bottomBackLabel = "Kembali ke Ringkasan Penawaran",
   showSidebar = true,
   showPaymentStep = true,
   children,
 }) {
   const shouldShowPrimaryAction = canContinue || !(secondaryLabel && onSecondary);
+  const headerUserName = customerName ? String(customerName).trim() : "Calon Tertanggung";
 
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-4 md:px-6">
-          <div className="flex items-center gap-3">
-            <div className="text-[18px] font-black leading-tight text-[#0A4D82]">
-              Danantara
-              <div className="-mt-1">Indonesia</div>
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
+        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-3 md:px-6">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 text-white">
+              <div className="text-[15px] font-black leading-tight md:text-[18px]">
+                Danantara
+                <div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div>
+              </div>
+              <div className="hidden text-[15px] font-semibold text-white/95 sm:block">asuransi jasindo</div>
             </div>
-            <div className="text-[16px] font-semibold text-slate-700">asuransi jasindo</div>
+            <div className="hidden items-center gap-3 md:flex">
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "https://esppa.asuransijasindo.co.id/";
+                }}
+                className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
+              >
+                <Home className="h-4 w-4" />
+                Beranda
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"
+              >
+                <Package className="h-4 w-4" />
+                Produk
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4 text-white">
             {topActionLabel && onTopAction ? (
               <button
                 type="button"
                 onClick={onTopAction}
-                className="inline-flex h-[40px] items-center justify-center rounded-[10px] border border-[#D5DEEA] bg-[#F8FBFE] px-4 text-sm font-semibold text-[#0A4D82] shadow-sm transition hover:border-[#BFD0E2] hover:bg-white"
+                className="hidden h-11 items-center justify-center rounded-[10px] border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:inline-flex"
               >
                 {topActionLabel}
               </button>
             ) : null}
             <button
               type="button"
-              onClick={onBack}
-              className="inline-flex items-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"
             >
-              <ArrowLeft className="h-4 w-4" />
-              {backLabel}
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>
+              {headerUserName}
+            </button>
+            <button
+              type="button"
+              aria-label="Lihat notifikasi"
+              className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"
+            >
+              <Bell className="h-4 w-4" />
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="bg-[linear-gradient(135deg,#0A4D82_0%,#0F5F9C_60%,#1B78B6_100%)] pb-8">
-        <div className="mx-auto max-w-[1280px] px-4 pt-8 md:px-6">
+        <div className="mx-auto max-w-[1280px] px-4 pt-6 md:px-6">
           <div className="mx-auto max-w-[960px]">
+            <div className="flex items-center justify-start">
+              <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                {backLabel}
+              </button>
+            </div>
             <div className="mt-1 text-center text-white">
               <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">
-                {customerName ? `Halo, ${String(customerName).trim().split(/\s+/)[0]}` : badgeLabel}
+                {headerUserName ? `Halo, ${headerUserName}` : badgeLabel}
               </div>
               <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{productName}</h1>
               <p className="mx-auto mt-3 max-w-3xl text-[15px] leading-7 text-white/90 md:text-[17px]">{heroDescription}</p>
@@ -122,7 +162,7 @@ export function CustomerDataJourneyShell({
             <div className="mx-auto mt-6 max-w-3xl rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-4xl md:p-5">
               <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5">
                 <div className="flex flex-col gap-5 md:flex-row md:gap-5">
-                  <StepNode step="Langkah 1" title="Tinjau Penawaran" subtitle="Selesai" done={true} active={false} icon={<FileText className="h-4 w-4" />} />
+                  <StepNode step="Langkah 1" title={stepOneTitle} subtitle="Selesai" done={true} active={false} icon={<FileText className="h-4 w-4" />} />
                   <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
                   <StepNode step="Langkah 2" title="Data Lanjutan" subtitle="Sedang diisi" done={false} active={true} icon={<FileText className="h-4 w-4" />} />
                   <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
@@ -144,9 +184,9 @@ export function CustomerDataJourneyShell({
               <div className="rounded-[28px] border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">
                 <div className="px-2 pb-5 text-center">
                   <div className="min-w-0 flex-1 text-center">
-                    <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Data Lanjutan Penawaran Anda</div>
+                    <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Data Lanjutan</div>
                     <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
-                    Informasi berikut diperlukan agar penawaran dapat dilanjutkan ke tahap pembayaran.
+                      {contentDescription || "Informasi berikut diperlukan agar penawaran dapat dilanjutkan ke tahap pembayaran."}
                     </div>
                   </div>
                 </div>

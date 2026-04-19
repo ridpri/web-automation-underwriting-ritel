@@ -29,7 +29,7 @@ const DEMO_POLICIES = [
   {
     id: "policy-car",
     category: "Kendaraan pribadi",
-    productName: "Asuransi Mobil Komprehensif",
+    productName: "Comprehensive Kendaraan - Mobil",
     objectName: "Honda Brio RS 2023",
     policyNumber: "JSD-MTR-2026-220091",
     insuredValue: 228000000,

@@ -2,8 +2,8 @@ import React from "react";
 import { X } from "lucide-react";
 
 const DEFAULT_OFFERS = [
-  { id: "TRX-20260411-0001", name: "Sony Laksono", product: "Asuransi Motor TLO", status: "Indikasi Terkirim" },
-  { id: "TRX-20260411-0002", name: "PT Maju Sentosa", product: "Asuransi Mobil TLO", status: "Isi Data Lanjutan" },
+  { id: "TRX-20260411-0001", name: "Sony Laksono", product: "Asuransi Sepeda Motor - Total Loss", status: "Indikasi Terkirim" },
+  { id: "TRX-20260411-0002", name: "PT Maju Sentosa", product: "Asuransi Mobil - Total Loss", status: "Isi Data Lanjutan" },
   { id: "TRX-20260411-0003", name: "Siti Rahma", product: "Asuransi Properti - Kebakaran", status: "Siap Bayar" },
 ];
 

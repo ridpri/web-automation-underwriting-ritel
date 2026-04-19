@@ -1,9 +1,17 @@
-import React, { useState } from "react";
+import React from "react";
 import { CheckCircle2, ChevronDown, Shield, X } from "lucide-react";
 import { CONSENT_SECTIONS } from "./vehicleFlowData";
 
 function cls(...args: Array<string | false | null | undefined>) {
   return args.filter(Boolean).join(" ");
+}
+
+function normalizeConsentTextLine(line: string) {
+  return String(line || "")
+    .replaceAll("â€œ", "“")
+    .replaceAll("â€", "”")
+    .replaceAll("Ã¢â‚¬Å“", "“")
+    .replaceAll("Ã¢â‚¬Â", "”");
 }
 
 export function HelpDot({ text }: { text: string }) {
@@ -108,17 +116,9 @@ export function ConsentAccordion({ section, open, onToggle }: any) {
 }
 
 export function ConsentModal({ open, agreed, onClose, onAgree }: any) {
-  const [expanded, setExpanded] = useState({ produk: true, data: false, material: false });
-  const [reachedBottom, setReachedBottom] = useState(false);
-
-  const handleScroll = (e: any) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollTop + clientHeight >= scrollHeight - 8) setReachedBottom(true);
-  };
-
   if (!open) return null;
 
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4"><div className="w-full max-w-3xl rounded-3xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-slate-200 px-6 py-5"><div><div className="text-[24px] font-bold tracking-tight text-slate-900">Persetujuan Kebijakan</div><div className="mt-1 text-sm text-slate-500">Buka seluruh bagian dan gulir sampai bawah sebelum menyetujui.</div></div><button type="button" onClick={onClose} aria-label="Tutup persetujuan kebijakan" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-5 w-5" /></button></div><div className="max-h-[60vh] overflow-y-auto px-6 py-5" onScroll={handleScroll}><div className="space-y-3">{CONSENT_SECTIONS.map((section) => <ConsentAccordion key={section.key} section={section} open={(expanded as any)[section.key]} onToggle={() => setExpanded((prev: any) => ({ ...prev, [section.key]: !prev[section.key] }))} />)}</div><div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">Dengan melanjutkan, Anda menyatakan telah membaca persetujuan yang berlaku dan memahami bahwa polis diterbitkan berdasarkan data yang diberikan pada penawaran ini.</div><div className="h-3" /></div><div className="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4"><div className="text-sm text-slate-500">{reachedBottom ? "Persetujuan siap disetujui." : "Gulir sampai bagian paling bawah untuk mengaktifkan tombol setuju."}</div><div className="flex items-center gap-3"><button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center rounded-[12px] border border-slate-200 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">Tutup</button><button type="button" disabled={!reachedBottom} onClick={onAgree} className={cls("inline-flex h-11 items-center justify-center rounded-[12px] px-5 text-sm font-bold text-white", reachedBottom ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-300")}>{agreed ? "Sudah Disetujui" : "Saya Setuju"}</button></div></div></div></div>;
+return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4"><div className="w-full max-w-2xl rounded-[28px] bg-white shadow-[0_32px_80px_rgba(15,23,42,0.24)]"><div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5"><div><div className="text-[20px] font-bold tracking-tight text-slate-900">Syarat dan Ketentuan Persetujuan</div><div className="mt-1 text-sm leading-6 text-slate-500">Dengan melanjutkan proses ini, Anda menyatakan telah membaca dan memahami poin persetujuan atas SPAU elektronik ini.</div></div><button type="button" onClick={onClose} aria-label="Tutup persetujuan kebijakan" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-5 w-5" /></button></div><div className="max-h-[60vh] space-y-4 overflow-y-auto px-6 py-5"><div className="rounded-2xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4"><ol className="space-y-4">{CONSENT_SECTIONS.map((section, index) => <li key={section.key} className="flex items-start gap-3"><div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#C9D8E8] bg-white text-[13px] font-semibold text-[#0A4D82]">{index + 1}</div><div className="min-w-0"><div className="text-[14px] font-semibold text-slate-900">{section.title}</div><div className="mt-1 space-y-2 text-[13px] leading-[1.75] text-slate-600" style={{ textAlign: "justify" }}>{(section.detailLines || []).map((line: string, lineIndex: number) => <div key={`${section.key}-line-${lineIndex}`}><span>{normalizeConsentTextLine(line)}</span>{lineIndex === (section.detailLines || []).length - 1 && section.detailLinkHref ? <><span> </span><a href={section.detailLinkHref} target="_blank" rel="noreferrer" className="font-medium text-[#0A4D82] underline underline-offset-2 hover:text-[#0D5B98]">{section.detailLinkLabel || section.detailLinkHref}</a></> : null}</div>)}</div></div></li>)}</ol></div><div className="rounded-2xl border border-[#E3EAF2] bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">Persetujuan ini menjadi bagian dari SPAU elektronik dan proses penerbitan polis berdasarkan data yang Anda berikan.</div></div><div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between"><div className="text-sm leading-6 text-slate-500">Silakan setujui bila isi persetujuan ini sudah sesuai.</div><div className="flex items-center gap-3"><button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center rounded-[12px] border border-slate-200 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">Tutup</button><button type="button" onClick={onAgree} className="inline-flex h-11 items-center justify-center rounded-[12px] bg-[#0A4D82] px-5 text-sm font-bold text-white hover:brightness-105">{agreed ? "Sudah Disetujui" : "Saya Setuju"}</button></div></div></div></div>;
 }
 
 export function PaymentInfoButton({ title, description, onClick }: any) {
@@ -130,7 +130,7 @@ export function PaymentInfoPanel({ title, children }: any) {
 }
 
 export function AccordionRiskRow({ title, premium, summary, detail, deductible, checked, onToggleChecked, expanded, onToggleExpand, alwaysIncluded = false, extra, itemIcon }: any) {
-  const deductibleIsDirect = ["tanpa biaya sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) =>
+  const deductibleIsDirect = ["tanpa biaya sendiri", "tanpa risiko sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) =>
     String(deductible || "").trim().toLowerCase().startsWith(token)
   );
   return (
@@ -155,7 +155,7 @@ export function AccordionRiskRow({ title, premium, summary, detail, deductible, 
       {expanded ? (
         <div className="border-t border-[#D6E0EA] px-3.5 py-3">
           <div className="whitespace-pre-line text-[13px] leading-5 text-slate-700">{summary}</div>
-          {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{deductibleIsDirect ? deductible : <><span className="font-semibold text-slate-700">Biaya sendiri saat klaim:</span> {deductible}</>}</div> : null}
+      {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{deductibleIsDirect ? deductible.replace(/biaya sendiri/gi, "risiko sendiri") : <><span className="font-semibold text-slate-700">Risiko sendiri saat klaim:</span> {deductible.replace(/biaya sendiri/gi, "risiko sendiri")}</>}</div> : null}
           {detail ? <div className="mt-2 whitespace-pre-line text-[12px] leading-5 text-slate-500">{detail}</div> : null}
           {extra ? <div className="mt-3">{extra}</div> : null}
         </div>

@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { jsPDF } from "jspdf";
 import {
   AlertTriangle,
   ArrowLeft,
   Bell,
   Building2,
   Camera,
+  Check,
   CheckCircle2,
   ChevronDown,
   FileText,
@@ -16,15 +18,22 @@ import {
   QrCode,
   Search,
   Shield,
+  ShieldAlert,
+  Sparkles,
+  Trash2,
   User,
   Wallet,
+  Waves,
   X,
 } from "lucide-react";
 import { canProceedToPaymentFromOperating, paymentBlockMessage } from "./operatingLayer.js";
+import { CustomerDataJourneyShell } from "./components/CustomerDataJourneyShell.jsx";
+import { OfferShareModal } from "./components/OfferShareModal.jsx";
+import { PremiumBreakdown, PremiumPriceHero, ProposalRow } from "./components/PremiumSummaryBlocks.jsx";
 import { SentOffersHistoryModal, UserPillMenu } from "./components/UserPillMenu.jsx";
 import { VehicleYearPicker } from "./components/VehicleYearPicker.jsx";
 import { createEmptyDocumentCheck, createPhotoEvidence, createTransactionAuthority, evaluateDocumentRead, summarizeFraudSignals } from "./platform/securityControls.js";
-import { PASSENGER_CAR_MODELS, getPassengerCarMeta } from "./carDomain.js";
+import { findVehicleSuggestions, getVehicleCatalogItem, getVehicleCatalogItems } from "./vehicleCatalog.js";
 
 const CURRENT_YEAR = 2026;
 const MIN_YEAR_TLO = CURRENT_YEAR - 20;
@@ -32,24 +41,36 @@ const MIN_YEAR_COMP = CURRENT_YEAR - 15;
 
 type FlowType = "motor" | "carComp" | "carTlo";
 type DataMode = "scan" | "manual";
+type EntryMode = "internal" | "external";
 
 type ExtensionsState = Record<string, any>;
+type VehicleCatalogItem = {
+  label: string;
+  brand: string;
+  model: string;
+  fuelType: string;
+  ojkCategory: string;
+  bodyType?: string;
+};
 
 type FlowState = {
-  ui: { extOpen: boolean; dataMode: DataMode };
+  ui: { extOpen: boolean; dataMode: DataMode; stnkMode: DataMode };
+  underwriting: { claimHistory: string };
   quote: {
     usage: string;
     vehicleType: string;
     plateRegion: string;
     vehicleName: string;
+    vehicleFuelType: string;
+    vehicleBodyType: string;
     year: string;
     marketValue: string;
     coverageStart: string;
     coverageEnd: string;
     extensions: ExtensionsState;
   };
-  insured: { customerType: string; nik: string; fullName: string; address: string; email: string; phone: string };
-  vehicle: { plateNumber: string; chassisNumber: string; engineNumber: string; color: string; year: string; contactOnLocation: string };
+  insured: { customerType: string; nik: string; fullName: string; lookup: string; address: string; email: string; phone: string };
+  vehicle: { plateNumber: string; ownerNameOnStnk: string; chassisNumber: string; engineNumber: string; color: string; year: string; contactOnLocation: string };
   ktpRead: boolean;
   stnkRead: boolean;
   uploads: Record<string, boolean>;
@@ -61,27 +82,38 @@ type FlowState = {
 const PRODUCTS = [
   {
     id: "motor",
-    title: "Asuransi TLO Motor",
+    title: "Asuransi Sepeda Motor - Total Loss",
     category: "Kendaraan",
-    subtitle:
-      "Perlindungan total kerugian untuk motor bila terjadi kerusakan total, termasuk risiko kebakaran dan pencurian sesuai ketentuan polis.",
+    subtitle: "Perlindungan untuk sepeda motor terhadap kehilangan akibat pencurian atau kerusakan berat yang termasuk total loss sesuai ketentuan polis.",
     gradient: "from-slate-700 via-slate-600 to-slate-500",
   },
   {
     id: "carComp",
-    title: "Kendaraan Bermotor Roda 4 - Comprehensive",
+    title: "Comprehensive Kendaraan - Mobil",
     category: "Kendaraan",
-    subtitle: "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran.",
+    subtitle: "Perlindungan mobil untuk kerusakan sebagian atau total akibat tabrakan, pencurian, kebakaran, dan risiko lain yang dijamin polis.",
     gradient: "from-sky-800 via-sky-700 to-sky-600",
   },
   {
     id: "carTlo",
-    title: "Asuransi TLO Mobil",
+    title: "Asuransi Mobil - Total Loss",
     category: "Kendaraan",
-    subtitle:
-      "Perlindungan total kerugian untuk mobil bila terjadi kerusakan total, termasuk risiko kebakaran dan pencurian sesuai ketentuan polis.",
+    subtitle: "Perlindungan mobil untuk kerugian total akibat pencurian, kebakaran, atau risiko lain yang dijamin polis.",
     gradient: "from-slate-900 via-slate-800 to-slate-700",
   },
+] as const;
+
+const MOTOR_UPLOAD_FIELDS = [
+  "Foto motor dari sudut depan samping",
+  "Foto salah satu sisi motor secara penuh",
+  "Foto panel speedometer saat kontak ON",
+] as const;
+
+const CAR_UPLOAD_FIELDS = [
+  "Ambil foto bagian depan",
+  "Ambil foto bagian samping kanan",
+  "Ambil foto bagian samping kiri",
+  "Ambil foto bagian belakang",
 ] as const;
 
 const OJK_REGION_1_CODES = ["BA", "BB", "BD", "BE", "BG", "BH", "BK", "BL", "BM", "BN", "BP"];
@@ -145,39 +177,47 @@ const PLATES = [
   "Z - Garut/Tasik/Majalengka",
 ];
 
-const MOTOR_SUGGESTIONS = [
-  "Honda BeAT CBS",
-  "Honda Scoopy Sporty",
-  "Honda Vario 125 CBS",
-  "Honda PCX 160 CBS",
-  "Yamaha NMAX 155 Connected",
-  "Yamaha Aerox 155 Connected",
-  "Suzuki Nex II",
-];
+const CUSTOMER_TYPES = ["Pribadi", "Perusahaan / Badan Usaha"];
+type MockCustomer = {
+  name: string;
+  cif: string;
+  type: string;
+  phone: string;
+  email: string;
+};
 
-const CAR_SUGGESTIONS = [
-  "Toyota Avanza 1.5 G",
-  "Toyota Veloz 1.5 Q",
-  "Honda Brio Satya E",
-  "Mitsubishi Xpander Ultimate",
-  "Suzuki Ertiga GX",
-  "Suzuki XL7 Beta",
-];
+const VEHICLE_MOCK_CIF_BY_FLOW: Record<FlowType, readonly MockCustomer[]> = {
+  motor: [
+    { name: "Rama Pratama", cif: "MTR21", type: "Pribadi", phone: "081311220011", email: "rama.pratama@email.com" },
+    { name: "Nadia Permata", cif: "MTR32", type: "Pribadi", phone: "081377665544", email: "nadia.permata@email.com" },
+    { name: "CV Dua Roda Abadi", cif: "MTR45", type: "Perusahaan / Badan Usaha", phone: "02150881122", email: "admin@duarodaabadi.co.id" },
+  ],
+  carComp: [
+    { name: "Bimo Santoso", cif: "CAR18", type: "Pribadi", phone: "081244556677", email: "bimo.santoso@email.com" },
+    { name: "Karina Putri", cif: "CAR27", type: "Pribadi", phone: "081355884422", email: "karina.putri@email.com" },
+    { name: "PT Cakra Mobilitas", cif: "CAR39", type: "Perusahaan / Badan Usaha", phone: "02150997711", email: "fleet@cakramobilitas.co.id" },
+  ],
+  carTlo: [
+    { name: "Bimo Santoso", cif: "CAR18", type: "Pribadi", phone: "081244556677", email: "bimo.santoso@email.com" },
+    { name: "Karina Putri", cif: "CAR27", type: "Pribadi", phone: "081355884422", email: "karina.putri@email.com" },
+    { name: "PT Cakra Mobilitas", cif: "CAR39", type: "Perusahaan / Badan Usaha", phone: "02150997711", email: "fleet@cakramobilitas.co.id" },
+  ],
+} as const;
 
 const MOTOR_EXTS = [
   { id: "tpl", label: "Jaminan Tanggung Jawab Hukum terhadap Pihak Ketiga", type: "amount", icon: Shield },
-  { id: "srcc", label: "Risiko Kerusuhan dan Huru-hara", type: "toggle", icon: AlertTriangle },
-  { id: "ts", label: "Risiko Terorisme", type: "toggle", icon: AlertTriangle },
-  { id: "flood", label: "Risiko Banjir", type: "toggle", icon: MapPin },
-  { id: "quake", label: "Risiko Gempa Bumi", type: "toggle", icon: AlertTriangle },
+  { id: "srcc", label: "Jaminan Kerusuhan & Huru-hara", type: "toggle", icon: Shield },
+  { id: "ts", label: "Jaminan Terorisme", type: "toggle", icon: AlertTriangle },
+  { id: "flood", label: "Jaminan Banjir", type: "toggle", icon: Waves },
+  { id: "quake", label: "Jaminan Gempa Bumi", type: "toggle", icon: Sparkles },
 ] as const;
 
 const CAR_EXTS = [
   { id: "tpl", label: "Jaminan Tanggung Jawab Hukum terhadap Pihak Ketiga", type: "amount", icon: Shield },
-  { id: "srcc", label: "Risiko Kerusuhan dan Huru-hara", type: "toggle", icon: AlertTriangle },
-  { id: "ts", label: "Risiko Terorisme", type: "toggle", icon: AlertTriangle },
-  { id: "flood", label: "Risiko Banjir", type: "toggle", icon: MapPin },
-  { id: "quake", label: "Risiko Gempa Bumi", type: "toggle", icon: AlertTriangle },
+  { id: "srcc", label: "Jaminan Kerusuhan & Huru-hara", type: "toggle", icon: Shield },
+  { id: "ts", label: "Jaminan Terorisme", type: "toggle", icon: AlertTriangle },
+  { id: "flood", label: "Jaminan Banjir", type: "toggle", icon: Waves },
+  { id: "quake", label: "Jaminan Gempa Bumi", type: "toggle", icon: Sparkles },
   { id: "driverPa", label: "Kecelakaan Diri Pengemudi", type: "amount", icon: User },
   { id: "passengerPa", label: "Kecelakaan Diri Penumpang", type: "amount-seat", icon: User },
   { id: "ambulance", label: "Biaya ambulan", type: "toggle", icon: Phone },
@@ -216,9 +256,16 @@ const PASSENGER_PA_RATE = 0.001;
 const AUTH_WORKSHOP_RATE = 0.0025;
 const THEFT_BY_OWN_DRIVER_RATE = 0.001;
 const AMBULANCE_PREMIUM = 50000;
+const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
+const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
+const DEMO_MODEL_LABELS: Record<FlowType, string> = {
+  motor: "Yamaha NMAX 155 Connected",
+  carComp: "BYD Atto 3 Advanced",
+  carTlo: "Toyota Avanza 1.5 G",
+};
 
 const EXT_INFO: Record<string, string> = {
-  tpl: "Jika dicantumkan dalam Ikhtisar Pertanggungan, menjamin tanggung jawab hukum Tertanggung atas kematian, cedera badan, biaya perawatan atau pengobatan, serta kerugian atau kerusakan harta benda milik penumpang atau pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis.",
+  tpl: "Menjamin tanggung jawab hukum Tertanggung terhadap kerusakan harta benda, biaya pengobatan, cedera badan, atau kematian pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis, dengan nilai pertanggungan maksimum Rp1.000.000 untuk setiap kejadian.",
   srcc: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa senjata api, revolusi tanpa senjata api, serta penjarahan yang terjadi dalam peristiwa tersebut.",
   ts: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, atau sabotase.",
   flood: "Menjamin kerugian atau kerusakan yang secara langsung disebabkan oleh banjir, angin topan, badai, hujan es, genangan air, atau tanah longsor yang mengenai kendaraan.",
@@ -234,20 +281,32 @@ const CONSENT_SECTIONS = [
   {
     key: "produk",
     title: "Pemahaman Produk",
-    summary: "Tertanggung menyatakan telah menerima penjelasan, membaca, dan memahami informasi produk asuransi.",
-    detail: "Tertanggung menyatakan telah menerima penjelasan, membaca, dan memahami informasi produk asuransi yang diajukan pada penawaran ini.",
+    summary: "Calon pemegang polis menyatakan telah menerima penjelasan, membaca, dan memahami informasi produk asuransi.",
+    detailLines: [
+      'Menyatakan telah menerima penjelasan, membaca, dan memahami informasi produk asuransi PT Asuransi Jasa Indonesia (“Penanggung”) ini;',
+    ],
   },
   {
     key: "data",
     title: "Pemrosesan Data Pribadi",
-    summary: "Tertanggung memberi izin pemrosesan data pribadi untuk penerbitan polis, pelayanan klaim, dan peningkatan layanan.",
-    detail: "Tertanggung memberikan izin kepada Penanggung untuk memproses data yang dicantumkan dalam formulir ini dan mengungkapkannya kepada pihak yang ditunjuk untuk pelayanan polis, klaim, dan peningkatan layanan sesuai ketentuan yang berlaku.",
+    summary: "Calon pemegang polis memberi izin pemrosesan data pribadi untuk penerbitan polis, pelayanan klaim, dan peningkatan layanan.",
+    detailLines: [
+      "Memberikan izin kepada Penanggung untuk melakukan pemrosesan Informasi/Data (mengumpulkan, memverifikasi, mengolah, menyimpan, memperbarui, mempergunakan, termasuk memusnahkan) yang tercantum dalam SPAU ini dan mengungkapkan Informasi/Data Pribadi (termasuk namun tidak terbatas pada nama, alamat surat menyurat, alamat email, nomor telepon, kontak, dan informasi/keterangan lainnya) kepada afiliasi Penanggung dan/atau pihak ketiga yang ditunjuk oleh Penanggung serta setuju dihubungi melalui sarana komunikasi pribadi sehubungan dengan pengajuan polis asuransi ini, pelayanan klaim, peningkatan layanan konsumen dan/ atau pelaksanaan ketentuan polis asuransi sesuai dengan kebijakan internal Penanggung maupun peraturan perundang-undangan yang berlaku.",
+      "Adapun rincian mengenai tujuan pemrosesan Data Pribadi maupun pihak lain yang dapat memperoleh dan/atau melakukan pemrosesan Informasi/Data Pribadi Kami/Saya untuk menunjang keperluan ini tercantum dalam Kebijakan Privasi Penanggung yang dapat diakses pada",
+    ],
+    detailLinkLabel: "Kebijakan Privasi",
+    detailLinkHref: "https://bit.ly/JSDPrivasi",
   },
   {
     key: "material",
     title: "Kebenaran Fakta Material",
     summary: "Seluruh keterangan yang diberikan harus benar dan menjadi dasar penerbitan polis.",
-    detail: "Tertanggung menyatakan seluruh informasi yang diberikan benar, jujur, dan menjadi dasar bagi penerbitan polis. Ketidaksesuaian data dapat memengaruhi penerimaan risiko maupun penyelesaian klaim.",
+    detailLines: [
+      "Menyatakan bahwa:",
+      "(a) seluruh informasi/keterangan yang dicantumkan dalam SPAU ini dibuat dengan sejujurnya dan sesuai dengan keadaan sebenarnya menurut pengetahuan Kami/Saya atau yang seharusnya Kami/Saya ketahui;",
+      "(b) menyadari bahwa SPAU ini akan digunakan sebagai dasar dan merupakan bagian yang tidak terpisahkan dari polis asuransi yang akan diterbitkan, oleh karenanya ketidakbenarannya merupakan pelanggaran atau tidak terpenuhinya kewajiban penyampaian fakta material. Pelanggaran tersebut mengakibatkan ditolaknya setiap klaim yang diajukan;",
+      "(c) mengerti bahwa pertanggungan yang diminta ini baru berlaku setelah mendapat persetujuan tertulis dari Penanggung.",
+    ],
   },
 ];
 
@@ -255,15 +314,30 @@ function cls(...args: Array<string | false | null | undefined>) {
   return args.filter(Boolean).join(" ");
 }
 
+function normalizeConsentTextLine(line: string) {
+  return String(line || "")
+    .replaceAll("â€œ", "“")
+    .replaceAll("â€", "”")
+    .replaceAll("Ã¢â‚¬Å“", "“")
+    .replaceAll("Ã¢â‚¬Â", "”");
+}
+
+function normalizeConsentLine(line: string) {
+  return normalizeConsentTextLine(line);
+}
+
 function createFlowState(type: FlowType): FlowState {
   const isMotor = type === "motor";
   return {
-    ui: { extOpen: false, dataMode: "scan" },
+    ui: { extOpen: false, dataMode: "scan", stnkMode: "scan" },
+    underwriting: { claimHistory: "" },
     quote: {
       usage: "",
       vehicleType: "",
       plateRegion: "",
       vehicleName: "",
+      vehicleFuelType: "",
+      vehicleBodyType: "",
       year: "",
       marketValue: "",
       coverageStart: "",
@@ -284,13 +358,13 @@ function createFlowState(type: FlowType): FlowState {
             theftByOwnDriver: { enabled: false },
           },
     },
-    insured: { customerType: "", nik: "", fullName: "", address: "", email: "", phone: "" },
-    vehicle: { plateNumber: "", chassisNumber: "", engineNumber: "", color: "", year: "", contactOnLocation: "" },
+    insured: { customerType: "", nik: "", fullName: "", lookup: "", address: "", email: "", phone: "" },
+    vehicle: { plateNumber: "", ownerNameOnStnk: "", chassisNumber: "", engineNumber: "", color: "", year: "", contactOnLocation: "" },
     ktpRead: false,
     stnkRead: false,
     uploads: isMotor
-      ? { "Ambil foto bagian depan": false, "Ambil foto bagian belakang": false }
-      : { "Ambil foto bagian depan": false, "Ambil foto bagian belakang": false, "Ambil foto bagian samping kanan": false, "Ambil foto bagian samping kiri": false },
+      ? Object.fromEntries(MOTOR_UPLOAD_FIELDS.map((label) => [label, false]))
+      : Object.fromEntries(CAR_UPLOAD_FIELDS.map((label) => [label, false])),
     paymentMethod: "",
     promoCode: "",
     agree: false,
@@ -300,6 +374,217 @@ function createFlowState(type: FlowType): FlowState {
 function formatRupiah(v: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v || 0));
 }
+function formatDisplayDateTime(value: Date) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value);
+}
+function formatDisplayDate(value: Date) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(value);
+}
+function encodeShareToken(payload: any) {
+  if (!payload) return "";
+  try {
+    const json = JSON.stringify(payload);
+    const bytes = new TextEncoder().encode(json);
+    let binary = "";
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  } catch {
+    return "";
+  }
+}
+function decodeShareToken(value: string) {
+  if (!value) return null;
+  try {
+    const normalized = String(value).replace(/-/g, "+").replace(/_/g, "/");
+    const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+    const binary = atob(normalized + padding);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+}
+function readVehicleShareContextFromUrl() {
+  if (typeof window === "undefined") return { view: "", viewer: "", shareData: null };
+  const params = new URLSearchParams(window.location.search);
+  const shareToken = params.get("share") || "";
+  return {
+    view: params.get("view") || "",
+    viewer: params.get("viewer") || "",
+    shareToken,
+    shareData: decodeShareToken(shareToken),
+  };
+}
+function clearVehicleShareContextFromUrl() {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  ["view", "viewer", "share", "referral", "sender", "customer", "offer"].forEach((key) => {
+    url.searchParams.delete(key);
+  });
+  window.history.replaceState({}, "", url.toString());
+}
+function replaceVehicleShareContextInUrl({ view = "", viewer = "", shareData = null }: any = {}) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (view) url.searchParams.set("view", view);
+  else url.searchParams.delete("view");
+  if (viewer) url.searchParams.set("viewer", viewer);
+  else url.searchParams.delete("viewer");
+  const encoded = encodeShareToken(shareData);
+  if (encoded) url.searchParams.set("share", encoded);
+  else url.searchParams.delete("share");
+  ["referral", "sender", "customer", "offer"].forEach((key) => {
+    url.searchParams.delete(key);
+  });
+  window.history.replaceState({}, "", url.toString());
+}
+function getJourneyShareUrl(journeyKey: string, params: any = {}) {
+  if (typeof window === "undefined") return `?journey=${journeyKey}`;
+  const url = new URL(window.location.href);
+  ["journey", "view", "viewer", "share", "referral", "sender", "customer", "offer"].forEach((key) => {
+    url.searchParams.delete(key);
+  });
+  url.searchParams.set("journey", journeyKey);
+  if (params.view) url.searchParams.set("view", params.view);
+  if (params.viewer) url.searchParams.set("viewer", params.viewer);
+  if (params.shareData) {
+    const encoded = encodeShareToken(params.shareData);
+    if (encoded) url.searchParams.set("share", encoded);
+  }
+  return `${url.origin}${url.pathname}?${url.searchParams.toString()}`;
+}
+function openShareWindow(targetUrl: string) {
+  if (typeof window === "undefined" || !targetUrl) return;
+  window.open(targetUrl, "_blank", "noopener,noreferrer");
+}
+function downloadVehicleOfferPdf({
+  fileName,
+  productTitle,
+  customerName,
+  phone,
+  email,
+  vehicleName,
+  plateRegion,
+  usage,
+  year,
+  marketValue,
+  tariffInfo,
+  basePremium,
+  extensionPremium,
+  stampDuty,
+  totalPremium,
+  extensionItems,
+  offerReference,
+  downloadedAt,
+  shareUrl,
+}: any) {
+  try {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const marginX = 16;
+    const pageWidth = 210;
+    const contentWidth = pageWidth - marginX * 2;
+    let y = 18;
+    const split = (text: string, width = contentWidth) => doc.splitTextToSize(String(text || "-"), width);
+    const drawLabelValue = (label: string, value: string) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(label, marginX, y);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      const lines = split(value, contentWidth - 52);
+      doc.text(lines, marginX + 52, y);
+      y += Math.max(6, lines.length * 5);
+    };
+
+    doc.setFillColor(10, 77, 130);
+    doc.roundedRect(marginX, y - 6, contentWidth, 28, 4, 4, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(17);
+    doc.text(productTitle || "Penawaran Kendaraan", marginX + 6, y + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Referensi: ${offerReference || "-"}`, marginX + 6, y + 12);
+    doc.text(`Diunduh: ${downloadedAt || "-"}`, marginX + 6, y + 18);
+    y += 34;
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Ringkasan Informasi Calon Pemegang Polis", marginX, y);
+    y += 8;
+    drawLabelValue("Nama Calon Pemegang Polis", customerName || "Calon Pemegang Polis");
+    drawLabelValue("Alamat Email", email || "-");
+    drawLabelValue("Nomor Handphone", phone || "-");
+    y += 4;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Ringkasan Informasi Kendaraan", marginX, y);
+    y += 8;
+    drawLabelValue("Merek / Tipe", vehicleName || "-");
+    drawLabelValue("Kode Wilayah", plateRegion || "-");
+    drawLabelValue("Tahun Kendaraan", year || "-");
+    drawLabelValue("Harga Pertanggungan", formatRupiah(Number(marketValue || 0)));
+    drawLabelValue("Penggunaan Kendaraan", usage || "-");
+    if (tariffInfo) drawLabelValue("Kategori Tarif / Wilayah Tarif", tariffInfo);
+    y += 4;
+
+    if (extensionItems?.length) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Perluasan Jaminan", marginX, y);
+      y += 8;
+      extensionItems.forEach((item: any) => {
+        drawLabelValue(item.title, formatRupiah(item.premium || 0));
+      });
+      y += 2;
+    }
+
+    doc.setFillColor(248, 251, 254);
+    doc.setDrawColor(213, 221, 230);
+    doc.roundedRect(marginX, y, contentWidth, 26, 4, 4, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Premi Penawaran", marginX + 6, y + 8);
+    doc.setFontSize(18);
+    doc.setTextColor(10, 77, 130);
+    doc.text(formatRupiah(Number(totalPremium || 0)), marginX + 6, y + 19);
+    y += 34;
+
+    drawLabelValue("Premi", formatRupiah(Number(basePremium || 0)));
+    if (Number(extensionPremium || 0) > 0) {
+      drawLabelValue("Premi Perluasan", formatRupiah(Number(extensionPremium || 0)));
+    }
+    drawLabelValue("Biaya Meterai", formatRupiah(Number(stampDuty || 0)));
+    y += 4;
+    drawLabelValue("Tautan Penawaran", shareUrl || "-");
+
+    const safeName = String(fileName || "Penawaran-Kendaraan").replace(/[\\/:*?\"<>|]+/g, "-");
+    doc.save(`${safeName}.pdf`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function isDigitsOnly(value: string) {
+  return /^\d+$/.test(String(value || "").trim());
+}
 function getPlateCode(plate: string) {
   return String(plate || "").split(" - ")[0].trim().toUpperCase();
 }
@@ -308,6 +593,9 @@ function getRegion(plate: string) {
   if (OJK_REGION_1_CODES.includes(code)) return 1;
   if (OJK_REGION_2_CODES.includes(code)) return 2;
   return 3;
+}
+function getRegionLabel(plate: string) {
+  return plate ? `Wilayah ${getRegion(plate)}` : "";
 }
 function validateMaxHP(flowType: FlowType, value: number) {
   if (flowType === "motor") return value <= 500000000;
@@ -329,7 +617,6 @@ function getCategory(value: number) {
   return 5;
 }
 function getCarCategory(vehicleType: string) {
-  if (PASSENGER_CAR_MODELS.includes(vehicleType)) return "Angkutan Penumpang";
   if (vehicleType === "Angkutan Penumpang" || vehicleType === "Angkutan Barang" || vehicleType === "Bis") return vehicleType;
   const value = String(vehicleType || "").toLowerCase();
   if (!value) return "Angkutan Penumpang";
@@ -377,6 +664,13 @@ function getCategoryLabel(category: number) {
   if (category === 4) return "Kategori 4 - >Rp400 juta s.d. Rp800 juta";
   return "Kategori 5 - >Rp800 juta";
 }
+function getVehicleTariffCategory(flowType: FlowType, quote: any) {
+  if (flowType === "motor") return "Kategori 8";
+  const vehicleCategory = getCarCategory(quote.vehicleType);
+  if (vehicleCategory === "Angkutan Barang") return "Kategori 6";
+  if (vehicleCategory === "Bis") return "Kategori 7";
+  return `Kategori ${getCategory(Number(quote.marketValue || 0))}`;
+}
 function progressiveTPL(amount: number, vehicleType: string) {
   let remaining = Math.max(0, amount);
   let total = 0;
@@ -416,6 +710,7 @@ function addOneYear(dateStr: string) {
   return x.toISOString().slice(0, 10);
 }
 function getStampDuty(netPremium: number) {
+  if (Number(netPremium) <= 0) return 0;
   return netPremium > 5000000 ? 20000 : 10000;
 }
 function isYearEligible(flowType: FlowType, year: string) {
@@ -594,13 +889,13 @@ function calcCarComp(q: any) {
 function deductibleText(flowType: FlowType, vehicleType: string, itemId: string) {
   if (flowType === "motor") {
     if (itemId === "main") return "Rp150.000.";
-    if (itemId === "tpl") return "Tanpa biaya sendiri saat klaim.";
+  if (itemId === "tpl") return "Tanpa risiko sendiri saat klaim.";
     if (itemId === "srcc" || itemId === "ts") return "10% dari nilai yang disetujui, paling sedikit Rp500.000,- per kejadian.";
     if (itemId === "flood" || itemId === "quake") return "10% dari nilai kerugian, minimum Rp500.000,-- untuk setiap kejadian.";
     return "";
   }
   if (itemId === "main") return getCarCategory(vehicleType) === "Angkutan Penumpang" ? "Rp300.000." : "Rp500.000.";
-  if (itemId === "tpl" || itemId === "driverPa" || itemId === "passengerPa") return "Tanpa biaya sendiri saat klaim.";
+  if (itemId === "tpl" || itemId === "driverPa" || itemId === "passengerPa") return "Tanpa risiko sendiri saat klaim.";
   if (itemId === "srcc" || itemId === "ts") return "10% dari nilai yang disetujui, paling sedikit Rp500.000,- per kejadian.";
   if (itemId === "flood" || itemId === "quake") return "10% dari nilai kerugian, minimum Rp500.000,-- untuk setiap kejadian.";
   if (itemId === "theftByOwnDriver") return "10% dari Total Harga Pertanggungan.";
@@ -610,14 +905,35 @@ function deductibleText(flowType: FlowType, vehicleType: string, itemId: string)
 
 function mainCoverText(flowType: FlowType) {
   if (flowType === "carComp") {
-    return "Menjamin kerugian atau kerusakan pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tanpa biaya sendiri saat klaim.";
+    return "Menjamin kerugian atau kerusakan pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tanpa risiko sendiri saat klaim.";
   }
-  return "Menjamin kerugian total pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan mencapai sedikitnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tanpa biaya sendiri saat klaim.";
+    return "Menjamin kerugian total pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan mencapai sedikitnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tanpa risiko sendiri saat klaim.";
 }
 
 function mainCoverTitle(flowType: FlowType) {
-  if (flowType === "carComp") return "Jaminan Utama - Comprehensive";
-  return "Jaminan Utama - Total Loss Only (TLO)";
+  if (flowType === "carComp") return "Jaminan Utama (Comprehensive)";
+  return "Jaminan Utama (TLO)";
+}
+
+function getVehiclePhotoTitle(name: string) {
+  if (name === "Foto motor dari sudut depan samping") return "Foto Tampak Depan";
+  if (name === "Foto salah satu sisi motor secara penuh") return "Foto Samping";
+  if (name === "Foto panel speedometer saat kontak ON") return "Foto Panel Speedometer";
+  if (name === "Ambil foto bagian depan") return "Foto mobil dari depan, dengan plat terlihat";
+  if (name === "Ambil foto bagian samping kanan") return "Foto sisi kanan mobil secara penuh";
+  if (name === "Ambil foto bagian samping kiri") return "Foto sisi kiri mobil secara penuh";
+  return "Foto mobil dari belakang";
+}
+
+function getVehiclePhotoHelper(name: string) {
+  return "Wajib diisi.";
+}
+
+function createVehiclePhotoMetadata(name: string, declaredAddress: string) {
+  return createPhotoEvidence({
+    label: getVehiclePhotoTitle(name),
+    declaredAddress,
+  });
 }
 
 function secondaryMainCoverText(flowType: FlowType) {
@@ -634,6 +950,60 @@ function mainDeductibleText(flowType: FlowType, vehicleType: string) {
   return getCarCategory(vehicleType) === "Angkutan Penumpang"
     ? "Kerugian atau kerusakan: Rp300.000. Kehilangan karena pencurian: 5% dari harga pertanggungan."
     : "Kerugian atau kerusakan: Rp500.000. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
+}
+
+function vehicleDeductibleIsDirectText(value: string) {
+  const text = String(value || "").trim().toLowerCase();
+  return ["tanpa biaya sendiri", "tanpa risiko sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) => text.startsWith(token));
+}
+
+function VehicleGuaranteeDetailCard({
+  title,
+  icon: Icon = Shield,
+  premium,
+  detail,
+  deductible,
+}: {
+  title: string;
+  icon?: any;
+  premium: string;
+  detail: string;
+  deductible?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
+      <button type="button" onClick={() => setExpanded((prev) => !prev)} className="flex w-full items-start justify-between gap-3 px-3.5 py-3 text-left">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-[#0A4D82]">
+            <Icon className="h-4 w-4 shrink-0" />
+            <div className="text-[14px] font-medium leading-[1.35] text-slate-900">{title}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="whitespace-nowrap text-[12px] font-medium text-slate-600">{premium}</div>
+          <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
+        </div>
+      </button>
+      {expanded ? (
+        <div className="border-t border-[#D6E0EA] px-3.5 py-3">
+          <div className="whitespace-pre-line text-[12.5px] leading-5 text-slate-700">{detail}</div>
+          {deductible ? (
+            <div className="mt-2 text-[12px] leading-5 text-slate-600">
+              {vehicleDeductibleIsDirectText(deductible) ? (
+                <span>{String(deductible || "").replace(/biaya sendiri/gi, "risiko sendiri")}</span>
+              ) : (
+                <>
+                  <span className="font-medium text-slate-700">Risiko sendiri saat klaim: </span>
+                  <span>{String(deductible || "").replace(/biaya sendiri/gi, "risiko sendiri")}</span>
+                </>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function secondaryCoverTitle(flowType: FlowType) {
@@ -710,24 +1080,143 @@ function SelectInput({ value, onChange, options, placeholder = "Pilih opsi yang 
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
+function VehicleAutocomplete({
+  value,
+  onChange,
+  onSelect,
+  catalogType,
+  placeholder,
+  disabled = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSelect: (item: VehicleCatalogItem) => void;
+  catalogType: "motor" | "car";
+  placeholder: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const deferredValue = useDeferredValue(value);
+  const suggestions = useMemo(
+    () => findVehicleSuggestions(catalogType, deferredValue, 8),
+    [catalogType, deferredValue],
+  );
+
   return (
-    <div className="flex items-start justify-between gap-3 py-1.5 text-sm">
-      <div className="min-w-0 flex-1 text-white/75">{label}</div>
-      <div className="shrink-0 whitespace-nowrap text-right font-semibold text-white">{value}</div>
+    <div className="relative">
+      <div className="relative">
+        <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+          <Search className="h-4 w-4" />
+        </div>
+        <input
+          type="text"
+          value={value}
+          disabled={disabled}
+          onFocus={() => {
+            if (!disabled) setOpen(true);
+          }}
+          onBlur={() => {
+            window.setTimeout(() => setOpen(false), 120);
+          }}
+          onChange={(event) => {
+            onChange(event.target.value);
+            if (!open) setOpen(true);
+          }}
+          placeholder={placeholder}
+          className={cls(
+            "h-[44px] w-full rounded-[8px] border border-[#D5DDE6] bg-white px-3.5 pl-10 pr-10 text-[14px] text-slate-800 outline-none transition placeholder:text-slate-500",
+            "focus:border-[#0A4D82] focus:ring-4 focus:ring-[#0A4D82]/10",
+            disabled && "cursor-not-allowed bg-slate-50 text-slate-500",
+          )}
+        />
+        {value ? (
+          <button
+            type="button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            aria-label="Kosongkan pilihan kendaraan"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+
+      {!disabled && open ? (
+        <div className="absolute inset-x-0 z-30 mt-2 overflow-hidden rounded-2xl border border-[#D8E1EA] bg-white shadow-[0_20px_40px_rgba(15,23,42,0.12)]">
+          {suggestions.length ? (
+            <div className="max-h-72 overflow-y-auto">
+              {suggestions.map((item, index) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    startTransition(() => onSelect(item));
+                    setOpen(false);
+                  }}
+                  className={cls(
+                    "flex w-full flex-col items-start gap-1 px-4 py-3 text-left transition hover:bg-[#F8FBFE]",
+                    index > 0 && "border-t border-slate-100",
+                  )}
+                >
+                  <div className="flex w-full items-start justify-between gap-3">
+                    <div className="text-sm font-semibold text-slate-900">{item.label}</div>
+                  </div>
+                  <div className="text-xs leading-5 text-slate-500">
+                    {item.ojkCategory}
+                    {item.bodyType ? ` · ${item.bodyType}` : ""}
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-3 text-sm text-slate-500">
+              Belum ada dummy data yang cocok. Coba ketik merek atau tipe lain.
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function StepNode({ step, title, subtitle, active, icon }: any) {
+function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="relative flex flex-1 flex-col items-center text-center">
-      <div className={cls("flex h-9 w-9 items-center justify-center rounded-full border-2 bg-white", active ? "border-[#0A4D82] text-[#0A4D82] shadow-md shadow-[#0A4D82]/10" : "border-slate-300 text-slate-300")}>{icon}</div>
-      <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{step}</div>
-      <div className={cls("mt-0.5 text-[14px] font-bold", active ? "text-slate-900" : "text-slate-500")}>{title}</div>
-      <div className={cls("mt-0.5 text-[12px]", active ? "text-[#E8A436]" : "text-slate-400")}>{subtitle}</div>
+    <div className="flex flex-col gap-1.5 border-b border-slate-100 py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="text-sm text-slate-500">{label}</div>
+      <div className="max-w-full break-words text-left text-sm text-slate-900 sm:max-w-[60%] sm:text-right">{value || "-"}</div>
     </div>
   );
+}
+
+function StepNode({ step, title, subtitle, active, done, icon, onClick }: any) {
+  const content = (
+    <>
+      <div
+        className={cls(
+          "flex h-9 w-9 items-center justify-center rounded-full border-2 bg-white md:h-10 md:w-10",
+          done ? "border-green-600 text-green-600" : active ? "border-[#0A4D82] text-[#0A4D82]" : "border-slate-300 text-slate-300",
+        )}
+      >
+        {done ? <CheckCircle2 className="h-4 w-4" /> : icon}
+      </div>
+      <div className="mt-2 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400 md:text-[10px] md:tracking-[0.16em]">{step}</div>
+      <div className={cls("mt-0.5 text-[13px] font-bold md:text-[14px]", active || done ? "text-slate-900" : "text-slate-500")}>{title}</div>
+      <div className={cls("mt-0.5 text-[11px] md:text-[12px]", active ? "text-[#E8A436]" : done ? "text-green-600" : "text-slate-400")}>{subtitle}</div>
+    </>
+  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className="relative flex flex-1 flex-col items-center text-center">
+        {content}
+      </button>
+    );
+  }
+  return <div className="relative flex flex-1 flex-col items-center text-center">{content}</div>;
 }
 
 function ProductCard({ item, onClick }: any) {
@@ -743,21 +1232,211 @@ function ProductCard({ item, onClick }: any) {
   );
 }
 
-function ActionCard({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-2xl bg-white p-5 shadow-sm">{children}</div>;
+function ActionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={cls("rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5", className)}>{children}</div>;
 }
-function ConsentAccordion({ section, open, onToggle }: any) {
-  return <div className="rounded-xl border border-[#D6E0EA] bg-[#F8FBFE]"><button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"><div><div className="text-sm font-semibold text-slate-900">{section.title}</div><div className="mt-1 text-xs leading-5 text-slate-500">{section.summary}</div></div><ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", open && "rotate-180")} /></button>{open ? <div className="border-t border-[#D6E0EA] px-4 py-3 text-sm leading-6 text-slate-600">{section.detail}</div> : null}</div>;
+
+function SectionCard({
+  title,
+  subtitle,
+  children,
+  action,
+  headerAlign = "left",
+  className = "",
+  compactHeader = false,
+  heroHeader = false,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  action?: React.ReactNode;
+  headerAlign?: "left" | "center";
+  className?: string;
+  compactHeader?: boolean;
+  heroHeader?: boolean;
+}) {
+  return (
+    <section
+      className={cls(
+        compactHeader
+          ? "rounded-2xl border border-[#D8E1EA] bg-white px-4 py-3.5 md:px-5"
+          : "rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5",
+        className,
+      )}
+    >
+      <div
+        className={cls(
+          "flex items-start gap-4",
+          action ? "justify-between" : headerAlign === "center" ? "justify-center" : "justify-start",
+        )}
+      >
+        <div className={cls(headerAlign === "center" ? "text-center" : "", heroHeader ? "w-full" : "")}>
+          <div
+            className={cls(
+              heroHeader
+                ? "text-[26px] font-bold tracking-tight md:text-[30px]"
+                : compactHeader
+                  ? "text-[15px] font-semibold"
+                  : "text-[18px] font-bold",
+              "text-slate-900",
+            )}
+          >
+            {title}
+          </div>
+          {subtitle ? (
+            <div
+              className={cls(
+                heroHeader
+                  ? "mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]"
+                  : compactHeader
+                    ? "mt-1 text-[13px] leading-5"
+                    : "mt-1 text-sm",
+                !heroHeader && "text-slate-500",
+              )}
+            >
+              {subtitle}
+            </div>
+          ) : null}
+        </div>
+        {action ? <div>{action}</div> : null}
+      </div>
+      <div className={compactHeader ? "mt-3" : "mt-4"}>{children}</div>
+    </section>
+  );
 }
+
+function OfferSummarySection({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="rounded-[22px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFDFF_100%)] px-4 py-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition-shadow duration-200 hover:shadow-[0_16px_34px_rgba(15,23,42,0.07)] md:px-5">
+      <div className="flex items-center justify-between gap-3 border-b border-[#EEF3F8] pb-3">
+        <div className="text-[15px] font-semibold tracking-tight text-slate-900">{title}</div>
+        {action ? action : null}
+      </div>
+      <div className="mt-3.5">{children}</div>
+    </div>
+  );
+}
+
+function SummaryEditButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-sm font-medium text-[#0A4D82] shadow-sm transition hover:border-[#BFD4E8] hover:bg-[#F8FBFE] hover:shadow-[0_8px_18px_rgba(10,77,130,0.08)]"
+    >
+      Edit
+    </button>
+  );
+}
+
+function OfferSummaryKeyValue({ label, value }: { label: string; value: React.ReactNode }) {
+  const normalizedLabel = String(label || "").replace(/:\s*$/, "");
+  const normalizedValue = typeof value === "string" ? value.trim() : value;
+  if (!normalizedValue || normalizedValue === "-" || normalizedValue === "") return null;
+  return (
+    <div className="border-t border-slate-100 py-2 first:border-t-0 first:pt-0 last:pb-0">
+      <div className="space-y-1 md:grid md:grid-cols-[170px_10px_minmax(0,1fr)] md:gap-x-1.5 md:space-y-0">
+        <div className="text-[12px] font-normal leading-[1.4] text-slate-500">
+          {normalizedLabel}
+          <span className="md:hidden">:</span>
+        </div>
+        <div className="hidden text-[12px] font-normal leading-[1.4] tracking-[0.08em] text-slate-400 md:block">:</div>
+        <div className="text-[14px] font-normal leading-[1.45] text-slate-900">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryGuaranteeItem({ title, icon: Icon = Shield, compact = false }: { title: string; icon?: any; compact?: boolean }) {
+  return (
+    <div className={cls("flex items-start", compact ? "gap-2" : "gap-2.5")}>
+      <div className={cls("mt-0.5 flex shrink-0 items-center justify-center border border-[#D6E0EA] bg-[#F8FBFE] text-[#0A4D82]", compact ? "h-6 w-6 rounded-md" : "h-7 w-7 rounded-lg")}>
+        <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+      </div>
+      <div className={cls("min-w-0 text-slate-900", compact ? "text-[14px] leading-[1.35]" : "text-[15px] leading-[1.45]")}>{title}</div>
+    </div>
+  );
+}
+
+function PreviewGuaranteeOption({
+  title,
+  icon: Icon = Shield,
+  premium,
+  checked,
+  expanded,
+  onToggleChecked,
+  onToggleExpand,
+  detail,
+  deductible,
+}: {
+  title: string;
+  icon?: any;
+  premium: string;
+  checked: boolean;
+  expanded: boolean;
+  onToggleChecked: () => void;
+  onToggleExpand: () => void;
+  detail?: string;
+  deductible?: string;
+}) {
+  return (
+    <div
+      className={cls(
+        "group relative overflow-hidden rounded-xl border px-3 py-2.5 transition-all duration-200",
+        checked
+          ? "border-[#AFCFEA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4FAFF_100%)] shadow-[0_12px_26px_rgba(10,77,130,0.10)]"
+          : "border-slate-200 bg-white hover:border-[#C8D9EA] hover:bg-[#FBFDFF] hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]",
+      )}
+    >
+      {checked ? <div className="absolute inset-y-0 left-0 w-1 rounded-l-xl bg-[#0A4D82]" /> : null}
+      <div className={cls("flex items-start gap-2.5", checked && "pl-1")}>
+        <button
+          type="button"
+          aria-pressed={checked}
+          onClick={onToggleChecked}
+          className={cls(
+            "mt-0.5 flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-md border transition-all duration-200",
+            checked
+              ? "border-[#0A4D82] bg-[#0A4D82] text-white shadow-[0_6px_12px_rgba(10,77,130,0.22)]"
+              : "border-[#CAD6E3] bg-white text-transparent hover:border-[#9DB8D4]",
+          )}
+        >
+          <Check className="h-3.5 w-3.5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <button type="button" onClick={onToggleChecked} className="min-w-0 flex-1 text-left">
+              <SummaryGuaranteeItem title={title} icon={Icon} compact />
+            </button>
+            <button type="button" onClick={onToggleExpand} className="flex shrink-0 items-center gap-2 text-left">
+              <span className={cls("whitespace-nowrap text-[12px] font-medium", checked ? "text-slate-600" : "text-slate-500")}>
+                {premium}
+              </span>
+              <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition duration-200", expanded && "rotate-180")} />
+            </button>
+          </div>
+          {expanded ? <div className="mt-1.5 pl-[30px] text-[12.5px] leading-5 text-slate-600">{detail}</div> : null}
+          {expanded && deductible ? (
+            <div className="mt-2 pl-[30px] text-[12px] leading-5 text-slate-600">
+              {vehicleDeductibleIsDirectText(deductible) ? (
+                <span>{String(deductible || "").replace(/biaya sendiri/gi, "risiko sendiri")}</span>
+              ) : (
+                <>
+                  <span className="font-medium text-slate-700">Risiko sendiri saat klaim: </span>
+                  <span>{String(deductible || "").replace(/biaya sendiri/gi, "risiko sendiri")}</span>
+                </>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ConsentModal({ open, agreed, onClose, onAgree }: any) {
-  const [expanded, setExpanded] = useState({ produk: true, data: false, material: false });
-  const [reachedBottom, setReachedBottom] = useState(false);
-  const handleScroll = (e: any) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollTop + clientHeight >= scrollHeight - 8) setReachedBottom(true);
-  };
   if (!open) return null;
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4"><div className="w-full max-w-3xl rounded-3xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-slate-200 px-6 py-5"><div><div className="text-[24px] font-bold tracking-tight text-slate-900">Persetujuan Kebijakan</div><div className="mt-1 text-sm text-slate-500">Buka seluruh bagian dan gulir sampai bawah sebelum menyetujui.</div></div><button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-5 w-5" /></button></div><div className="max-h-[60vh] overflow-y-auto px-6 py-5" onScroll={handleScroll}><div className="space-y-3">{CONSENT_SECTIONS.map((section) => <ConsentAccordion key={section.key} section={section} open={(expanded as any)[section.key]} onToggle={() => setExpanded((prev: any) => ({ ...prev, [section.key]: !prev[section.key] }))} />)}</div><div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">Dengan melanjutkan, Anda menyatakan telah membaca persetujuan yang berlaku dan memahami bahwa polis diterbitkan berdasarkan data yang diberikan pada penawaran ini.</div><div className="h-3" /></div><div className="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4"><div className="text-sm text-slate-500">{reachedBottom ? "Persetujuan siap disetujui." : "Gulir sampai bagian paling bawah untuk mengaktifkan tombol setuju."}</div><div className="flex items-center gap-3"><button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center rounded-[12px] border border-slate-200 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">Tutup</button><button type="button" disabled={!reachedBottom} onClick={onAgree} className={cls("inline-flex h-11 items-center justify-center rounded-[12px] px-5 text-sm font-bold text-white", reachedBottom ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-300")}>{agreed ? "Sudah Disetujui" : "Saya Setuju"}</button></div></div></div></div>;
+      return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4"><div className="w-full max-w-2xl rounded-[28px] bg-white shadow-[0_32px_80px_rgba(15,23,42,0.24)]"><div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5"><div><div className="text-[20px] font-bold tracking-tight text-slate-900">Syarat dan Ketentuan Persetujuan</div><div className="mt-1 text-sm leading-6 text-slate-500">Dengan melanjutkan proses ini, Anda menyatakan telah membaca dan memahami poin persetujuan atas SPAU elektronik ini.</div></div><button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-5 w-5" /></button></div><div className="max-h-[60vh] space-y-4 overflow-y-auto px-6 py-5"><div className="rounded-2xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4"><ol className="space-y-4">{CONSENT_SECTIONS.map((section, index) => <li key={section.key} className="flex items-start gap-3"><div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#C9D8E8] bg-white text-[13px] font-semibold text-[#0A4D82]">{index + 1}</div><div className="min-w-0"><div className="text-[14px] font-semibold text-slate-900">{section.title}</div><div className="mt-1 space-y-2 text-[13px] leading-[1.75] text-slate-600" style={{ textAlign: "justify" }}>{(section.detailLines || []).map((line: string, lineIndex: number) => <div key={`${section.key}-line-${lineIndex}`}><span>{normalizeConsentTextLine(line)}</span>{lineIndex === (section.detailLines || []).length - 1 && section.detailLinkHref ? <><span> </span><a href={section.detailLinkHref} target="_blank" rel="noreferrer" className="font-medium text-[#0A4D82] underline underline-offset-2 hover:text-[#0D5B98]">{section.detailLinkLabel || section.detailLinkHref}</a></> : null}</div>)}</div></div></li>)}</ol></div></div><div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between"><div className="text-sm leading-6 text-slate-500">Silakan setujui jika isi persetujuan ini sudah sesuai.</div><div className="flex items-center gap-3"><button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center rounded-[12px] border border-slate-200 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50">Tutup</button><button type="button" onClick={onAgree} className="inline-flex h-11 items-center justify-center rounded-[12px] bg-[#0A4D82] px-5 text-sm font-semibold text-white hover:brightness-105">{agreed ? "Sudah Disetujui" : "Saya Setuju"}</button></div></div></div></div>;
 }
 function PaymentInfoButton({ title, description, onClick }: any) {
   return <button type="button" onClick={onClick} className="rounded-xl border border-[#D5DDE6] bg-white px-4 py-3 text-left hover:bg-slate-50"><div className="text-sm font-semibold text-slate-900">{title}</div><div className="mt-1 text-xs leading-5 text-slate-500">{description}</div></button>;
@@ -779,17 +1458,17 @@ function AccordionRiskRow({ title, premium, summary, detail, deductible, checked
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[#0A4D82]">
               {!alwaysIncluded && itemIcon ? React.createElement(itemIcon, { className: "h-4 w-4 shrink-0" }) : null}
-              <div className="truncate text-[15px] font-semibold">{title}</div>
+              <div className="truncate text-[14px] font-medium leading-[1.35]">{title}</div>
             </div>
-            <div className="mt-0.5 text-[12px] text-slate-500">Premi: {premium}</div>
+            <div className="mt-0.5 text-[12px] font-normal text-slate-500">Premi: {premium}</div>
           </div>
           <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
         </button>
       </div>
       {expanded ? (
         <div className="border-t border-[#D6E0EA] px-3.5 py-3">
-          <div className="whitespace-pre-line text-[13px] leading-5 text-slate-700">{summary}</div>
-          {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{["tanpa biaya sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) => String(deductible || "").trim().toLowerCase().startsWith(token)) ? deductible : <><span className="font-semibold text-slate-700">Biaya sendiri saat klaim:</span> {deductible}</>}</div> : null}
+          <div className="whitespace-pre-line text-[12.5px] leading-5 text-slate-700">{summary}</div>
+              {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{["tanpa biaya sendiri", "tanpa risiko sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) => String(deductible || "").trim().toLowerCase().startsWith(token)) ? deductible.replace(/biaya sendiri/gi, "risiko sendiri") : <><span className="font-medium text-slate-700">Risiko sendiri saat klaim:</span> {deductible.replace(/biaya sendiri/gi, "risiko sendiri")}</>}</div> : null}
           {detail ? <div className="mt-2 whitespace-pre-line text-[12px] leading-5 text-slate-500">{detail}</div> : null}
           {extra ? <div className="mt-3">{extra}</div> : null}
         </div>
@@ -802,6 +1481,7 @@ export default function MotorLatestExact({
   onExit,
   sessionName = "Dita (External)",
   initialFlow = "motor",
+  entryMode = "external",
   operatingRecord = null,
   onOperatingSignal = () => {},
   accountMenuItems = [],
@@ -809,6 +1489,7 @@ export default function MotorLatestExact({
   onExit?: () => void;
   sessionName?: string;
   initialFlow?: FlowType;
+  entryMode?: EntryMode;
   operatingRecord?: any;
   onOperatingSignal?: (signal: any) => void;
   accountMenuItems?: Array<{ label: string; onClick: () => void; primary?: boolean }>;
@@ -822,26 +1503,53 @@ export default function MotorLatestExact({
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [paymentPanel, setPaymentPanel] = useState("");
   const [checkoutStatus, setCheckoutStatus] = useState("");
+  const [journeyStatus, setJourneyStatus] = useState("");
   const [userName] = useState(sessionName);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSentOffers, setShowSentOffers] = useState(false);
+  const [showOfferShareModal, setShowOfferShareModal] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState("");
+  const [viewerMode, setViewerMode] = useState<"internal" | "customer">(entryMode === "internal" ? "internal" : "customer");
+  const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
+  const [hasSharedOfferJourney, setHasSharedOfferJourney] = useState(false);
   const [flows, setFlows] = useState<Record<FlowType, FlowState>>({
     motor: createFlowState("motor"),
     carComp: createFlowState("carComp"),
     carTlo: createFlowState("carTlo"),
+  });
+  const [selectedCustomers, setSelectedCustomers] = useState<Record<FlowType, MockCustomer | null>>({
+    motor: null,
+    carComp: null,
+    carTlo: null,
   });
   const [documentChecks, setDocumentChecks] = useState<Record<FlowType, { ktp: any; stnk: any }>>({
     motor: { ktp: createEmptyDocumentCheck("KTP"), stnk: createEmptyDocumentCheck("STNK") },
     carComp: { ktp: createEmptyDocumentCheck("KTP"), stnk: createEmptyDocumentCheck("STNK") },
     carTlo: { ktp: createEmptyDocumentCheck("KTP"), stnk: createEmptyDocumentCheck("STNK") },
   });
+  const [sharedPreviewEditing, setSharedPreviewEditing] = useState({ insured: false, vehicle: false });
   const [evidence, setEvidence] = useState<Record<FlowType, Record<string, any>>>({
     motor: {},
     carComp: {},
     carTlo: {},
   });
+  const coverageDateFieldRef = useRef<HTMLInputElement | null>(null);
+  const operatingSignalRef = useRef(onOperatingSignal);
+  const lastAuthoritySignalRef = useRef("");
+  const lastFraudSignalRef = useRef("");
+  const lastStageSignalRef = useRef("");
+  const lastHydratedShareKeyRef = useRef("");
 
   const currentData = flowType ? flows[flowType] : null;
+  const selectedCustomer = flowType ? selectedCustomers[flowType] : null;
+  const allowCustomerLookup = entryMode === "internal";
+  const currentFlowCustomers = useMemo(() => VEHICLE_MOCK_CIF_BY_FLOW[flowType], [flowType]);
+  const customerSuggestions = useMemo(() => {
+    if (!flowType || !allowCustomerLookup) return [];
+    const keyword = String(flows[flowType].insured.lookup || flows[flowType].insured.fullName || "").trim().toLowerCase();
+    if (!keyword) return [];
+    return currentFlowCustomers.filter((item) => item.name.toLowerCase().includes(keyword) || item.cif.toLowerCase().includes(keyword)).slice(0, 5);
+  }, [allowCustomerLookup, currentFlowCustomers, flowType, flows]);
   const operatingBlockedMessage = paymentBlockMessage(operatingRecord);
   const canProceedPayment = canProceedToPaymentFromOperating(operatingRecord);
   const calc = useMemo(() => {
@@ -863,11 +1571,207 @@ export default function MotorLatestExact({
     });
   };
 
+  const openCoverageDatePicker = () => {
+    const field = coverageDateFieldRef.current;
+    if (!field) return;
+    try {
+      if (typeof field.showPicker === "function") {
+        field.showPicker();
+        return;
+      }
+    } catch {
+      // Fallback to click/focus flow when showPicker is unsupported or blocked.
+    }
+    try {
+      field.focus();
+      field.click();
+    } catch {
+      // Ignore browser-specific picker limitations to avoid breaking the page.
+    }
+  };
+
+  const resolveDemoVehicle = (type: FlowType) => {
+    const catalogType = type === "motor" ? "motor" : "car";
+    return getVehicleCatalogItem(catalogType, DEMO_MODEL_LABELS[type]) || getVehicleCatalogItems(catalogType)[0] || null;
+  };
+
+  const updateVehicleSelection = (type: FlowType, value: string, explicitItem?: VehicleCatalogItem | null) => {
+    const catalogType = type === "motor" ? "motor" : "car";
+    const matchedItem = explicitItem || getVehicleCatalogItem(catalogType, value);
+
+    setFlows((prev) => {
+      const next: any = JSON.parse(JSON.stringify(prev));
+      next[type].quote.vehicleName = value;
+      next[type].quote.vehicleType = matchedItem?.ojkCategory || "";
+      next[type].quote.vehicleFuelType = matchedItem?.fuelType || "";
+      next[type].quote.vehicleBodyType = matchedItem?.bodyType || "";
+      return next;
+    });
+  };
+
+  const fillStepOneDemoData = (type: FlowType) => {
+    const demoVehicle = resolveDemoVehicle(type);
+    if (!demoVehicle) return;
+    const demoCustomer = VEHICLE_MOCK_CIF_BY_FLOW[type][0];
+    const demoLookupValue = allowCustomerLookup ? `${demoCustomer.name} - ${demoCustomer.cif}` : demoCustomer.name;
+
+    const baseQuoteByFlow: Record<FlowType, { plateRegion: string; year: string; marketValue: string; usage: string }> = {
+      motor: {
+        plateRegion: "B - Jakarta/Depok/Tangerang/Bekasi",
+        year: "2025",
+        marketValue: "36500000",
+        usage: "Pribadi",
+      },
+      carComp: {
+        plateRegion: "B - Jakarta/Depok/Tangerang/Bekasi",
+        year: "2024",
+        marketValue: "465000000",
+        usage: "Pribadi",
+      },
+      carTlo: {
+        plateRegion: "D - Bandung",
+        year: "2023",
+        marketValue: "248000000",
+        usage: "Pribadi",
+      },
+    };
+
+    setFlows((prev) => {
+      const next: any = JSON.parse(JSON.stringify(prev));
+      next[type].quote = {
+        ...next[type].quote,
+        ...baseQuoteByFlow[type],
+        vehicleName: demoVehicle.label,
+        vehicleType: demoVehicle.ojkCategory,
+        vehicleFuelType: demoVehicle.fuelType,
+        vehicleBodyType: demoVehicle.bodyType || "",
+      };
+      if (isInternalMode) {
+        next[type].insured = {
+          ...next[type].insured,
+          customerType: demoCustomer.type,
+          nik: next[type].insured.nik || "3174********0012",
+          fullName: demoCustomer.name,
+          lookup: demoLookupValue,
+          address: next[type].insured.address || "Jl. Kemang Raya No. 18, Jakarta Selatan",
+          email: demoCustomer.email,
+          phone: demoCustomer.phone,
+        };
+      } else {
+        next[type].insured = {
+          ...next[type].insured,
+          customerType: demoCustomer.type,
+          fullName: demoCustomer.name,
+          lookup: demoLookupValue,
+          email: demoCustomer.email,
+          phone: demoCustomer.phone,
+        };
+      }
+      return next;
+    });
+    if (isInternalMode) {
+      setSelectedCustomers((prev) => ({ ...prev, [type]: demoCustomer }));
+    }
+  };
+
+  const fillStepTwoDemoData = (type: FlowType) => {
+    const demoVehicle = resolveDemoVehicle(type);
+    if (!demoVehicle) return;
+    const demoCustomer = VEHICLE_MOCK_CIF_BY_FLOW[type][0];
+    const demoLookupValue = allowCustomerLookup ? `${demoCustomer.name} - ${demoCustomer.cif}` : demoCustomer.name;
+
+    fillStepOneDemoData(type);
+
+    const vehicleDetailByFlow: Record<FlowType, { plateNumber: string; chassisNumber: string; engineNumber: string; color: string; year: string }> = {
+      motor: {
+        plateNumber: "B 4123 UYT",
+        chassisNumber: "MH1JM8112PK123456",
+        engineNumber: "JM81E1234567",
+        color: "Hitam",
+        year: "2025",
+      },
+      carComp: {
+        plateNumber: "B 1458 NZX",
+        chassisNumber: "LGXCE4CB8R1234567",
+        engineNumber: "ATTO3EV123456",
+        color: "Putih",
+        year: "2024",
+      },
+      carTlo: {
+        plateNumber: "D 1724 AQA",
+        chassisNumber: "MHKK1BA3JPK123456",
+        engineNumber: "2NRFKE7654321",
+        color: "Silver",
+        year: "2023",
+      },
+    };
+
+    setFlows((prev) => {
+      const next: any = JSON.parse(JSON.stringify(prev));
+      next[type].ui.dataMode = "manual";
+      next[type].ui.stnkMode = "manual";
+      next[type].insured = {
+        ...next[type].insured,
+        customerType: demoCustomer.type,
+        nik: "3174********0012",
+        fullName: demoCustomer.name,
+        lookup: demoLookupValue,
+        address: "Jl. Kemang Raya No. 18, Jakarta Selatan",
+        email: demoCustomer.email,
+        phone: demoCustomer.phone,
+      };
+      next[type].vehicle = {
+        ...next[type].vehicle,
+        ...vehicleDetailByFlow[type],
+        contactOnLocation: demoCustomer.name,
+      };
+      next[type].underwriting = {
+        ...next[type].underwriting,
+        claimHistory: "Tidak Ada",
+      };
+      next[type].quote = {
+        ...next[type].quote,
+        vehicleName: demoVehicle.label,
+        vehicleType: demoVehicle.ojkCategory,
+        vehicleFuelType: demoVehicle.fuelType,
+        vehicleBodyType: demoVehicle.bodyType || "",
+        coverageStart: "2026-05-01",
+        coverageEnd: addOneYear("2026-05-01"),
+      };
+      next[type].uploads = Object.keys(next[type].uploads).reduce((acc: Record<string, boolean>, key: string) => {
+        acc[key] = true;
+        return acc;
+      }, {});
+      return next;
+    });
+    setSelectedCustomers((prev) => ({ ...prev, [type]: demoCustomer }));
+
+    setEvidence((prev) => {
+      const next: any = { ...prev, [type]: { ...prev[type] } };
+      Object.keys(flows[type].uploads).forEach((name) => {
+        next[type][name] = createVehiclePhotoMetadata(name, "Jl. Kemang Raya No. 18, Jakarta Selatan");
+      });
+      return next;
+    });
+
+  };
+
+  const fillDemoForCurrentStep = () => {
+    if (!flowType) return;
+    if (step === 1) {
+      fillStepOneDemoData(flowType);
+      return;
+    }
+    fillStepTwoDemoData(flowType);
+  };
+
   const openFlow = (type: FlowType) => {
     setFlowType(type);
     setScreen("flow");
     setStep(1);
     setShowPremiumDetails(false);
+    setJourneyStatus("");
+    setCheckoutStatus("");
   };
 
   const returnToLauncher = () => {
@@ -878,13 +1782,79 @@ export default function MotorLatestExact({
     setScreen("catalog");
     setFlowType(null);
     setStep(1);
+    setJourneyStatus("");
+    setCheckoutStatus("");
   };
 
   if (!flowType && screen === "flow") return null;
   const selected = currentData!;
-  const selectedPassengerCarMeta = flowType === "carTlo" && selected.quote.vehicleType ? getPassengerCarMeta(selected.quote.vehicleType) : null;
+  const isInternalMode = entryMode === "internal";
+  const isInternalPreview = isInternalMode && viewerMode === "internal";
+  const isCustomerPreview = !isInternalPreview;
+  const isGuestExternalSession = !isInternalMode && /Tanpa Login/i.test(String(userName || ""));
+  const externalDisplayName = String(selected?.insured?.fullName || "").trim() || "Calon Pemegang Polis";
+  const displayUserName = isInternalMode ? userName : externalDisplayName;
+  const heroGreeting = isInternalMode ? `Selamat datang kembali, ${userName}` : `Halo, ${externalDisplayName}`;
+  const showPaymentStep = entryMode === "external" || viewerMode === "customer";
+  const isSharedCustomerPreview = !isInternalMode && hasSharedOfferJourney;
+  const stepOneTitle = isInternalMode ? "Data Awal" : hasSharedOfferJourney ? "Tinjau Penawaran" : "Simulasi Premi";
+  const activeProduct = PRODUCTS.find((item) => item.id === flowType);
+  const hasQuoteBasis = Boolean(selected.quote.plateRegion)
+    && Boolean(selected.quote.year)
+    && isYearEligible(flowType, selected.quote.year)
+    && Boolean(String(selected.quote.marketValue || "").trim())
+    && validateMaxHP(flowType, Number(selected.quote.marketValue || 0))
+    && Boolean(selected.quote.usage)
+    && Boolean(String(selected.quote.vehicleName || "").trim())
+    && (flowType === "motor" || Boolean(selected.quote.vehicleType));
+  const quoteReady = hasQuoteBasis;
+  const selectedVehicleMeta = getVehicleCatalogItem(flowType === "motor" ? "motor" : "car", selected.quote.vehicleName);
+  const tariffCategoryLabel = getVehicleTariffCategory(flowType, selected.quote);
+  const tariffRegionLabel = getRegionLabel(selected.quote.plateRegion);
+  const tariffInfoValue = tariffRegionLabel ? `${tariffCategoryLabel} · ${tariffRegionLabel}` : tariffCategoryLabel;
+  const shouldShowTariffSummary = Boolean(
+    isInternalMode &&
+      selected.quote.plateRegion &&
+      (flowType === "motor" || selected.quote.marketValue || selected.quote.vehicleType),
+  );
+  const tariffInfoSummary = tariffRegionLabel
+    ? `Kendaraan ini termasuk dalam ${tariffCategoryLabel} / ${tariffRegionLabel}.`
+    : `Kendaraan ini termasuk dalam ${tariffCategoryLabel}.`;
+  const vehicleUsageHelpText = `Kendaraan ini digunakan untuk apa?
+
+Penggunaan Pribadi berarti kendaraan digunakan untuk keperluan pribadi dan bukan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.
+
+Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.`;
+  const vehicleUsageSummaryText =
+    selected.quote.usage === "Pribadi"
+      ? "Penggunaan Pribadi berarti kendaraan digunakan untuk keperluan pribadi dan bukan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan."
+      : selected.quote.usage === "Komersial"
+        ? "Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan."
+        : "";
   const exts = flowType === "motor" ? MOTOR_EXTS : CAR_EXTS;
-  const suggestions = flowType === "motor" ? MOTOR_SUGGESTIONS : CAR_SUGGESTIONS;
+  const enabledExtensionItems = exts
+    .filter((item) => selected.quote.extensions[item.id]?.enabled)
+    .map((item) => ({ title: item.label, premium: Number(getExtensionDisplayFee(flowType, selected.quote, item.id) || 0) }));
+  const shouldShowSidebarPricing = hasQuoteBasis && (showPremiumDetails || step > 1);
+  const displayedBasePremium = shouldShowSidebarPricing ? formatRupiah(flowType === "carComp" ? calc.mainPremium : getMainPremiumSplit(flowType, calc).ownDamage + getMainPremiumSplit(flowType, calc).theft) : "-";
+  const displayedExtensionPremium = shouldShowSidebarPricing && calc.extensionTotal > 0 ? formatRupiah(calc.extensionTotal) : null;
+  const displayedStampDuty = shouldShowSidebarPricing ? formatRupiah(calc.stamp) : "-";
+  const displayedTotalPremium = shouldShowSidebarPricing ? formatRupiah(calc.total) : "-";
+  const showSidebar = false;
+  const shouldAutoSyncOperatingSignals = false;
+  const policySummaryTitle = "Polis Standar Asuransi Kendaraan Bermotor Indonesia";
+  const insuredSummaryName = String(selected.insured.fullName || "").trim() || "Calon Pemegang Polis";
+  const insuredSummaryEmail = String(selected.insured.email || "").trim() || "-";
+  const insuredSummaryPhone = String(selected.insured.phone || "").trim() || "-";
+  const vehicleSummaryName = String(selected.quote.vehicleName || "").trim() || "-";
+  const vehicleSummaryPlateRegion = String(selected.quote.plateRegion || "").trim() || "-";
+  const vehicleSummaryPlateNumber = String(selected.vehicle.plateNumber || "").trim() || "-";
+  const vehicleSummaryYear = String(selected.quote.year || "").trim() || "-";
+  const vehicleSummaryUsage = String(selected.quote.usage || "").trim() || "-";
+  const vehicleSummaryValue = String(selected.quote.marketValue || "").trim()
+    ? `Rp ${formatRupiah(Number(selected.quote.marketValue || 0))}`
+    : "-";
+  const enabledExtensionVisualItems = exts.filter((item) => selected.quote.extensions[item.id]?.enabled);
 
   const feeMap = calc
     ? {
@@ -901,11 +1871,28 @@ export default function MotorLatestExact({
         theftByOwnDriver: getExtensionDisplayFee(flowType, selected.quote, "theftByOwnDriver"),
       }
     : {};
+  const selectedExtensionDetailItems = enabledExtensionVisualItems.map((item) => ({
+    title: item.label,
+    icon: item.icon || Shield,
+    premium: `Rp ${formatRupiah(Number((feeMap as any)[item.id] || 0))}`,
+    detail: EXT_INFO[item.id],
+    deductible: deductibleText(flowType, selected.quote.vehicleType, item.id),
+  }));
 
-  const uploadsComplete = selected ? Object.values(selected.uploads).every(Boolean) : false;
+  const visibleUploadNames = selected
+    ? (flowType === "motor" ? [...MOTOR_UPLOAD_FIELDS] : [...CAR_UPLOAD_FIELDS])
+    : [];
+  const uploadsComplete = selected ? visibleUploadNames.every((name) => Boolean(selected.uploads[name])) : false;
   const dataComplete = selected ? !!(selected.insured.customerType && selected.insured.fullName && selected.insured.address && selected.insured.email && selected.insured.phone && selected.vehicle.plateNumber && selected.vehicle.chassisNumber && selected.vehicle.engineNumber) : false;
   const periodComplete = selected ? !!(selected.quote.coverageStart && selected.quote.coverageEnd) : false;
-  const canIssue = !!(selected && calc && uploadsComplete && dataComplete && periodComplete && selected.agree && calc.status !== "Need Review");
+  const readyForNextStage = !!(selected && calc && uploadsComplete && dataComplete && periodComplete && calc.status !== "Need Review");
+  const canIssue = !!(readyForNextStage && selected.agree);
+  const coverageEndDate = selected?.quote?.coverageStart ? addOneYear(selected.quote.coverageStart) : "";
+  const coverageStartDisplay = selected?.quote?.coverageStart ? formatDisplayDate(new Date(`${selected.quote.coverageStart}T00:00:00`)) : "-";
+  const coverageEndDisplay = coverageEndDate ? formatDisplayDate(new Date(`${coverageEndDate}T00:00:00`)) : "-";
+  const coveragePeriodDisplay = selected?.quote?.coverageStart ? `${coverageStartDisplay} - ${coverageEndDisplay}` : "Pilih tanggal mulai pertanggungan";
+  const vehicleSummaryCoveragePeriod = selected.quote.coverageStart ? coveragePeriodDisplay : "-";
+  const claimHistorySummary = String(selected.underwriting?.claimHistory || "").trim() || "-";
   const transactionAuthority = useMemo(
     () =>
       createTransactionAuthority({
@@ -918,6 +1905,27 @@ export default function MotorLatestExact({
       }),
     [flowType, operatingRecord, selected?.insured.fullName, selected?.quote.plateRegion, selected?.vehicle.plateNumber, sessionName, step],
   );
+  const shareJourneyKey = flowType === "motor" ? "motor-external" : flowType === "carTlo" ? "car-tlo-external" : "mobil-comp";
+  const sharedOfferView = isInternalMode && step === 2 && readyForNextStage ? "payment" : "offer-indicative";
+  const shareUrl = getJourneyShareUrl(shareJourneyKey, {
+    view: sharedOfferView,
+    viewer: "customer",
+    shareData: {
+      flowType,
+      referral: transactionAuthority.transactionId,
+      sender: sessionName,
+      customer: selected?.insured?.fullName || "",
+      offer: {
+        quote: selected?.quote,
+        insured: selected?.insured,
+        vehicle: selected?.vehicle,
+        uploads: selected?.uploads,
+      },
+    },
+  });
+  const shareRecipientName = selected?.insured?.fullName || "Calon Pemegang Polis";
+  const shareLabel = activeProduct?.title || "Asuransi Kendaraan";
+  const shareSubject = `${shareLabel} - ${shareRecipientName}`;
   const fraudAlerts = useMemo(
     () =>
       summarizeFraudSignals({
@@ -928,23 +1936,1259 @@ export default function MotorLatestExact({
   );
 
   useEffect(() => {
-    if (!flowType) return;
-    onOperatingSignal({ authority: transactionAuthority });
-  }, [flowType, onOperatingSignal, transactionAuthority]);
+    operatingSignalRef.current = onOperatingSignal;
+  }, [onOperatingSignal]);
 
   useEffect(() => {
-    if (!fraudAlerts.length) return;
-    onOperatingSignal({
+    if (!shouldAutoSyncOperatingSignals) return;
+    if (!flowType) return;
+    const authorityKey = JSON.stringify(transactionAuthority || {});
+    if (JSON.stringify(operatingRecord?.authority || null) === authorityKey) return;
+    if (lastAuthoritySignalRef.current === authorityKey) return;
+    lastAuthoritySignalRef.current = authorityKey;
+    operatingSignalRef.current?.({ authority: transactionAuthority });
+  }, [flowType, operatingRecord?.authority, shouldAutoSyncOperatingSignals, transactionAuthority]);
+
+  useEffect(() => {
+    if (!shouldAutoSyncOperatingSignals) return;
+    if (!fraudAlerts.length) {
+      lastFraudSignalRef.current = "";
+      return;
+    }
+    const fraudKey = JSON.stringify(fraudAlerts);
+    const recordFraudKey = JSON.stringify(operatingRecord?.flags || []);
+    if (
+      operatingRecord?.status === "Pending Review Internal" &&
+      recordFraudKey === fraudKey &&
+      operatingRecord?.reason === fraudAlerts[0]
+    ) {
+      return;
+    }
+    if (lastFraudSignalRef.current === fraudKey) return;
+    lastFraudSignalRef.current = fraudKey;
+    operatingSignalRef.current?.({
       status: "Pending Review Internal",
       reason: fraudAlerts[0],
       notes: "Transaksi perlu review internal berdasarkan hasil verifikasi dokumen atau evidence.",
       flags: fraudAlerts,
     });
-  }, [fraudAlerts, onOperatingSignal]);
+  }, [fraudAlerts, operatingRecord?.flags, operatingRecord?.reason, operatingRecord?.status, shouldAutoSyncOperatingSignals]);
+
+  useEffect(() => {
+    if (isInternalMode && step > 2) setStep(2);
+  }, [isInternalMode, step]);
+
+  useEffect(() => {
+    if (!shouldAutoSyncOperatingSignals) return;
+    if (!flowType || !showPremiumDetails) return;
+    if (isInternalMode) return;
+    let stageSignalKey = "";
+    if (step === 2) {
+      stageSignalKey = `${flowType}:step-2`;
+      if (lastStageSignalRef.current === stageSignalKey) return;
+      lastStageSignalRef.current = stageSignalKey;
+      operatingSignalRef.current?.({
+        status: "Isi Data Lanjutan",
+        reason: "Data lanjutan kendaraan sedang dilengkapi.",
+        notes: "Flow kendaraan sedang berada pada tahap data lanjutan.",
+      });
+    }
+    if (step === 3 && readyForNextStage) {
+      if (
+        operatingRecord?.status === "Siap Bayar" &&
+        operatingRecord?.reason === "Data kendaraan sudah lengkap dan siap dilanjutkan ke pembayaran."
+      ) {
+        lastStageSignalRef.current = `${flowType}:step-3:ready`;
+        return;
+      }
+      stageSignalKey = `${flowType}:step-3:ready`;
+      if (lastStageSignalRef.current === stageSignalKey) return;
+      lastStageSignalRef.current = stageSignalKey;
+      operatingSignalRef.current?.({
+        status: "Siap Bayar",
+        reason: "Data kendaraan sudah lengkap dan siap dilanjutkan ke pembayaran.",
+        notes: "Versi final kendaraan siap dibayarkan oleh calon pemegang polis.",
+      });
+    }
+    if (!stageSignalKey) lastStageSignalRef.current = "";
+  }, [flowType, isInternalMode, operatingRecord?.reason, operatingRecord?.status, readyForNextStage, shouldAutoSyncOperatingSignals, showPremiumDetails, step]);
+
+  useEffect(() => {
+    if (!showOfferShareModal) setShareFeedback("");
+  }, [showOfferShareModal]);
+
+  useEffect(() => {
+    if (entryMode !== "external" || !flowType) return;
+    const { view, viewer, shareData, shareToken } = readVehicleShareContextFromUrl();
+    const sharedOffer = shareData?.offer;
+    const requestedView = view === "payment" ? "payment" : "offer-indicative";
+    const nextStep = requestedView === "payment" ? 3 : 1;
+    if (!sharedOffer || shareData?.flowType !== flowType) {
+      setHasSharedOfferJourney(false);
+      setViewerMode("customer");
+      setStep(1);
+      setShowPremiumDetails(false);
+      lastHydratedShareKeyRef.current = `${flowType}:self-serve`;
+      if (view || viewer || shareData) {
+        clearVehicleShareContextFromUrl();
+      }
+      return;
+    }
+    const shareHydrationKey = `${flowType}:${shareToken}:${viewer}:${view}`;
+    setHasSharedOfferJourney(true);
+    setViewerMode(viewer === "internal" ? "internal" : "customer");
+    setStep(nextStep);
+    setShowPremiumDetails(true);
+    if (view !== requestedView || viewer !== "customer") {
+      replaceVehicleShareContextInUrl({
+        view: requestedView,
+        viewer: "customer",
+        shareData,
+      });
+    }
+    if (lastHydratedShareKeyRef.current === shareHydrationKey) return;
+    lastHydratedShareKeyRef.current = shareHydrationKey;
+    setFlows((prev) => {
+      const next: any = JSON.parse(JSON.stringify(prev));
+      next[flowType] = {
+        ...next[flowType],
+        quote: {
+          ...next[flowType].quote,
+          ...(sharedOffer.quote || {}),
+        },
+        insured: {
+          ...next[flowType].insured,
+          ...(sharedOffer.insured || {}),
+        },
+        vehicle: {
+          ...next[flowType].vehicle,
+          ...(sharedOffer.vehicle || {}),
+        },
+        uploads: {
+          ...next[flowType].uploads,
+          ...(sharedOffer.uploads || {}),
+        },
+      };
+      return next;
+    });
+    if ((sharedOffer.insured?.fullName || "").trim()) {
+      setSelectedCustomers((prev) => ({ ...prev, [flowType]: null }));
+    }
+  }, [entryMode, flowType]);
+
+  useEffect(() => {
+    if (!isSharedCustomerPreview) {
+      setSharedPreviewEditing((prev) => (prev.insured || prev.vehicle ? { insured: false, vehicle: false } : prev));
+    }
+  }, [isSharedCustomerPreview]);
+
+  const handleSendIndicative = () => {
+    setJourneyStatus("Indikasi awal kendaraan sudah disiapkan untuk calon pemegang polis.");
+    setShowOfferShareModal(true);
+    onOperatingSignal({
+      status: "Indikasi Terkirim",
+      reason: "Indikasi kendaraan dikirim ke calon pemegang polis.",
+      notes: "Calon pemegang polis dapat membuka langkah 1 untuk melihat simulasi premi awal.",
+    });
+  };
+
+  const handleSendFinalizedOffer = () => {
+    setJourneyStatus("Data lanjutan kendaraan sudah lengkap dan siap dikirim ke calon pemegang polis.");
+    setShowOfferShareModal(true);
+    onOperatingSignal({
+      status: "Indikasi Terkirim",
+      reason: "Versi indikasi kendaraan terbaru dikirim ke calon pemegang polis.",
+      notes: "Versi terbaru mencakup data lanjutan yang sudah dilengkapi dari jalur internal.",
+    });
+  };
+
+  const handleCopyShareLink = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = shareUrl;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setShareFeedback("Link berhasil disalin.");
+    } catch {
+      setShareFeedback("Copy otomatis gagal. Silakan salin tautan secara manual.");
+    }
+  };
+
+  const handleDownloadSharePdf = () => {
+    const downloaded = downloadVehicleOfferPdf({
+      fileName: `Penawaran-${shareLabel}-${shareRecipientName}`,
+      productTitle: shareLabel,
+      customerName: shareRecipientName,
+      phone: selected.insured.phone,
+      email: selected.insured.email,
+      vehicleName: selected.quote.vehicleName,
+      plateRegion: selected.quote.plateRegion,
+      usage: selected.quote.usage,
+      year: selected.quote.year,
+      marketValue: selected.quote.marketValue,
+      tariffInfo: isInternalMode ? tariffInfoValue : "",
+      basePremium: flowType === "carComp" ? calc.mainPremium : getMainPremiumSplit(flowType, calc).ownDamage + getMainPremiumSplit(flowType, calc).theft,
+      extensionPremium: calc.extensionTotal,
+      stampDuty: calc.stamp,
+      totalPremium: calc.total,
+      extensionItems: enabledExtensionItems,
+      offerReference: transactionAuthority.transactionId,
+      downloadedAt: formatDisplayDateTime(new Date()),
+      shareUrl,
+    });
+    setShareFeedback(downloaded ? "File PDF penawaran sedang diunduh." : "File PDF belum berhasil diunduh. Coba lagi sebentar.");
+  };
+
+  const stepTwoPendingItems = [
+    !selected.insured.fullName ? "Nama nasabah belum lengkap." : null,
+    !selected.insured.address ? "Alamat calon pemegang polis belum lengkap." : null,
+    !selected.insured.email ? "Alamat email belum lengkap." : null,
+    !selected.insured.phone ? "Nomor handphone belum lengkap." : null,
+    !selected.vehicle.plateNumber ? "Nomor polisi / TNKB belum lengkap." : null,
+    !selected.vehicle.chassisNumber ? "Nomor rangka kendaraan belum lengkap." : null,
+    !selected.vehicle.engineNumber ? "Nomor mesin kendaraan belum lengkap." : null,
+    !selected.underwriting.claimHistory ? "Riwayat klaim 3 tahun terakhir belum diisi." : null,
+    !periodComplete ? "Tanggal mulai perlindungan belum diisi." : null,
+    !uploadsComplete ? "Foto kendaraan belum lengkap." : null,
+    selected.ui.dataMode === "scan" && !selected.ktpRead ? "Foto KTP belum terbaca." : null,
+    selected.ui.stnkMode === "scan" && !selected.stnkRead ? "Foto STNK belum terbaca." : null,
+    calc?.status === "Need Review" ? "Profil risiko kendaraan masih perlu kami cek lebih lanjut." : null,
+  ].filter(Boolean) as string[];
+
+  const renderPremiumSummaryCard = (showHeroAsFinal = false) => (
+    <ActionCard>
+      <div className="text-[18px] font-bold text-slate-900">Ringkasan Pembayaran</div>
+      <div className="mt-4">
+        <PremiumPriceHero
+          label="Total Pembayaran"
+          value={displayedTotalPremium}
+          tooltipText={
+            !showHeroAsFinal
+              ? "Total pembayaran ini masih perkiraan awal. Setelah Anda melengkapi Data Lanjutan, nilainya akan dihitung ulang dan bisa berubah sesuai informasi yang Anda isi."
+              : undefined
+          }
+        />
+        <PremiumBreakdown>
+          <ProposalRow label="Premi" value={displayedBasePremium} />
+          {displayedExtensionPremium ? <ProposalRow label="Premi Perluasan" value={displayedExtensionPremium} /> : null}
+          <ProposalRow label="Biaya Meterai" value={displayedStampDuty} />
+        </PremiumBreakdown>
+      </div>
+    </ActionCard>
+  );
+
+  const renderCoverageSummaryCard = () => (
+    <ActionCard>
+      <div className="space-y-5">
+        <div>
+          <div className="text-[18px] font-bold text-slate-900">{isSharedCustomerPreview ? "Ringkasan Syarat dan Ketentuan" : "Rincian Jaminan"}</div>
+          <div className="mt-1 text-sm leading-6 text-slate-500">
+            {isSharedCustomerPreview ? "Ringkasan jaminan utama dan perluasan yang berlaku pada penawaran ini." : "Klik setiap baris untuk melihat penjelasan detailnya."}
+          </div>
+          <div className="mt-4 text-[15px] font-semibold tracking-tight text-slate-900">Risiko yang Dijamin</div>
+          <div className="mt-3 space-y-2.5">
+            <AccordionRiskRow itemIcon={Shield} title={mainCoverTitle(flowType)} premium={formatRupiah(calc.mainPremium)} summary={mainCoverText(flowType)} detail="" deductible={mainDeductibleText(flowType, selected.quote.vehicleType)} alwaysIncluded expanded={!!expandedRows.main} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, main: !prev.main }))} />
+          </div>
+        </div>
+        <div>
+          <div>
+            <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
+          </div>
+          <div className="mt-4 space-y-2.5">
+            {exts.map((item) => {
+              const enabled = selected.quote.extensions[item.id].enabled;
+              return (
+                <AccordionRiskRow
+                  key={item.id}
+                  itemIcon={item.icon}
+                  title={item.label}
+                  premium={formatRupiah((feeMap as any)[item.id] || 0)}
+                  summary={EXT_INFO[item.id]}
+                  deductible={deductibleText(flowType, selected.quote.vehicleType, item.id)}
+                  checked={enabled}
+                  onToggleChecked={() => {
+                    const next = !enabled;
+                    if (item.id === "ts") {
+                      setAt(flowType, `quote.extensions.ts.enabled`, next);
+                      if (next) setAt(flowType, `quote.extensions.srcc.enabled`, true);
+                      return;
+                    }
+                    if (item.id === "srcc") {
+                      const tsEnabled = selected.quote.extensions.ts.enabled;
+                      if (tsEnabled && !next) {
+                        setAt(flowType, `quote.extensions.srcc.enabled`, true);
+                        return;
+                      }
+                    }
+                    setAt(flowType, `quote.extensions.${item.id}.enabled`, next);
+                  }}
+                  expanded={!!expandedRows[item.id]}
+                  onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
+                  extra={enabled ? item.type === "amount-seat" ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div><FieldLabel label="Nilai pertanggungan per penumpang" compact /><TextInput value={selected.quote.extensions.passengerPa.amount ? formatRupiah(Number(selected.quote.extensions.passengerPa.amount)) : ""} onChange={(value: string) => {
+                        const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
+                        const marketValue = Number(selected.quote.marketValue || 0) || 0;
+                        const capped = Math.min(raw, 25000000, marketValue || 25000000);
+                        setAt(flowType, "quote.extensions.passengerPa.amount", capped);
+                      }} inputMode="numeric" /></div>
+                      <div><FieldLabel label="Jumlah penumpang" compact /><SelectInput value={String(selected.quote.extensions.passengerPa.seats || "")} onChange={(value: string) => setAt(flowType, "quote.extensions.passengerPa.seats", value)} options={["1", "2", "3", "4", "5", "6", "7"]} placeholder="Jumlah penumpangnya berapa?" /></div>
+                      <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,1% dari nilai pertanggungan per penumpang. Tanpa risiko sendiri saat klaim.</div>
+                    </div>
+                  ) : item.type === "amount" ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div><FieldLabel label={item.id === "tpl" ? "Nilai pertanggungan pihak ketiga" : item.id === "driverPa" ? "Nilai pertanggungan pengemudi" : item.id === "equipment" ? "Nilai perlengkapan tambahan" : "Nilai pertanggungan"} compact /><TextInput value={selected.quote.extensions[item.id].amount ? formatRupiah(Number(selected.quote.extensions[item.id].amount)) : ""} onChange={(value: string) => {
+                        const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
+                        let capped = raw;
+
+                        if (item.id === "tpl") {
+                          capped = flowType === "motor" ? Math.min(raw, 1000000) : Math.min(raw, 100000000);
+                        }
+
+                        if (item.id === "driverPa" || item.id === "passengerPa") {
+                          const marketValue = Number(selected.quote.marketValue || 0) || 0;
+                          capped = Math.min(raw, 25000000, marketValue || 25000000);
+                        }
+
+                        if (item.id === "equipment") {
+                          const max = calc?.details?.equipmentCap || 0;
+                          capped = Math.min(raw, max);
+                        }
+
+                        setAt(flowType, `quote.extensions.${item.id}.amount`, capped);
+                      }} inputMode="numeric" /></div>
+                      {item.id === "equipment" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Batas maksimal: {formatRupiah(calc.details.equipmentCap || 0)}</div> : null}
+                      {item.id === "driverPa" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,5% dari nilai pertanggungan. Tanpa risiko sendiri saat klaim.</div> : null}
+                    </div>
+                  ) : null : null}
+                />
+              );
+            })}
+          </div>
+          {selected.quote.extensions.ts.enabled ? (
+            <div className="mt-3 rounded-xl border border-[#D8E1EA] bg-white px-3.5 py-3 text-[13px] leading-5 text-slate-600">
+              Jaminan Terorisme mensyaratkan Jaminan Kerusuhan &amp; Huru-hara, sehingga perluasan tersebut ikut dipilih otomatis.
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </ActionCard>
+  );
+
+  const renderSharedPreviewSummaryCard = () => (
+    <SectionCard
+      title="Ringkasan Penawaran Anda"
+      subtitle="Rangkuman utama penawaran yang sedang Anda tinjau."
+      headerAlign="center"
+    >
+      <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+        <div className="space-y-3">
+          <OfferSummarySection
+            title="Ringkasan Informasi Calon Pemegang Polis"
+            action={!sharedPreviewEditing.insured ? <SummaryEditButton onClick={() => setSharedPreviewEditing({ insured: true, vehicle: false })} /> : null}
+          >
+            {sharedPreviewEditing.insured ? (
+              <div className="space-y-4">
+                <OfferSummaryKeyValue label="Nama Calon Pemegang Polis" value={insuredSummaryName} />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <FieldLabel label="Alamat Email" required />
+                    <TextInput
+                      value={selected.insured.email}
+                      onChange={(value: string) => setAt(flowType, "insured.email", value)}
+                      placeholder="nama@email.com"
+                      icon={<Mail className="h-4 w-4" />}
+                      type="email"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel label="Nomor Handphone" required />
+                    <TextInput
+                      value={selected.insured.phone}
+                      onChange={(value: string) => setAt(flowType, "insured.phone", value)}
+                      placeholder="08xxxxxxxxxx"
+                      icon={<Phone className="h-4 w-4" />}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm text-slate-500">Yang bisa diubah di bagian ini hanya alamat email dan nomor handphone.</div>
+                  <button
+                    type="button"
+                    onClick={() => setSharedPreviewEditing((prev) => ({ ...prev, insured: false }))}
+                    className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <OfferSummaryKeyValue label="Nama Calon Pemegang Polis" value={insuredSummaryName} />
+                <OfferSummaryKeyValue label="Alamat Email" value={insuredSummaryEmail} />
+                <OfferSummaryKeyValue label="Nomor Handphone" value={insuredSummaryPhone} />
+              </div>
+            )}
+          </OfferSummarySection>
+
+          <OfferSummarySection
+            title="Ringkasan Informasi Kendaraan"
+            action={!sharedPreviewEditing.vehicle ? <SummaryEditButton onClick={() => setSharedPreviewEditing({ insured: false, vehicle: true })} /> : null}
+          >
+            {sharedPreviewEditing.vehicle ? (
+              <div className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <FieldLabel label={flowType === "motor" ? "Merek / Tipe Motor" : "Merek / Tipe Kendaraan"} />
+                    <VehicleAutocomplete
+                      value={selected.quote.vehicleName}
+                      onChange={(value: string) => updateVehicleSelection(flowType, value)}
+                      onSelect={(item: VehicleCatalogItem) => updateVehicleSelection(flowType, item.label, item)}
+                      catalogType={flowType === "motor" ? "motor" : "car"}
+                      placeholder={flowType === "motor" ? "Sepeda motor ini merek dan tipenya apa?" : "Mobil ini merek dan tipenya apa?"}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel label="Kode wilayah plat / TNKB" />
+                    <TextInput
+                      value={selected.quote.plateRegion}
+                      onChange={(value: string) => setAt(flowType, "quote.plateRegion", value)}
+                      placeholder="Pilih kode wilayah kendaraan"
+                      icon={<MapPin className="h-4 w-4" />}
+                      listId={`${flowType}-preview-plate-list`}
+                    />
+                    <datalist id={`${flowType}-preview-plate-list`}>{PLATES.map((p) => <option key={p} value={p} />)}</datalist>
+                  </div>
+                  <div>
+                    <FieldLabel label="Tahun Pembuatan Kendaraan" helpText="Sesuai tahun pembuatan/manufacture year pada STNK." />
+                    <VehicleYearPicker
+                      value={selected.quote.year}
+                      onChange={(value: string) => setAt(flowType, "quote.year", value)}
+                      minYear={flowType === "carComp" ? MIN_YEAR_COMP : MIN_YEAR_TLO}
+                      maxYear={CURRENT_YEAR}
+                      placeholder="Kendaraan ini dibuat tahun berapa?"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel label="Harga Pertanggungan" helpText="Harga pertanggungan adalah nilai kendaraan yang diasuransikan. Isi sesuai harga pasar wajar kendaraan saat ini, karena nilai ini menjadi dasar perhitungan premi dan batas ganti rugi sesuai ketentuan polis." />
+                    <TextInput
+                      value={selected.quote.marketValue ? formatRupiah(Number(String(selected.quote.marketValue).replace(/[^0-9]/g, ""))) : ""}
+                      onChange={(value: string) => setAt(flowType, "quote.marketValue", String(value).replace(/[^0-9]/g, ""))}
+                      placeholder={flowType === "motor" ? "Berapa harga pertanggungan sepeda motor ini?" : "Berapa harga pertanggungan mobil ini?"}
+                      inputMode="numeric"
+                    />
+                  </div>
+                </div>
+                <div className="md:max-w-[760px]">
+                  <FieldLabel label="Penggunaan Kendaraan" helpText={vehicleUsageHelpText} />
+                  <SelectInput
+                    value={selected.quote.usage}
+                    onChange={(value: string) => setAt(flowType, "quote.usage", value)}
+                    options={["Pribadi", "Komersial"]}
+                    placeholder="Kendaraan ini digunakan untuk apa?"
+                  />
+                  {selected.quote.usage === "Pribadi" ? (
+                    <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600">
+                      <span className="font-semibold text-slate-800">Penggunaan Pribadi</span> berarti kendaraan digunakan untuk keperluan pribadi dan bukan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.
+                    </div>
+                  ) : selected.quote.usage === "Komersial" ? (
+                    <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600">
+                      <span className="font-semibold text-slate-800">Penggunaan Komersial</span> berarti kendaraan digunakan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.
+                    </div>
+                  ) : null}
+                  {shouldShowTariffSummary ? (
+                    <div className="mt-3 rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2 text-sm leading-6 text-slate-600">
+                      <span className="font-semibold text-[#0A4D82]">{tariffInfoSummary}</span>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSharedPreviewEditing((prev) => ({ ...prev, vehicle: false }))}
+                    className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <OfferSummaryKeyValue label={flowType === "motor" ? "Merek / Tipe Motor" : "Merek / Tipe Kendaraan"} value={vehicleSummaryName} />
+                <OfferSummaryKeyValue label="Kode wilayah plat / TNKB" value={vehicleSummaryPlateRegion} />
+                <OfferSummaryKeyValue label="Tahun Pembuatan Kendaraan" value={vehicleSummaryYear} />
+                <OfferSummaryKeyValue label="Penggunaan Kendaraan" value={vehicleSummaryUsage} />
+                <OfferSummaryKeyValue label="Harga Pertanggungan" value={vehicleSummaryValue} />
+              </div>
+            )}
+          </OfferSummarySection>
+
+          <OfferSummarySection title="Ringkasan Syarat dan Ketentuan">
+              <div className="space-y-4">
+                <div className="rounded-xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F7FAFD_100%)] px-4 py-3">
+                  <div className="text-[15px] font-medium leading-[1.4] text-slate-900">{policySummaryTitle}</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-[14px] font-medium text-slate-600">Risiko yang dijamin</div>
+                  <VehicleGuaranteeDetailCard
+                    title={mainCoverTitle(flowType)}
+                    icon={Shield}
+                    premium={displayedBasePremium === "-" ? "-" : `Rp ${displayedBasePremium}`}
+                    detail={mainCoverText(flowType)}
+                    deductible={mainDeductibleText(flowType, selected.quote.vehicleType)}
+                  />
+                </div>
+              <div className="space-y-2">
+                <div>
+                  <div className="text-[14px] font-medium text-slate-600">Perluasan Jaminan</div>
+                </div>
+                {exts.map((item) => {
+                  const enabled = selected.quote.extensions[item.id].enabled;
+                  return (
+                    <PreviewGuaranteeOption
+                      key={item.id}
+                      icon={item.icon}
+                      title={item.label}
+                      premium={formatRupiah((feeMap as any)[item.id] || 0)}
+                      checked={enabled}
+                      expanded={!!expandedRows[item.id]}
+                      onToggleChecked={() => {
+                        const next = !enabled;
+                        if (item.id === "ts") {
+                          setAt(flowType, `quote.extensions.ts.enabled`, next);
+                          if (next) setAt(flowType, `quote.extensions.srcc.enabled`, true);
+                          return;
+                        }
+                        if (item.id === "srcc") {
+                          const tsEnabled = selected.quote.extensions.ts.enabled;
+                          if (tsEnabled && !next) {
+                            setAt(flowType, `quote.extensions.srcc.enabled`, true);
+                            return;
+                          }
+                        }
+                        setAt(flowType, `quote.extensions.${item.id}.enabled`, next);
+                      }}
+                      onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
+                      detail={EXT_INFO[item.id]}
+                      deductible={deductibleText(flowType, selected.quote.vehicleType, item.id)}
+                    />
+                  );
+                })}
+                {selected.quote.extensions.ts.enabled ? (
+                  <div className="rounded-xl border border-[#D8E1EA] bg-white px-3.5 py-3 text-[13px] leading-5 text-slate-600">
+                    Jaminan Terorisme mensyaratkan Jaminan Kerusuhan &amp; Huru-hara, sehingga perluasan tersebut ikut dipilih otomatis.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </OfferSummarySection>
+
+          <OfferSummarySection title="Ringkasan Pembayaran">
+            <PremiumPriceHero
+              label="Total Pembayaran"
+              value={displayedTotalPremium}
+              tooltipText="Total pembayaran ini masih perkiraan awal. Setelah Anda melengkapi Data Lanjutan, nilainya akan dihitung ulang dan bisa berubah sesuai informasi yang Anda isi."
+            />
+            <PremiumBreakdown>
+              <ProposalRow label="Premi" value={displayedBasePremium} />
+              {displayedExtensionPremium ? <ProposalRow label="Premi Perluasan" value={displayedExtensionPremium} /> : null}
+              <ProposalRow label="Biaya Meterai" value={displayedStampDuty} />
+            </PremiumBreakdown>
+          </OfferSummarySection>
+
+          <div className="rounded-[24px] border border-[#D8E1EA] bg-white p-5 shadow-sm">
+            {journeyStatus ? (
+              <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{journeyStatus}</div>
+            ) : null}
+            <div className={journeyStatus ? "mt-4" : ""}>
+              <button
+                type="button"
+                onClick={() => {
+                  setJourneyStatus("");
+                  setStep(2);
+                }}
+                className="flex h-[48px] w-full items-center justify-center rounded-[12px] bg-[#F5A623] px-5 text-sm font-semibold text-white shadow-sm hover:brightness-105"
+              >
+                Isi Data Lanjutan
+              </button>
+            </div>
+            <div className="mt-3 flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setJourneyStatus("Tim asuransi akan membantu menindaklanjuti penawaran kendaraan ini.")}
+                className="text-sm font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+              >
+                Minta Bantuan Isi Data Lanjutan
+              </button>
+              <button
+                type="button"
+                onClick={() => setJourneyStatus("Penawaran kendaraan ini ditandai untuk tidak dilanjutkan.")}
+                className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+              >
+                Tidak mau melanjutkan penawaran
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </SectionCard>
+  );
+
+  const renderStepOneActions = () => (
+    <div>
+      <div className={cls("flex justify-stretch gap-3", showPremiumDetails ? "justify-stretch sm:justify-end" : "sm:justify-end sm:gap-3")}>
+        {!showPremiumDetails ? (
+          <button
+            type="button"
+            disabled={!quoteReady}
+            onClick={() => setShowPremiumDetails(true)}
+            className={cls(
+              "inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition",
+              quoteReady ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
+            )}
+          >
+            Cek Premi
+          </button>
+        ) : null}
+        {isInternalMode ? (
+          <button
+            type="button"
+            disabled={!quoteReady}
+            onClick={handleSendIndicative}
+            className={cls(
+              "inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition",
+              quoteReady ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
+            )}
+          >
+            Kirim Penawaran
+          </button>
+        ) : null}
+        <button
+          type="button"
+          disabled={!quoteReady}
+          onClick={() => {
+            setJourneyStatus("");
+            setStep(2);
+          }}
+          className={cls(
+            "inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition",
+            quoteReady ? (isInternalMode ? "bg-[#0A4D82] hover:brightness-105" : "bg-[#F5A623] hover:brightness-105") : "cursor-not-allowed bg-slate-400",
+          )}
+        >
+          {"Isi Data Lanjutan"}
+        </button>
+      </div>
+      {!isInternalMode && hasSharedOfferJourney ? (
+        <div className="mt-3 space-y-3">
+          <button
+            type="button"
+            onClick={() => setJourneyStatus("Tim asuransi akan membantu menindaklanjuti penawaran kendaraan ini.")}
+            className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+          >
+            Minta Bantuan Isi Data Lanjutan
+          </button>
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setJourneyStatus("Penawaran kendaraan ini ditandai untuk tidak dilanjutkan.")}
+              className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+            >
+              Tidak mau melanjutkan penawaran
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const renderExternalStepTwoActions = () => (
+    <ActionCard>
+      <div className="space-y-4">
+        {journeyStatus ? <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{journeyStatus}</div> : null}
+        {(selected.ui.dataMode === "scan" && !selected.ktpRead) || (selected.ui.stnkMode === "scan" && !selected.stnkRead) ? (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4" />
+              <div>Dokumen yang dipilih untuk isi otomatis belum terbaca penuh. Anda masih bisa lanjut dengan pengisian manual bila diperlukan.</div>
+            </div>
+          </div>
+        ) : null}
+        <div className="grid gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => {
+              setJourneyStatus("");
+              setStep(1);
+            }}
+            className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-center text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]"
+          >
+            Kembali ke Tinjau Penawaran
+          </button>
+          <button
+            onClick={() => {
+              if (readyForNextStage) {
+                setJourneyStatus("");
+                setStep(3);
+              }
+            }}
+            disabled={!readyForNextStage}
+            className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm", readyForNextStage ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+          >
+            Lanjut ke Pembayaran
+          </button>
+        </div>
+        <div className="mt-3 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setJourneyStatus("Tim asuransi akan membantu melengkapi data lanjutan kendaraan ini.")}
+            className="text-sm font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+          >
+            Minta Bantuan Isi Data Lanjutan
+          </button>
+          <button
+            type="button"
+            onClick={() => setJourneyStatus("Penawaran kendaraan ini ditandai untuk tidak dilanjutkan.")}
+            className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+          >
+            Tidak mau melanjutkan penawaran
+          </button>
+        </div>
+      </div>
+    </ActionCard>
+  );
+
+  const renderInternalStepTwoActions = () => (
+    <ActionCard>
+      <div className="space-y-4">
+        {journeyStatus ? <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{journeyStatus}</div> : null}
+        {step === 2 && ((selected.ui.dataMode === "scan" && !selected.ktpRead) || (selected.ui.stnkMode === "scan" && !selected.stnkRead)) ? (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4" />
+              <div>Dokumen yang dipilih untuk isi otomatis belum terbaca penuh. Anda masih bisa lanjut dengan pengisian manual bila diperlukan.</div>
+            </div>
+          </div>
+        ) : null}
+        <div className="grid gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => {
+              setJourneyStatus("");
+              setStep(1);
+            }}
+            className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+          >
+            Kembali ke Data Awal
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (readyForNextStage) handleSendFinalizedOffer();
+            }}
+            disabled={!readyForNextStage}
+            className={cls(
+              "flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm transition",
+              readyForNextStage ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
+            )}
+          >
+            Kirim Penawaran
+          </button>
+        </div>
+      </div>
+    </ActionCard>
+  );
+
+  const renderStepTwoContent = (showIntroHeader: boolean) => {
+    const ktpConfidenceLabel = documentChecks[flowType].ktp.confidence
+      ? `${Math.round(documentChecks[flowType].ktp.confidence * 100)}%`
+      : "-";
+    const stnkConfidenceLabel = documentChecks[flowType].stnk.confidence
+      ? `${Math.round(documentChecks[flowType].stnk.confidence * 100)}%`
+      : "-";
+    const canShowInsuredStepTwoFields = selected.ui.dataMode !== "scan" || selected.ktpRead;
+    const canShowStnkVehicleFields = selected.ui.stnkMode !== "scan" || selected.stnkRead;
+
+    return (
+      <ActionCard className={showIntroHeader ? "rounded-[28px]" : ""}>
+          {showIntroHeader ? (
+            <div className="px-2 pb-5 text-center">
+              <div className="min-w-0 flex-1 text-center">
+                <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">
+                  {isInternalMode ? "Dokumen Nasabah & Kendaraan" : "Data Lanjutan"}
+                </div>
+                <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
+                  {isInternalMode
+                    ? "Pilih cara pengisian data dari dokumen atau lanjutkan secara manual."
+                    : "Data yang Anda isi pada halaman ini merupakan bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar ringkasan final sebelum pembayaran serta penerbitan polis."}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <div className={showIntroHeader ? "mt-5 space-y-6" : "space-y-6"}>
+            <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
+              <div className="space-y-4">
+                <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Calon Pemegang Polis</div>
+                <div className="grid gap-2.5 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setAt(flowType, "ui.dataMode", "scan")}
+                    className={cls(
+                      "rounded-[14px] border px-4 py-2.5 text-left transition",
+                      selected.ui.dataMode === "scan" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
+                    )}
+                  >
+                    <div className="text-[14px] font-semibold text-[#0A4D82]">Gunakan Foto KTP</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAt(flowType, "ui.dataMode", "manual")}
+                    className={cls(
+                      "rounded-[14px] border px-4 py-2.5 text-left transition",
+                      selected.ui.dataMode === "manual" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
+                    )}
+                  >
+                    <div className="text-[14px] font-semibold text-[#0A4D82]">Isi Manual</div>
+                  </button>
+                </div>
+
+                {selected.ui.dataMode === "scan" ? (
+                  <div className="rounded-[16px] border border-[#D8E1EA] bg-white px-4 py-3">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className={cls("text-[13px] font-medium", selected.ktpRead ? "text-emerald-700" : "text-slate-600")}>
+                        {selected.ktpRead ? `Data dari foto KTP berhasil dibaca (${ktpConfidenceLabel})` : "Isi otomatis dengan foto KTP"}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const extractedData = {
+                            fullName: "Rizky Pratama",
+                            address: "Jl. Pahlawan No. 18, Palmerah, Jakarta Barat",
+                            identityNumber: selected.insured.nik || "3174********0012",
+                          };
+                          setFlows((prev) => ({
+                            ...prev,
+                            [flowType]: {
+                              ...prev[flowType],
+                              insured: {
+                                ...prev[flowType].insured,
+                                nik: prev[flowType].insured.nik || "3174********0012",
+                                fullName: "Rizky Pratama",
+                                address: "Jl. Pahlawan No. 18, Palmerah, Jakarta Barat",
+                              },
+                              ktpRead: true,
+                            },
+                          }));
+                          setDocumentChecks((prev) => ({
+                            ...prev,
+                            [flowType]: {
+                              ...prev[flowType],
+                              ktp: evaluateDocumentRead({
+                                docType: "KTP",
+                                extractedData,
+                                expectedData: {
+                                  fullName: selected.insured.fullName,
+                                  identityNumber: selected.insured.nik,
+                                },
+                              }),
+                            },
+                          }));
+                        }}
+                        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-bold text-white hover:brightness-105"
+                      >
+                        <Camera className="h-4 w-4" />
+                        Foto KTP
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {canShowInsuredStepTwoFields ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <FieldLabel label={selected.insured.customerType === "Perusahaan / Badan Usaha" ? "NPWP" : "NIK"} required={false} />
+                      <TextInput value={selected.insured.nik} onChange={(value: string) => setAt(flowType, "insured.nik", value)} placeholder={selected.insured.customerType === "Perusahaan / Badan Usaha" ? "NPWP" : "NIK"} icon={<User className="h-4 w-4" />} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <FieldLabel label="Alamat Calon Pemegang Polis" />
+                      <div className="space-y-2.5">
+                        <TextInput
+                          value={selected.insured.address}
+                          onChange={(value: string) => setAt(flowType, "insured.address", value)}
+                          placeholder="Ketik alamat calon pemegang polis"
+                          icon={<MapPin className="h-4 w-4" />}
+                        />
+                        <div className="flex flex-wrap gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => setAt(flowType, "insured.address", "Lokasi calon pemegang polis tersimulasi - Jl. Pahlawan No. 18, Palmerah, Jakarta Barat")}
+                            className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            <MapPin className="h-4 w-4" />
+                            Ambil Lokasi Sekarang
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAt(flowType, "insured.address", "Pin lokasi calon pemegang polis tersimulasi - Jl. Kemang Raya No. 18, Jakarta Selatan")}
+                            className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            <MapPin className="h-4 w-4" />
+                            Pilih di Peta
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
+              <div className="space-y-4">
+                <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Kendaraan Lanjutan</div>
+                <div className="grid gap-2.5 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setAt(flowType, "ui.stnkMode", "scan")}
+                    className={cls(
+                      "rounded-[14px] border px-4 py-2.5 text-left transition",
+                      selected.ui.stnkMode === "scan" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
+                    )}
+                  >
+                    <div className="text-[14px] font-semibold text-[#0A4D82]">Gunakan Foto STNK</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAt(flowType, "ui.stnkMode", "manual")}
+                    className={cls(
+                      "rounded-[14px] border px-4 py-2.5 text-left transition",
+                      selected.ui.stnkMode === "manual" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
+                    )}
+                  >
+                    <div className="text-[14px] font-semibold text-[#0A4D82]">Isi Manual</div>
+                  </button>
+                </div>
+                {selected.ui.stnkMode === "scan" ? (
+                  <div className="rounded-[16px] border border-[#D8E1EA] bg-white px-4 py-3">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className={cls("text-[13px] font-medium", selected.stnkRead ? "text-emerald-700" : "text-slate-600")}>
+                        {selected.stnkRead ? `Data dari foto STNK berhasil dibaca (${stnkConfidenceLabel})` : "Isi otomatis dengan foto STNK"}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const extractedData = {
+                            ownerNameOnStnk: "Rizky Pratama",
+                            plateNumber: flowType === "motor" ? "B 4123 UYT" : "B 1234 UYT",
+                            chassisNumber: flowType === "motor" ? "MH1JM8112PK123456" : "MHFCBA2J0PK123456",
+                            engineNumber: flowType === "motor" ? "JM81E1234567" : "2NRFKE1234567",
+                            color: "Hitam",
+                          };
+                          setFlows((prev) => ({
+                            ...prev,
+                            [flowType]: {
+                              ...prev[flowType],
+                              vehicle: {
+                                ...prev[flowType].vehicle,
+                                ownerNameOnStnk: extractedData.ownerNameOnStnk,
+                                plateNumber: extractedData.plateNumber,
+                                chassisNumber: extractedData.chassisNumber,
+                                engineNumber: extractedData.engineNumber,
+                                color: extractedData.color,
+                                year: prev[flowType].quote.year,
+                                contactOnLocation: prev[flowType].vehicle.contactOnLocation,
+                              },
+                              stnkRead: true,
+                            },
+                          }));
+                          setDocumentChecks((prev) => ({
+                            ...prev,
+                            [flowType]: {
+                              ...prev[flowType],
+                              stnk: evaluateDocumentRead({
+                                docType: "STNK",
+                                extractedData,
+                                expectedData: {
+                                  plateNumber: selected.vehicle.plateNumber,
+                                  chassisNumber: selected.vehicle.chassisNumber,
+                                },
+                              }),
+                            },
+                          }));
+                        }}
+                        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-bold text-white hover:brightness-105"
+                      >
+                        <Camera className="h-4 w-4" />
+                        Foto STNK
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <>
+                    {selected.insured.customerType === "Perusahaan / Badan Usaha" ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <FieldLabel label="Kontak di Lokasi" />
+                          <TextInput value={selected.vehicle.contactOnLocation} onChange={(value: string) => setAt(flowType, "vehicle.contactOnLocation", value)} placeholder="Masukkan kontak di lokasi" icon={<Phone className="h-4 w-4" />} />
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {canShowStnkVehicleFields ? (
+                        <>
+                          <div>
+                            <FieldLabel label="Nomor Polisi / TNKB" />
+                            <TextInput
+                              value={selected.vehicle.plateNumber}
+                              onChange={(value: string) => setAt(flowType, "vehicle.plateNumber", value)}
+                              placeholder="Masukkan nomor polisi / TNKB"
+                            />
+                          </div>
+                          <div>
+                            <FieldLabel label="Nama Pemilik sesuai STNK" />
+                            <TextInput
+                              value={selected.vehicle.ownerNameOnStnk}
+                              onChange={(value: string) => setAt(flowType, "vehicle.ownerNameOnStnk", value)}
+                              placeholder="Masukkan nama pemilik sesuai STNK"
+                            />
+                          </div>
+                          <div>
+                            <FieldLabel label="Nomor Rangka" />
+                            <TextInput
+                              value={selected.vehicle.chassisNumber}
+                              onChange={(value: string) => setAt(flowType, "vehicle.chassisNumber", value)}
+                              placeholder="Masukkan nomor rangka kendaraan"
+                            />
+                          </div>
+                          <div>
+                            <FieldLabel label="Nomor Mesin" />
+                            <TextInput
+                              value={selected.vehicle.engineNumber}
+                              onChange={(value: string) => setAt(flowType, "vehicle.engineNumber", value)}
+                              placeholder="Masukkan nomor mesin kendaraan"
+                            />
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
+
+                    {flowType !== "motor" ? (
+                      <details className="rounded-xl border border-slate-200 bg-slate-50">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left">
+                          <div>
+                            <div className="text-sm font-semibold text-slate-900">Perlengkapan Tambahan</div>
+                            <div className="mt-1 text-xs text-slate-500">Aksesori atau perangkat non-standar yang bukan bawaan pabrik dan ingin ikut dijamin bersama kendaraan.</div>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-slate-400" />
+                        </summary>
+                        <div className="border-t border-slate-200 px-4 py-4">
+                          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                            <div>
+                              <FieldLabel label="Nilai perlengkapan tambahan" required={false} />
+                              <TextInput
+                                value={selected.quote.extensions.equipment.amount ? formatRupiah(Number(selected.quote.extensions.equipment.amount)) : ""}
+                                onChange={(value: string) => {
+                                  const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
+                                  const capped = Math.min(calc?.details?.equipmentCap || 0, raw);
+                                  setAt(flowType, "quote.extensions.equipment.amount", capped);
+                                  setAt(flowType, "quote.extensions.equipment.enabled", capped > 0);
+                                }}
+                                placeholder={`Maksimum ${formatRupiah(calc?.details?.equipmentCap || 0)}`}
+                                inputMode="numeric"
+                              />
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-600">
+                              Maksimum 10% dari harga pertanggungan casco, paling tinggi Rp25.000.000.
+                            </div>
+                          </div>
+                        </div>
+                      </details>
+                    ) : null}
+                </>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
+            <div className="space-y-4">
+              <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Pertanggungan</div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <FieldLabel label="Tanggal Mulai Perlindungan" helpText="Perlindungan asuransi berlaku 1 tahun sejak tanggal ini." />
+                  <input
+                    ref={coverageDateFieldRef}
+                    type="date"
+                    value={selected.quote.coverageStart}
+                    onChange={(event) => setAt(flowType, "quote.coverageStart", event.target.value)}
+                    className="sr-only"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                  <button
+                    type="button"
+                    onClick={openCoverageDatePicker}
+                    className={cls(
+                      "flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[12px] border border-[#D5DDE6] bg-white px-4 py-3 text-left text-[14px] transition hover:border-[#A9C7E3] hover:bg-[#F8FBFE]",
+                      selected.quote.coverageStart ? "text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.04)]" : "text-slate-400",
+                    )}
+                  >
+                    <span className={cls("block", selected.quote.coverageStart ? "font-medium text-slate-900" : "font-normal text-slate-400")}>
+                      {coveragePeriodDisplay}
+                    </span>
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-[#EEF6FD] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#0A4D82]">
+                      1 Tahun
+                    </span>
+                  </button>
+                  {selected.quote.coverageStart ? (
+                    <div className="mt-1.5 text-[12px] leading-5 text-slate-500">
+                      Berlaku sampai pukul 12.00 siang pada {coverageEndDisplay}.
+                    </div>
+                  ) : null}
+                </div>
+                <div className="md:col-span-2">
+                  <FieldLabel
+                    label="Pernah diajukan klaim asuransi dalam 3 tahun terakhir?"
+                    helpText="Klaim asuransi adalah permintaan ganti rugi ke perusahaan asuransi atas kerusakan, kehilangan, atau kejadian lain yang dijamin polis."
+                  />
+                  <SelectInput
+                    value={selected.underwriting.claimHistory}
+                    onChange={(value: string) => setAt(flowType, "underwriting.claimHistory", value)}
+                    options={CLAIM_HISTORY_OPTIONS}
+                    placeholder="Pilih jawaban yang sesuai"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
+            <div className="space-y-4">
+              <div className="text-[18px] font-bold tracking-tight text-slate-900">Foto Kendaraan</div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {visibleUploadNames.map((name) => {
+                const uploaded = selected.uploads[name];
+                const photoTitle = getVehiclePhotoTitle(name);
+                const helperText = getVehiclePhotoHelper(name);
+                const photoEvidence = evidence[flowType]?.[name];
+                return (
+                  <div
+                    key={name}
+                    className="rounded-2xl border border-[#D8E1EA] bg-white p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-[15px] font-semibold tracking-tight text-slate-900">{photoTitle}</div>
+                        <div className="mt-1 text-sm text-slate-500">{helperText}</div>
+                      </div>
+                      <Camera className="h-5 w-5 text-slate-400" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAt(flowType, `uploads.${name}`, true);
+                        setEvidence((prev) => ({
+                          ...prev,
+                          [flowType]: {
+                            ...prev[flowType],
+                            [name]: createVehiclePhotoMetadata(name, selected.insured.address),
+                          },
+                        }));
+                      }}
+                      className={cls(
+                        "mt-3 flex h-40 w-full flex-col items-center justify-center rounded-2xl border px-4 text-center transition hover:border-[#0A4D82]/30",
+                        uploaded
+                          ? "border-[#D8E1EA] bg-white"
+                          : "border-dashed border-[#C9D6E4] bg-[linear-gradient(180deg,#FAFCFF_0%,#F4F8FC_100%)]",
+                      )}
+                    >
+                      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#DCE6F0]">
+                        <Camera className="h-5 w-5 text-[#0A4D82]" />
+                      </span>
+                      <span className="mt-3 text-sm font-medium text-slate-700">
+                        {uploaded ? "Foto kendaraan sudah diambil" : "Ambil foto kendaraan"}
+                      </span>
+                      <span className="mt-1 text-xs leading-5 text-slate-500">
+                        {uploaded && photoEvidence?.capturedAt ? "Foto tersimpan untuk verifikasi lanjutan." : "Ketuk area ini untuk membuka kamera."}
+                      </span>
+                    </button>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {uploaded ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAt(flowType, `uploads.${name}`, false);
+                            setEvidence((prev) => ({
+                              ...prev,
+                              [flowType]: {
+                                ...prev[flowType],
+                                [name]: null,
+                              },
+                            }));
+                          }}
+                          className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Hapus Foto
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+            </div>
+          </div>
+      </ActionCard>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <SentOffersHistoryModal open={showSentOffers} onClose={() => setShowSentOffers(false)} />
+      <OfferShareModal
+        open={showOfferShareModal}
+        onClose={() => setShowOfferShareModal(false)}
+        recipientName={shareRecipientName}
+        shareLabel={shareLabel}
+        productIcon={<Shield className="h-5 w-5" />}
+        onOpenIndicativeOffer={
+          sharedOfferView === "offer-indicative"
+            ? () => {
+                setShowOfferShareModal(false);
+                openShareWindow(shareUrl);
+              }
+            : null
+        }
+        onOpenFinalOffer={
+          sharedOfferView === "payment"
+            ? () => {
+                setShowOfferShareModal(false);
+                openShareWindow(shareUrl);
+              }
+            : null
+        }
+        onPrintPdf={handleDownloadSharePdf}
+        onOpenWhatsApp={() => {
+          const shareMessage = encodeURIComponent(`Halo ${shareRecipientName}, berikut tautan simulasi ${shareLabel}: ${shareUrl}`);
+          openShareWindow(`https://wa.me/?text=${shareMessage}`);
+        }}
+        onOpenEmail={() => {
+          const shareMessage = encodeURIComponent(`Halo ${shareRecipientName}, berikut tautan simulasi ${shareLabel}: ${shareUrl}`);
+          openShareWindow(`mailto:?subject=${encodeURIComponent(shareSubject)}&body=${shareMessage}`);
+        }}
+        onCopyLink={handleCopyShareLink}
+        onShowQrInfo={() => setShareFeedback(`QR Code belum digenerate otomatis. Untuk handoff ke IT, tautan yang akan diencode adalah: ${shareUrl}`)}
+        feedback={shareFeedback}
+      />
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
         <div className="mx-auto flex max-w-[1800px] items-center justify-between px-4 py-3 md:px-6">
           <div className="flex items-center gap-6">
@@ -958,22 +3202,53 @@ export default function MotorLatestExact({
             </div>
           </div>
           <div className="flex items-center gap-4 text-white">
-            <div className="relative">
-              <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>
-                {userName}
+            {screen === "flow" ? (
+              <button
+                type="button"
+                onClick={fillDemoForCurrentStep}
+                className="hidden h-11 items-center justify-center rounded-[10px] border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:inline-flex"
+              >
+                Simulasi
               </button>
-              <UserPillMenu
-                open={showUserMenu}
-                items={accountMenuItems.map((item) => ({
-                  ...item,
-                  onClick: () => {
-                    setShowUserMenu(false);
-                    item.onClick();
-                  },
-                }))}
-              />
-            </div>
+            ) : null}
+            {isGuestExternalSession ? (
+              <>
+                <button
+                  type="button"
+                  className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
+                  <span className="text-[13px] md:text-sm">ID</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = "https://esppa.asuransijasindo.co.id/";
+                  }}
+                  className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
+                >
+                  <Home className="h-4 w-4" aria-hidden="true" />
+                  Masuk
+                </button>
+              </>
+            ) : (
+              <div className="relative">
+                <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>
+                  {displayUserName}
+                </button>
+                <UserPillMenu
+                  open={showUserMenu}
+                  items={accountMenuItems.map((item) => ({
+                    ...item,
+                    onClick: () => {
+                      setShowUserMenu(false);
+                      item.onClick();
+                    },
+                  }))}
+                />
+              </div>
+            )}
             <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
               <Bell className="h-4 w-4" />
             </button>
@@ -1000,63 +3275,177 @@ export default function MotorLatestExact({
         </div>
       ) : (
         <>
-          <div className="relative overflow-hidden bg-[#0A4D82] pb-10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.20),transparent_28%),radial-gradient(circle_at_80%_25%,rgba(255,255,255,0.14),transparent_24%),radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.12),transparent_24%)]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0A4D82]/60 to-[#0A4D82]/75" />
-            <div className="relative mx-auto max-w-[1800px] px-4 pt-6 md:px-6">
+          <div className="bg-[#0A4D82] pb-10">
+            <div className="mx-auto max-w-[1280px] px-4 pt-6 md:px-6">
               <div className="flex items-center justify-between gap-3">
                 <button type="button" onClick={returnToLauncher} className="inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
-                <button type="button" tabIndex={-1} aria-hidden="true" className="pointer-events-none invisible inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
+                {!isInternalMode && !isGuestExternalSession ? (
+                  <div className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
+                    <span>Calon Pemegang Polis</span>
+                  </div>
+                ) : null}
               </div>
               <div className="mt-6 text-center text-white">
-                <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Selamat datang kembali, {userName}</div>
-                <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{flowType === "motor" ? "Total Loss Kendaraan - Motor" : flowType === "carComp" ? "Asuransi Mobil Comprehensive" : "Total Loss Kendaraan - Mobil"}</h1>
-<p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{flowType === "motor" ? "Perlindungan sepeda motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran." : flowType === "carComp" ? "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran." : "Perlindungan mobil untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran."}</p>
+                {!isGuestExternalSession ? <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">{heroGreeting}</div> : null}
+                <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{activeProduct?.title || "Produk Kendaraan"}</h1>
+                <p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{activeProduct?.subtitle || "Perlindungan kendaraan untuk risiko yang dijamin sesuai produk yang dipilih."}</p>
               </div>
-              <div className="mx-auto mt-7 max-w-4xl rounded-2xl bg-white p-4 shadow-2xl shadow-black/15 md:p-5">
-                <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-4 py-4 md:px-5 md:py-5">
-                  <div className="flex flex-col gap-6 md:flex-row md:gap-5">
-                    <StepNode step="LANGKAH 1" title="Simulasi Premi" subtitle={step === 1 ? "Dalam proses" : "Selesai"} active={step === 1} icon={<Building2 className="h-4 w-4" />} onClick={() => setStep(1)} />
+              <div className="mx-auto mt-6 max-w-[860px] rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-[960px] md:p-5">
+                <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5">
+                  <div className="flex flex-col gap-5 md:flex-row md:gap-5">
+                    <StepNode step="Langkah 1" title={stepOneTitle} subtitle={step === 1 ? "Sedang dibuka" : "Selesai"} active={step === 1} done={step > 1} icon={<FileText className="h-4 w-4" />} onClick={() => setStep(1)} />
                     <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-                    <StepNode step="LANGKAH 2" title="Isi Data" subtitle={step === 2 ? "Dalam proses" : step > 2 ? "Selesai" : "Tertunda"} active={step === 2} icon={<FileText className="h-4 w-4" />} onClick={showPremiumDetails ? () => setStep(2) : undefined} />
-                    <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-                    <StepNode step="LANGKAH 3" title="Pembayaran" subtitle={step === 3 ? "Dalam proses" : "Tertunda"} active={step === 3} icon={<Wallet className="h-4 w-4" />} onClick={step > 1 ? () => setStep(3) : undefined} />
+                    <StepNode
+                      step="Langkah 2"
+                      title="Data Lanjutan"
+                      subtitle={step === 2 ? (readyForNextStage ? (isInternalMode ? "Siap dikirim" : "Siap dibayar") : "Sedang diisi") : isInternalMode ? "Menunggu" : step > 2 ? "Selesai" : "Menunggu"}
+                      active={step === 2}
+                      done={!isInternalMode && step > 2}
+                      icon={<FileText className="h-4 w-4" />}
+                      onClick={showPremiumDetails ? () => setStep(2) : undefined}
+                    />
+                    {!isInternalMode ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
+                    {!isInternalMode ? (
+                      <StepNode
+                        step="Langkah 3"
+                        title="Pembayaran"
+                        subtitle={step === 3 ? "Sedang dibuka" : readyForNextStage ? "Menunggu" : "Tertunda"}
+                        active={step === 3}
+                        done={false}
+                        icon={<Wallet className="h-4 w-4" />}
+                        onClick={step > 1 && readyForNextStage ? () => setStep(3) : undefined}
+                      />
+                    ) : null}
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className={cls("mx-auto px-4 pb-12 md:px-6", step > 1 || showPremiumDetails ? "max-w-[1280px]" : "max-w-4xl")}>
-            <div className={cls("grid items-start gap-5", step > 1 || showPremiumDetails ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
+          <div className={showSidebar ? "mx-auto max-w-[1280px] px-4 pb-12 md:px-6" : "mx-auto mt-6 max-w-[860px] px-4 pb-12 md:px-6"}>
+            <div className={showSidebar ? "grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]" : "space-y-5"}>
               <div className="space-y-5">
                 {step === 1 ? (
                   <>
-                    <ActionCard>
-                      <div className="text-[20px] font-bold tracking-tight text-slate-900">Informasi Obyek</div>
-                      <div className="mt-5 grid gap-4 md:grid-cols-2">
-                        {flowType === "carTlo" ? (
+                    {isSharedCustomerPreview ? (
+                      <>
+                        {renderSharedPreviewSummaryCard()}
+                      </>
+                    ) : (
+                      <>
+                    {isInternalMode ? (
+                      <ActionCard>
+                        <div className="text-[18px] font-bold text-slate-900">Informasi Calon Pemegang Polis</div>
+                        <div className="mt-5 grid gap-4 md:grid-cols-2">
+                          <div className="md:col-span-2">
+                            <FieldLabel label="Nama Calon Pemegang Polis" />
+                            <div className="relative">
+                              <TextInput
+                                value={selected.insured.lookup || selected.insured.fullName}
+                                onChange={(value: string) => {
+                                  setSelectedCustomers((prev) => ({ ...prev, [flowType]: null }));
+                                  setAt(flowType, "insured.lookup", value);
+                                  setAt(flowType, "insured.fullName", value);
+                                }}
+                                placeholder={allowCustomerLookup ? "Masukkan nama calon pemegang polis atau kode CIF" : "Masukkan nama calon pemegang polis"}
+                                icon={<User className="h-4 w-4" />}
+                              />
+                              {allowCustomerLookup && selected.insured.lookup && customerSuggestions.length > 0 && !selectedCustomer ? (
+                                <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
+                                  {customerSuggestions.map((item) => (
+                                    <button
+                                      key={item.cif}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedCustomers((prev) => ({ ...prev, [flowType]: item }));
+                                        setAt(flowType, "insured.lookup", `${item.name} - ${item.cif}`);
+                                        setAt(flowType, "insured.fullName", item.name);
+                                        setAt(flowType, "insured.customerType", item.type);
+                                        setAt(flowType, "insured.phone", item.phone);
+                                        setAt(flowType, "insured.email", item.email);
+                                      }}
+                                      className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
+                                    >
+                                      <div>
+                                        <div className="font-semibold text-slate-900">{item.name}</div>
+                                        <div className="text-xs text-slate-500">{item.type}</div>
+                                      </div>
+                                      <div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div>
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                            {allowCustomerLookup && selectedCustomer ? (
+                              <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div>
+                            ) : allowCustomerLookup && selected.insured.lookup ? (
+                              <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div>
+                            ) : null}
+                          </div>
+                          {Boolean((selected.insured.lookup || selected.insured.fullName || "").trim()) && (!allowCustomerLookup || (!selectedCustomer && !isDigitsOnly(selected.insured.lookup || selected.insured.fullName))) ? (
+                            <div>
+                              <FieldLabel label="Tipe Nasabah" />
+                              <SelectInput
+                                value={selected.insured.customerType}
+                                onChange={(value: string) => setAt(flowType, "insured.customerType", value)}
+                                options={CUSTOMER_TYPES}
+                                placeholder="Nasabah ini perorangan atau badan usaha?"
+                              />
+                            </div>
+                          ) : null}
                           <div>
-                            <FieldLabel label="Merek / Tipe Kendaraan" />
-                            <SelectInput
-                              value={selected.quote.vehicleType}
-                              onChange={(value: string) => setAt(flowType, "quote.vehicleType", value)}
-                              options={PASSENGER_CAR_MODELS}
-                              placeholder="Pilih merek dan tipe mobil penumpang"
+                            <FieldLabel label="Nomor Handphone" />
+                            <TextInput
+                              value={selected.insured.phone}
+                              onChange={(value: string) => setAt(flowType, "insured.phone", value)}
+                              placeholder="08xxxxxxxxxx"
+                              icon={<Phone className="h-4 w-4" />}
                             />
                           </div>
-                        ) : flowType !== "motor" ? <div><FieldLabel label="Jenis Kendaraan" /><SelectInput value={selected.quote.vehicleType} onChange={(value: string) => setAt(flowType, "quote.vehicleType", value)} options={["Angkutan Penumpang", "Angkutan Barang", "Bis"]} placeholder="Mobil ini termasuk jenis apa?" /></div> : null}
+                          <div>
+                            <FieldLabel label="Alamat Email" />
+                            <TextInput
+                              value={selected.insured.email}
+                              onChange={(value: string) => setAt(flowType, "insured.email", value)}
+                              placeholder="nama@email.com"
+                              icon={<Mail className="h-4 w-4" />}
+                              type="email"
+                            />
+                          </div>
+                        </div>
+                      </ActionCard>
+                    ) : null}
+
+                    {!isInternalMode && !hasSharedOfferJourney ? (
+                      <ActionCard>
+                        <div className="text-center">
+                          <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Simulasi Premi</div>
+                          <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
+                            Data yang Anda isi pada tahap simulasi ini merupakan bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar simulasi premi serta langkah berikutnya.
+                          </div>
+                        </div>
+                      </ActionCard>
+                    ) : null}
+
+                    <ActionCard>
+                      <div className="text-[18px] font-bold text-slate-900">Informasi Kendaraan</div>
+                      <div className="mt-5 grid gap-4 md:grid-cols-2">
                         <div>
-                          <FieldLabel label="Kode Nomor Polisi / TNKB" />
-                          <TextInput value={selected.quote.plateRegion} onChange={(value: string) => setAt(flowType, "quote.plateRegion", value)} placeholder={`Cari contoh: ${PLATES[0]}`} icon={<MapPin className="h-4 w-4" />} listId={`${flowType}-plate-list`} />
+                          <FieldLabel label={flowType === "motor" ? "Merek / Tipe Motor" : "Merek / Tipe Mobil"} />
+                          <VehicleAutocomplete
+                            value={selected.quote.vehicleName}
+                            onChange={(value: string) => updateVehicleSelection(flowType, value)}
+                            onSelect={(item: VehicleCatalogItem) => updateVehicleSelection(flowType, item.label, item)}
+                            catalogType={flowType === "motor" ? "motor" : "car"}
+                            placeholder={flowType === "motor" ? "Sepeda motor ini merek dan tipenya apa?" : "Mobil ini merek dan tipenya apa?"}
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel label="Kode wilayah plat / TNKB" />
+                          <TextInput value={selected.quote.plateRegion} onChange={(value: string) => setAt(flowType, "quote.plateRegion", value)} placeholder="Pilih kode wilayah kendaraan" icon={<MapPin className="h-4 w-4" />} listId={`${flowType}-plate-list`} />
                           <datalist id={`${flowType}-plate-list`}>{PLATES.map((p) => <option key={p} value={p} />)}</datalist>
                         </div>
-                        {flowType === "motor" ? (
-                          <div>
-                            <FieldLabel label="Merek / Tipe Motor" />
-                            <TextInput value={selected.quote.vehicleName} onChange={(value: string) => setAt(flowType, "quote.vehicleName", value)} placeholder="Masukkan merek dan tipe motor" icon={<Search className="h-4 w-4" />} />
-                          </div>
-                        ) : null}
                         <div>
                           <FieldLabel label="Tahun Pembuatan Kendaraan" helpText="Sesuai tahun pembuatan/manufacture year pada STNK." />
                           <VehicleYearPicker
@@ -1064,540 +3453,283 @@ export default function MotorLatestExact({
                             onChange={(value: string) => setAt(flowType, "quote.year", value)}
                             minYear={flowType === "carComp" ? MIN_YEAR_COMP : MIN_YEAR_TLO}
                             maxYear={CURRENT_YEAR}
-                            placeholder="Pilih tahun kendaraan"
+                            placeholder="Kendaraan ini dibuat tahun berapa?"
                           />
                         </div>
                         <div>
-                          <FieldLabel label="Harga Pertanggungan" helpText="Harga pertanggungan sebaiknya mencerminkan harga sebenarnya kendaraan sesaat sebelum kerugian atau kerusakan. Jika lebih rendah dari harga sebenarnya, penyelesaian klaim dapat diperhitungkan secara proporsional sebelum pengurangan risiko sendiri." />
-                          <TextInput value={selected.quote.marketValue ? formatRupiah(Number(String(selected.quote.marketValue).replace(/[^0-9]/g, ""))) : ""} onChange={(value: string) => setAt(flowType, "quote.marketValue", String(value).replace(/[^0-9]/g, ""))} placeholder="Contoh: 180.000.000" inputMode="numeric" />
+                          <FieldLabel label="Harga Pertanggungan" helpText="Harga pertanggungan adalah nilai kendaraan yang diasuransikan. Isi sesuai harga pasar wajar kendaraan saat ini, karena nilai ini menjadi dasar perhitungan premi dan batas ganti rugi sesuai ketentuan polis." />
+                          <TextInput value={selected.quote.marketValue ? formatRupiah(Number(String(selected.quote.marketValue).replace(/[^0-9]/g, ""))) : ""} onChange={(value: string) => setAt(flowType, "quote.marketValue", String(value).replace(/[^0-9]/g, ""))} placeholder={flowType === "motor" ? "Berapa harga pertanggungan sepeda motor ini?" : "Berapa harga pertanggungan mobil ini?"} inputMode="numeric" />
                           {String(selected.quote.marketValue || "").trim() && !validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) ? <div className="mt-2 text-xs font-medium text-[#E8A436]">{maxHPText(flowType)}</div> : null}
                         </div>
-                        <div>
-                          <FieldLabel label="Penggunaan" helpText={`Penggunaan Pribadi: penggunaan untuk kebutuhan pribadi pemilik (perjalanan sehari-hari, ke kantor, aktivitas keluarga).
-
-Penggunaan Komersial: penggunaan untuk disewakan atau memberikan jasa (seperti ojek, rental, antar barang, dan usaha operasional).`} />
-                          <SelectInput value={selected.quote.usage} onChange={(value: string) => setAt(flowType, "quote.usage", value)} options={["Pribadi", "Komersial"]} placeholder="Kendaraan ini digunakan untuk apa?" />
-                          {selected.quote.usage === "Pribadi" ? (
-                            <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                              <span className="font-semibold text-slate-800">Penggunaan Pribadi</span> adalah kebutuhan pribadi pemilik, seperti berkendara harian, ke kantor, dan aktivitas keluarga.
+                        <div className="md:col-span-2">
+                          <div className="md:max-w-[760px]">
+                            <div className="min-w-0">
+                              <FieldLabel label="Penggunaan Kendaraan" helpText={vehicleUsageHelpText} />
+                              <SelectInput value={selected.quote.usage} onChange={(value: string) => setAt(flowType, "quote.usage", value)} options={["Pribadi", "Komersial"]} placeholder="Kendaraan ini digunakan untuk apa?" />
                             </div>
-                          ) : null}
-                          {selected.quote.usage === "Komersial" ? (
-                            <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                              <span className="font-semibold text-slate-800">Penggunaan Komersial</span> adalah penyewaan atau layanan jasa usaha, seperti ojek, rental, antar barang, dan operasional usaha.
-                            </div>
-                          ) : null}
+                            {selected.quote.usage === "Pribadi" && vehicleUsageSummaryText ? (
+                              <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600">
+                                <span className="font-semibold text-slate-800">Penggunaan Pribadi</span> berarti kendaraan digunakan untuk keperluan pribadi dan bukan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.
+                              </div>
+                            ) : null}
+                            {selected.quote.usage === "Komersial" && vehicleUsageSummaryText ? (
+                              <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600">
+                                <span className="font-semibold text-slate-800">Penggunaan Komersial</span> berarti kendaraan digunakan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.
+                              </div>
+                            ) : null}
+                            {shouldShowTariffSummary ? (
+                              <div className="mt-3 rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2 text-sm leading-6 text-slate-600">
+                                <span className="font-semibold text-[#0A4D82]">{tariffInfoSummary}</span>
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
-                      {!showPremiumDetails ? (
-                        <div className="mt-5">
-                          <div className="flex justify-end">
-                            <button type="button" disabled={!(Boolean(selected.quote.plateRegion) && Boolean(selected.quote.year) && isYearEligible(flowType, selected.quote.year) && Boolean(String(selected.quote.marketValue || "").trim()) && validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) && Boolean(selected.quote.usage) && (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) && (flowType !== "carTlo" || Boolean(selected.quote.vehicleType)))} onClick={() => setShowPremiumDetails(true)} className={cls("flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-sm", Boolean(selected.quote.plateRegion) && Boolean(selected.quote.year) && isYearEligible(flowType, selected.quote.year) && Boolean(String(selected.quote.marketValue || "").trim()) && validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) && Boolean(selected.quote.usage) && (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) && (flowType !== "carTlo" || Boolean(selected.quote.vehicleType)) ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}><Wallet className="h-4 w-4" />CEK PREMI</button>
-                          </div>
-                          {flowType === "carTlo" && selected.quote.vehicleType ? (
-                            <p className="mt-2 text-right text-xs leading-5 text-slate-500">
-                              Sistem mengenali kendaraan ini sebagai{" "}
-                              <span className="font-semibold text-slate-700">{selectedPassengerCarMeta?.category}</span> dengan jenis bahan bakar{" "}
-                              <span className="font-semibold text-slate-700">{selectedPassengerCarMeta?.fuelType}</span>.
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
                     </ActionCard>
 
-                    {showPremiumDetails ? (
+                    {showPremiumDetails ? renderCoverageSummaryCard() : null}
+                    {showPremiumDetails ? renderPremiumSummaryCard(false) : null}
+                    {step === 1 ? renderStepOneActions() : null}
+                    {!isInternalMode && journeyStatus && step === 1 ? (
                       <ActionCard>
-                        <div className="space-y-5">
-                          <div>
-                            <div className="text-[20px] font-bold tracking-tight text-slate-900">Rincian Jaminan</div>
-                            <div className="mt-1 text-sm text-slate-500">Klik setiap baris untuk melihat penjelasan detailnya.</div>
-                            <div className="mt-4 text-[18px] font-bold tracking-tight text-slate-900">Risiko yang Dijamin</div>
-                            <div className="mt-3 space-y-2.5">
-                    <AccordionRiskRow itemIcon={Shield} title={mainCoverTitle(flowType)} premium={formatRupiah(calc.mainPremium)} summary={mainCoverText(flowType)} detail="" deductible={mainDeductibleText(flowType, selected.quote.vehicleType)} alwaysIncluded expanded={!!expandedRows.main} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, main: !prev.main }))} />
-                            </div>
-                          </div>
-                          <div>
-                            <div>
-                              <div className="text-[20px] font-bold tracking-tight text-slate-900">Perluasan Jaminan</div>
-                              <div className="mt-1 text-sm text-slate-500">Pilih perluasan yang dibutuhkan.</div>
-                            </div>
-                            <div className="mt-4 space-y-2.5">
-                              {exts.map((item) => {
-                                const enabled = selected.quote.extensions[item.id].enabled;
-                                return (
-                                  <AccordionRiskRow
-                                    key={item.id}
-                                    itemIcon={item.icon}
-                                    title={item.label}
-                                    premium={formatRupiah((feeMap as any)[item.id] || 0)}
-                                    summary={EXT_INFO[item.id]}
-                                    deductible={deductibleText(flowType, selected.quote.vehicleType, item.id)}
-                                    checked={enabled}
-                                    onToggleChecked={() => {
-                                      const next = !enabled;
-                                      if (item.id === "ts") {
-                                        setAt(flowType, `quote.extensions.ts.enabled`, next);
-                                        if (next) setAt(flowType, `quote.extensions.srcc.enabled`, true);
-                                        return;
-                                      }
-                                      if (item.id === "srcc") {
-                                        const tsEnabled = selected.quote.extensions.ts.enabled;
-                                        if (tsEnabled && !next) {
-                                          setAt(flowType, `quote.extensions.srcc.enabled`, true);
-                                          return;
-                                        }
-                                      }
-                                      setAt(flowType, `quote.extensions.${item.id}.enabled`, next);
-                                    }}
-                                    expanded={!!expandedRows[item.id]}
-                                    onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
-                                    extra={enabled ? item.type === "amount-seat" ? (
-                                      <div className="grid gap-3 md:grid-cols-2">
-                                        <div><FieldLabel label="Nilai pertanggungan per penumpang" compact /><TextInput value={selected.quote.extensions.passengerPa.amount ? formatRupiah(Number(selected.quote.extensions.passengerPa.amount)) : ""} onChange={(value: string) => {
-                                          const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
-                                          const marketValue = Number(selected.quote.marketValue || 0) || 0;
-                                          const capped = Math.min(raw, 25000000, marketValue || 25000000);
-                                          setAt(flowType, "quote.extensions.passengerPa.amount", capped);
-                                        }} inputMode="numeric" /></div>
-                                        <div><FieldLabel label="Jumlah penumpang" compact /><SelectInput value={String(selected.quote.extensions.passengerPa.seats || "")} onChange={(value: string) => setAt(flowType, "quote.extensions.passengerPa.seats", value)} options={["1", "2", "3", "4", "5", "6", "7"]} placeholder="Jumlah penumpangnya berapa?" /></div>
-                      <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,1% dari nilai pertanggungan per penumpang. Tanpa biaya sendiri saat klaim.</div>
-                                      </div>
-                                    ) : item.type === "amount" ? (
-                                      <div className="grid gap-3 md:grid-cols-2">
-                        <div><FieldLabel label={item.id === "tpl" ? "Nilai pertanggungan pihak ketiga" : item.id === "driverPa" ? "Nilai pertanggungan pengemudi" : item.id === "equipment" ? "Nilai perlengkapan tambahan" : "Nilai pertanggungan"} compact /><TextInput value={selected.quote.extensions[item.id].amount ? formatRupiah(Number(selected.quote.extensions[item.id].amount)) : ""} onChange={(value: string) => {
-                                            const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
-                                            let capped = raw;
-
-                                            if (item.id === "tpl") {
-                                              capped = flowType === "motor" ? Math.min(raw, 1000000) : Math.min(raw, 100000000);
-                                            }
-
-                                            if (item.id === "driverPa" || item.id === "passengerPa") {
-                                              const marketValue = Number(selected.quote.marketValue || 0) || 0;
-                                              capped = Math.min(raw, 25000000, marketValue || 25000000);
-                                            }
-
-                                            if (item.id === "equipment") {
-                                              const max = calc?.details?.equipmentCap || 0;
-                                              capped = Math.min(raw, max);
-                                            }
-
-                                            setAt(flowType, `quote.extensions.${item.id}.amount`, capped);
-                                          }} inputMode="numeric" /></div>
-                                        {item.id === "equipment" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Batas maksimal: {formatRupiah(calc.details.equipmentCap || 0)}</div> : null}
-                        {item.id === "driverPa" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,5% dari nilai pertanggungan. Tanpa biaya sendiri saat klaim.</div> : null}
-                                      </div>
-                                    ) : null : null}
-                                  />
-                                );
-                              })}
-                            </div>
-                          </div>
-                          {step === 1 ? (
-                            <div className="flex justify-stretch sm:justify-end">
-                              <button
-                                type="button"
-                                disabled={
-                                  !(
-                                    Boolean(selected.quote.plateRegion) &&
-                                    Boolean(selected.quote.year) &&
-                                    isYearEligible(flowType, selected.quote.year) &&
-                                    Boolean(String(selected.quote.marketValue || "").trim()) &&
-                                    validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) &&
-                                    Boolean(selected.quote.usage) &&
-                                    (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) &&
-                                    (flowType !== "carTlo" || Boolean(selected.quote.vehicleType))
-                                  )
-                                }
-                                onClick={() => setStep(2)}
-                                className={cls(
-                                  "inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition sm:w-auto",
-                                  Boolean(selected.quote.plateRegion) &&
-                                    Boolean(selected.quote.year) &&
-                                    isYearEligible(flowType, selected.quote.year) &&
-                                    Boolean(String(selected.quote.marketValue || "").trim()) &&
-                                    validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) &&
-                                    Boolean(selected.quote.usage) &&
-                                    (flowType !== "motor" || Boolean(String(selected.quote.vehicleName || "").trim())) &&
-                                    (flowType !== "carTlo" || Boolean(selected.quote.vehicleType))
-                                    ? "bg-[#F5A623] hover:brightness-105"
-                                    : "cursor-not-allowed bg-slate-400",
-                                )}
-                              >
-                                Isi Data
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
+                        <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{journeyStatus}</div>
                       </ActionCard>
                     ) : null}
+                      </>
+                    )}
                   </>
                 ) : null}
 
-                {step === 2 ? (
+                {step === 2 ? renderStepTwoContent(true) : null}
+                {isInternalMode && step === 2 ? renderInternalStepTwoActions() : null}
+                {!isInternalMode && step === 2 ? renderExternalStepTwoActions() : null}
+
+                {!isInternalMode && step === 3 ? (
                   <>
-                    <ActionCard>
-                      <div className="text-[20px] font-bold tracking-tight text-slate-900">Pilih Cara Isi Data</div>
-                      <div className="mt-1 text-sm text-slate-500">Pilih cara pengisian data nasabah dan kendaraan.</div>
-
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <button onClick={() => setAt(flowType, "ui.dataMode", "scan")} className={cls("rounded-xl border p-4 text-left", selected.ui.dataMode === "scan" ? "border-[#0A4D82] bg-[#F8FBFE]" : "border-slate-200 bg-white")}>
-                          <div className="text-[15px] font-bold text-[#0A4D82]">Foto KTP & STNK</div>
-                          <div className="mt-1.5 text-sm leading-6 text-slate-600">Bantu isi data dari dokumen.</div>
-                        </button>
-                        <button onClick={() => setAt(flowType, "ui.dataMode", "manual")} className={cls("rounded-xl border p-4 text-left", selected.ui.dataMode === "manual" ? "border-[#0A4D82] bg-[#F8FBFE]" : "border-slate-200 bg-white")}>
-                          <div className="text-[15px] font-bold text-[#0A4D82]">Isi Manual</div>
-                          <div className="mt-1.5 text-sm leading-6 text-slate-600">Lewati pembacaan dokumen.</div>
-                        </button>
-                      </div>
-
-                      {selected.ui.dataMode === "scan" ? (
-                        <div className="mt-5 space-y-4">
-                          <div className="grid gap-4 md:grid-cols-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const extractedData = {
-                                fullName: "Rizky Pratama",
-                                address: "Jl. Pahlawan No. 18, Palmerah, Jakarta Barat",
-                                identityNumber: selected.insured.nik || "3174********0012",
-                              };
-                              setFlows((prev) => ({
-                                ...prev,
-                                [flowType]: {
-                                  ...prev[flowType],
-                                  insured: {
-                                    ...prev[flowType].insured,
-                                    nik: prev[flowType].insured.nik || "3174********0012",
-                                    fullName: "Rizky Pratama",
-                                    address: "Jl. Pahlawan No. 18, Palmerah, Jakarta Barat",
-                                  },
-                                  ktpRead: true,
-                                },
-                              }));
-                              setDocumentChecks((prev) => ({
-                                ...prev,
-                                [flowType]: {
-                                  ...prev[flowType],
-                                  ktp: evaluateDocumentRead({
-                                    docType: "KTP",
-                                    extractedData,
-                                    expectedData: {
-                                      fullName: selected.insured.fullName,
-                                      identityNumber: selected.insured.nik,
-                                    },
-                                  }),
-                                },
-                              }));
-                            }}
-                            className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-[#0A4D82] px-4 py-3 text-sm font-bold text-white"
-                          >
-                            <Camera className="h-4 w-4" />Foto KTP
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const extractedData = {
-                                plateNumber: flowType === "motor" ? "B 4123 UYT" : "B 1234 UYT",
-                                chassisNumber: flowType === "motor" ? "MH1JM8112PK123456" : "MHFCBA2J0PK123456",
-                                engineNumber: flowType === "motor" ? "JM81E1234567" : "2NRFKE1234567",
-                                color: "Hitam",
-                              };
-                              setFlows((prev) => ({
-                                ...prev,
-                                [flowType]: {
-                                  ...prev[flowType],
-                                  vehicle: {
-                                    ...prev[flowType].vehicle,
-                                    plateNumber: extractedData.plateNumber,
-                                    chassisNumber: extractedData.chassisNumber,
-                                    engineNumber: extractedData.engineNumber,
-                                    color: extractedData.color,
-                                    year: prev[flowType].quote.year,
-                                    contactOnLocation: prev[flowType].vehicle.contactOnLocation,
-                                  },
-                                  stnkRead: true,
-                                },
-                              }));
-                              setDocumentChecks((prev) => ({
-                                ...prev,
-                                [flowType]: {
-                                  ...prev[flowType],
-                                  stnk: evaluateDocumentRead({
-                                    docType: "STNK",
-                                    extractedData,
-                                    expectedData: {
-                                      plateNumber: selected.vehicle.plateNumber,
-                                      chassisNumber: selected.vehicle.chassisNumber,
-                                    },
-                                  }),
-                                },
-                              }));
-                            }}
-                            className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-[#0A4D82] px-4 py-3 text-sm font-bold text-white"
-                          >
-                            <Camera className="h-4 w-4" />Foto STNK
-                          </button>
-                          </div>
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <div className={cls("rounded-xl border p-4 text-sm", selected.ktpRead ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500")}>
-                              {selected.ktpRead ? `Foto KTP berhasil dibaca. Data nasabah sudah terisi dan perlu diverifikasi singkat. Confidence OCR: ${documentChecks[flowType].ktp.confidence ? `${Math.round(documentChecks[flowType].ktp.confidence * 100)}%` : "-"}.` : "Belum ada hasil pembacaan KTP."}
+                    <SectionCard
+                      title="Ringkasan Sebelum Pembayaran"
+                      subtitle={`Tinjau kembali ringkasan Anda sebelum melanjutkan ke pembayaran. Ringkasan ini disusun dari data yang Anda isi dan lengkapi dalam SPAU elektronik, serta mengacu pada ${policySummaryTitle}.`}
+                      headerAlign="center"
+                      heroHeader
+                    >
+                      <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                        <div className="space-y-3">
+                          <OfferSummarySection title="Ringkasan Informasi Calon Pemegang Polis">
+                            <div className="space-y-2.5">
+                              <OfferSummaryKeyValue label="Nama Calon Pemegang Polis" value={insuredSummaryName} />
+                              <OfferSummaryKeyValue label="Alamat Email" value={insuredSummaryEmail} />
+                              <OfferSummaryKeyValue label="Nomor Handphone" value={insuredSummaryPhone} />
                             </div>
-                            <div className={cls("rounded-xl border p-4 text-sm", selected.stnkRead ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500")}>
-                              {selected.stnkRead ? `Foto STNK berhasil dibaca. Data kendaraan sudah terisi dan perlu diverifikasi singkat. Confidence OCR: ${documentChecks[flowType].stnk.confidence ? `${Math.round(documentChecks[flowType].stnk.confidence * 100)}%` : "-"}.` : "Belum ada hasil pembacaan STNK."}
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
+                          </OfferSummarySection>
 
-                      <div className="mt-5 space-y-5">
-                        <div>
-                          <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Nasabah</div>
-                          <div className="mt-1 text-sm text-slate-500">Nama nasabah, alamat email, dan nomor handphone ditampilkan langsung. Data lain muncul setelah pilih metode pengisian.</div>
-                          {selected.ui.dataMode === "scan" && !selected.ktpRead ? (
-                            <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                              Upload foto KTP terlebih dahulu untuk menampilkan informasi nasabah.
+                          <OfferSummarySection title="Ringkasan Informasi Kendaraan">
+                            <div className="space-y-2.5">
+                              <OfferSummaryKeyValue label={flowType === "motor" ? "Merek / Tipe Motor" : "Merek / Tipe Kendaraan"} value={vehicleSummaryName} />
+                              <OfferSummaryKeyValue label="Nomor Polisi / TNKB" value={vehicleSummaryPlateNumber} />
+                              <OfferSummaryKeyValue label="Kode wilayah plat / TNKB" value={vehicleSummaryPlateRegion} />
+                              <OfferSummaryKeyValue label="Tahun Pembuatan Kendaraan" value={vehicleSummaryYear} />
+                              <OfferSummaryKeyValue label="Penggunaan Kendaraan" value={vehicleSummaryUsage} />
+                              <OfferSummaryKeyValue label="Harga Pertanggungan" value={vehicleSummaryValue} />
+                              <OfferSummaryKeyValue label="Riwayat Klaim 3 Tahun Terakhir" value={claimHistorySummary} />
+                              <OfferSummaryKeyValue label="Periode Perlindungan" value={vehicleSummaryCoveragePeriod} />
                             </div>
-                          ) : (
-                            <div className="mt-4 grid gap-4 md:grid-cols-2">
-                              <div>
-                                <FieldLabel label="Siapa yang akan menjadi nasabah?" />
-                                <SelectInput value={selected.insured.customerType} onChange={(value: string) => setAt(flowType, "insured.customerType", value)} options={["Pribadi", "Perusahaan / Badan usaha"]} placeholder="Nasabah ini perorangan atau badan usaha?" />
+                          </OfferSummarySection>
+
+                          <OfferSummarySection title="Ringkasan Syarat dan Ketentuan">
+                            <div className="space-y-4">
+                              <div className="text-[15px] font-normal text-slate-900">{policySummaryTitle}</div>
+                              <div className="space-y-2">
+                                <div className="text-[13px] font-medium text-slate-500">Risiko yang dijamin</div>
+                                <VehicleGuaranteeDetailCard
+                                  title={mainCoverTitle(flowType)}
+                                  icon={Shield}
+                                  premium={displayedBasePremium === "-" ? "-" : `Rp ${displayedBasePremium}`}
+                                  detail={mainCoverText(flowType)}
+                                  deductible={mainDeductibleText(flowType, selected.quote.vehicleType)}
+                                />
                               </div>
                               <div>
-                                <FieldLabel label={selected.insured.customerType === "Perusahaan / Badan usaha" ? "Nama Perusahaan / Badan Usaha" : "Nama Lengkap"} />
-                                <TextInput value={selected.insured.fullName} onChange={(value: string) => setAt(flowType, "insured.fullName", value)} placeholder={selected.insured.customerType === "Perusahaan / Badan usaha" ? "Nama perusahaan / badan usaha" : "Nama lengkap"} icon={<User className="h-4 w-4" />} />
-                              </div>
-                              <div>
-                                <FieldLabel label="Alamat" />
-                                <TextInput value={selected.insured.address} onChange={(value: string) => setAt(flowType, "insured.address", value)} placeholder="Alamat" icon={<MapPin className="h-4 w-4" />} />
-                              </div>
-                              <div>
-                                <FieldLabel label="Alamat Email" />
-                                <TextInput value={selected.insured.email} onChange={(value: string) => setAt(flowType, "insured.email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" />
-                              </div>
-                              <div>
-                                <FieldLabel label="Nomor Handphone" />
-                                <TextInput value={selected.insured.phone} onChange={(value: string) => setAt(flowType, "insured.phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} />
-                              </div>
-                              <div>
-                                <FieldLabel label={selected.insured.customerType === "Perusahaan / Badan usaha" ? "NPWP" : "NIK"} required={false} />
-                                <TextInput value={selected.insured.nik} onChange={(value: string) => setAt(flowType, "insured.nik", value)} placeholder={selected.insured.customerType === "Perusahaan / Badan usaha" ? "NPWP" : "NIK"} icon={<User className="h-4 w-4" />} />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Kendaraan Lanjutan</div>
-                          <div className="mt-1 text-sm text-slate-500">Isi data kendaraan setelah memilih cara pengisian.</div>
-
-                          {selected.ui.dataMode === "scan" && !selected.stnkRead ? (
-                            <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                              Upload foto STNK terlebih dahulu untuk menampilkan informasi kendaraan lanjutan.
-                            </div>
-                          ) : null}
-
-                          {(selected.ui.dataMode !== "scan" || selected.stnkRead) && selected.insured.customerType === "Perusahaan / Badan usaha" ? (
-                            <div className="mt-4 grid gap-4 md:grid-cols-2">
-                              <div>
-                                <FieldLabel label="Kontak di Lokasi" />
-                                <TextInput value={selected.vehicle.contactOnLocation} onChange={(value: string) => setAt(flowType, "vehicle.contactOnLocation", value)} placeholder="Masukkan kontak di lokasi" icon={<Phone className="h-4 w-4" />} />
-                              </div>
-                            </div>
-                          ) : null}
-
-                          {(selected.ui.dataMode !== "scan" || selected.stnkRead) ? <div className="mt-4 grid gap-4 md:grid-cols-2">
-                            <div>
-                                  <FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" />
-                              <TextInput value={selected.quote.coverageStart} onChange={(value: string) => setAt(flowType, "quote.coverageStart", value)} type="date" />
-                            </div>
-
-                            {selected.ui.dataMode ? (
-                              <>
-                                <div>
-                                  <FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" />
-                                  <TextInput value={selected.quote.coverageEnd} type="date" readOnly />
+                                <div className="mb-2 flex items-center justify-between gap-3">
+                                  <div className="text-[13px] font-medium text-slate-500">Perluasan Jaminan</div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCheckoutStatus("");
+                                      setStep(1);
+                                      window.scrollTo({ top: 0, behavior: "smooth" });
+                                    }}
+                                    className="text-[12px] font-medium text-[#0A4D82] underline underline-offset-2 hover:text-[#0D5B98]"
+                                  >
+                                    {selectedExtensionDetailItems.length ? "Ubah Perluasan Jaminan" : "Tambahkan Perluasan Jaminan"}
+                                  </button>
                                 </div>
-                                {flowType === "carTlo" ? (
-                                  <div>
-                                    <FieldLabel label="Merek / Tipe Kendaraan" />
-                                    <SelectInput value={selected.quote.vehicleType} onChange={(value: string) => setAt(flowType, "quote.vehicleType", value)} options={PASSENGER_CAR_MODELS} placeholder="Pilih merek dan tipe mobil penumpang" />
-                                  </div>
-                                ) : flowType !== "motor" ? (
-                                  <div>
-                                    <FieldLabel label="Jenis Kendaraan" />
-                                    <SelectInput value={selected.quote.vehicleType} onChange={(value: string) => setAt(flowType, "quote.vehicleType", value)} options={["Angkutan Penumpang", "Angkutan Barang", "Bis"]} placeholder="Mobil ini termasuk jenis apa?" />
+                                {selectedExtensionDetailItems.length ? (
+                                  <div className="space-y-2">
+                                    {selectedExtensionDetailItems.map((item) => (
+                                      <VehicleGuaranteeDetailCard
+                                        key={item.title}
+                                        title={item.title}
+                                        icon={item.icon}
+                                        premium={item.premium}
+                                        detail={item.detail}
+                                        deductible={item.deductible}
+                                      />
+                                    ))}
                                   </div>
                                 ) : null}
-                                <div>
-                                  <FieldLabel label="Nomor Polisi / TNKB" />
-                                  <TextInput value={selected.vehicle.plateNumber} onChange={(value: string) => setAt(flowType, "vehicle.plateNumber", value)} placeholder={selected.ui.dataMode === "scan" && !selected.stnkRead ? "Isi manual atau gunakan Foto STNK" : "Masukkan nomor polisi / TNKB"} icon={<MapPin className="h-4 w-4" />} />
-                                </div>
-                                <div>
-                                  <FieldLabel label="Nomor Rangka" />
-                                  <TextInput value={selected.vehicle.chassisNumber} onChange={(value: string) => setAt(flowType, "vehicle.chassisNumber", value)} placeholder={selected.ui.dataMode === "scan" && !selected.stnkRead ? "Isi manual atau gunakan Foto STNK" : "Masukkan nomor rangka kendaraan"} />
-                                </div>
-                                <div>
-                                  <FieldLabel label="Nomor Mesin" />
-                                  <TextInput value={selected.vehicle.engineNumber} onChange={(value: string) => setAt(flowType, "vehicle.engineNumber", value)} placeholder={selected.ui.dataMode === "scan" && !selected.stnkRead ? "Isi manual atau gunakan Foto STNK" : "Masukkan nomor mesin kendaraan"} />
-                                </div>
-                                <div>
-                                  <FieldLabel label="Warna" />
-                                  <TextInput value={selected.vehicle.color} onChange={(value: string) => setAt(flowType, "vehicle.color", value)} placeholder={selected.ui.dataMode === "scan" && !selected.stnkRead ? "Isi manual atau gunakan Foto STNK" : "Masukkan warna kendaraan"} />
-                                </div>
-                                <div>
-                                  <FieldLabel label={`Merek / Tipe ${flowType === "motor" ? "Motor" : "Mobil"}`} />
-                                  <TextInput value={selected.quote.vehicleName} onChange={(value: string) => setAt(flowType, "quote.vehicleName", value)} placeholder={selected.ui.dataMode === "scan" && !selected.stnkRead ? "Isi manual atau gunakan Foto STNK" : `Cari contoh: ${suggestions[0]}`} icon={<Search className="h-4 w-4" />} listId={`${flowType}-list-2`} />
-                                  <datalist id={`${flowType}-list-2`}>{suggestions.map((s) => <option key={s} value={s} />)}</datalist>
-                                </div>
-                                <div>
-                                  <FieldLabel label="Tahun Pembuatan Kendaraan" helpText="Sesuai tahun pembuatan/manufacture year pada STNK." />
-                                  <TextInput value={selected.vehicle.year} onChange={(value: string) => setAt(flowType, "vehicle.year", value)} placeholder={selected.ui.dataMode === "scan" && !selected.stnkRead ? "Isi manual atau gunakan Foto STNK" : "Masukkan tahun kendaraan"} />
-                                </div>
-                              </>
-                            ) : null}
-                          </div> : null}
-
-                          {(selected.ui.dataMode !== "scan" || selected.stnkRead) && flowType !== "motor" ? (
-                            <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50">
-                              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left">
-                                <div>
-                                  <div className="text-sm font-semibold text-slate-900">Perlengkapan Tambahan</div>
-                                  <div className="mt-1 text-xs text-slate-500">Aksesori atau perangkat non-standar yang bukan bawaan pabrik dan ingin ikut dijamin bersama kendaraan.</div>
-                                </div>
-                                <ChevronDown className="h-4 w-4 text-slate-400" />
-                              </summary>
-                              <div className="border-t border-slate-200 px-4 py-4">
-                                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-                                  <div>
-                                    <FieldLabel label="Nilai perlengkapan tambahan" required={false} />
-                                    <TextInput
-                                      value={selected.quote.extensions.equipment.amount ? formatRupiah(Number(selected.quote.extensions.equipment.amount)) : ""}
-                                      onChange={(value: string) => {
-                                        const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
-                                        const capped = Math.min(calc?.details?.equipmentCap || 0, raw);
-                                        setAt(flowType, "quote.extensions.equipment.amount", capped);
-                                        setAt(flowType, "quote.extensions.equipment.enabled", capped > 0);
-                                      }}
-                                      placeholder={`Maksimum ${formatRupiah(calc?.details?.equipmentCap || 0)}`}
-                                      inputMode="numeric"
-                                    />
-                                  </div>
-                                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-600">
-                                    Maksimum 10% dari harga pertanggungan casco, paling tinggi Rp25.000.000.
-                                  </div>
-                                </div>
                               </div>
-                            </details>
-                          ) : null}
-                        </div>
-                      </div>
-                    </ActionCard>
+                            </div>
+                          </OfferSummarySection>
 
-                    <ActionCard>
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                      <div className="text-[20px] font-bold tracking-tight text-slate-900">Foto Kendaraan</div>
+                          <OfferSummarySection title="Ringkasan Pembayaran">
+                            <PremiumPriceHero label="Total Pembayaran" value={displayedTotalPremium} />
+                            <PremiumBreakdown>
+                              <ProposalRow label="Premi" value={displayedBasePremium} />
+                              {displayedExtensionPremium ? <ProposalRow label="Premi Perluasan" value={displayedExtensionPremium} /> : null}
+                              <ProposalRow label="Biaya Meterai" value={displayedStampDuty} />
+                            </PremiumBreakdown>
+                          </OfferSummarySection>
                         </div>
                       </div>
-                      <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        {Object.keys(selected.uploads).map((name, index) => (
-                          <button key={name} onClick={() => {
-                            const nextValue = !selected.uploads[name];
-                            setAt(flowType, `uploads.${name}`, nextValue);
-                            setEvidence((prev) => ({
-                              ...prev,
-                              [flowType]: {
-                                ...prev[flowType],
-                                [name]: nextValue
-                                  ? createPhotoEvidence({
-                                      label:
-                                        name === "Ambil foto bagian depan"
-                                      ? "Foto Kendaraan Tampak Depan"
-                                          : name === "Ambil foto bagian belakang"
-                                            ? "Foto Kendaraan Tampak Belakang"
-                                            : name === "Ambil foto bagian samping kanan"
-                                              ? "Foto Kendaraan Tampak Samping Kanan"
-                                              : "Foto Kendaraan Tampak Samping Kiri",
-                                      declaredAddress: selected.insured.address,
-                                    })
-                                  : null,
-                              },
-                            }));
-                          }} className={cls("rounded-xl border p-4 text-left", selected.uploads[name] ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white")}>
-                            <div className="text-sm font-bold text-slate-900">{index === 0 ? "Foto Kendaraan Tampak Depan" : "Foto Kendaraan Tampak Belakang"}</div>
-                            <div className="mt-1 text-xs text-slate-500">{selected.uploads[name] ? "Foto sudah diambil" : "Buka kamera"}</div>
+                    </SectionCard>
+
+                    <SectionCard title="Pilih Metode Pembayaran" subtitle="Pilih metode pembayaran yang ingin Anda gunakan untuk melanjutkan proses polis.">
+                      <div className="space-y-3">
+                        {PAYMENT_OPTIONS.map((method) => (
+                          <button
+                            key={method}
+                            onClick={() => { setAt(flowType, "paymentMethod", method); setCheckoutStatus(""); }}
+                            className={cls(
+                              "flex w-full items-center justify-between rounded-xl border px-4 py-4 text-left transition",
+                              selected.paymentMethod === method ? "border-[#0A4D82] bg-[#F8FBFE] shadow-sm" : "border-slate-200 bg-white hover:border-[#C9D5E3] hover:bg-[#FBFDFF]",
+                            )}
+                          >
+                            <span className="font-semibold text-slate-900">{method}</span>
+                            {selected.paymentMethod === method ? <CheckCircle2 className="h-5 w-5 text-[#0A4D82]" /> : null}
                           </button>
                         ))}
                       </div>
-                    </ActionCard>
+                      {operatingBlockedMessage ? <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{operatingBlockedMessage}</div> : null}
+                      {checkoutStatus ? <div className="mt-4 rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{checkoutStatus}</div> : null}
+                    </SectionCard>
 
-                  </>
-                ) : null}
-
-                {step === 3 ? (
-                  <>
-                    <ActionCard>
-                      <div className="text-[20px] font-bold tracking-tight text-slate-900">Informasi Nasabah</div>
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <div><div className="text-sm text-slate-500">Nama Nasabah</div><div className="mt-1 text-lg font-semibold text-slate-900">{selected.insured.fullName || "-"}</div></div>
-                        <div><div className="text-sm text-slate-500">Nilai yang Dilindungi</div><div className="mt-1 text-lg font-semibold text-slate-900">{formatRupiah(calc?.details?.insuredValue || Number(selected.quote.marketValue || 0))}</div></div>
-                      </div>
-                    </ActionCard>
-                    <ActionCard>
-                      <div className="text-[20px] font-bold tracking-tight text-slate-900">Perlindungan Asuransi</div>
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <PaymentInfoButton title="Lihat Ringkasan Manfaat" description="Rangkuman jaminan utama dan perluasan yang dipilih pada penawaran ini." onClick={() => setPaymentPanel((prev) => prev === "benefit" ? "" : "benefit")} />
-                        <PaymentInfoButton title="Lihat Syarat Utama" description="Ringkasan syarat penting sebelum pembayaran, tanpa menampilkan wording polis penuh." onClick={() => setPaymentPanel((prev) => prev === "terms" ? "" : "terms")} />
-                      </div>
-                      {paymentPanel === "benefit" ? <div className="mt-4"><PaymentInfoPanel title="Ringkasan Manfaat">Jaminan utama mengikuti jenis pertanggungan kendaraan yang dipilih. {Object.keys(selected.quote.extensions).some((key) => selected.quote.extensions[key]?.enabled) ? `Perluasan yang dipilih: ${exts.filter((item) => selected.quote.extensions[item.id]?.enabled).map((item) => item.label).join(", ")}.` : "Belum ada perluasan tambahan yang dipilih."}</PaymentInfoPanel></div> : null}
-                      {paymentPanel === "terms" ? <div className="mt-4"><PaymentInfoPanel title="Ringkasan Syarat Utama">Premi pada halaman ini berlaku untuk versi penawaran yang sedang aktif. Polis lengkap dan wording resmi tetap mengacu pada dokumen final setelah pembayaran berhasil. Jika data kendaraan berubah, premi dan kelayakan penawaran dapat diperbarui kembali.</PaymentInfoPanel></div> : null}
-                    </ActionCard>
-                    <ActionCard>
-                      <div className="text-[20px] font-bold tracking-tight text-slate-900">Persetujuan Kebijakan</div>
-                      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <SectionCard title="Lanjutkan Pembayaran" subtitle="Selesaikan persetujuan atas SPAU elektronik ini terlebih dahulu, lalu lanjutkan pembayaran.">
+                      <div className="rounded-2xl border border-[#D8E1EA] bg-white px-4 py-4">
                         <div className="flex items-start gap-3">
-                          <div className={cls("mt-1 inline-flex h-5 w-5 items-center justify-center rounded border", selected.agree ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300 bg-white text-transparent")}><CheckCircle2 className="h-4 w-4" /></div>
-                          <div className="text-sm leading-7 text-slate-600">Saya menyetujui persetujuan kebijakan yang berlaku. <button type="button" onClick={() => setShowConsentModal(true)} className="font-semibold text-[#0A4D82] underline underline-offset-2">Lihat di sini</button></div>
+                          <button
+                            type="button"
+                            onClick={() => setShowConsentModal(true)}
+                            className={cls(
+                              "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border transition",
+                              selected.agree ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-[#B7C7D8] bg-white text-transparent hover:border-[#0A4D82]",
+                            )}
+                            aria-label={selected.agree ? "Persetujuan kebijakan sudah disetujui" : "Buka syarat dan ketentuan persetujuan"}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                          <div className="min-w-0 text-sm leading-6 text-slate-700">
+                            <span>Saya telah membaca dan menyetujui </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowConsentModal(true)}
+                              className="inline p-0 font-medium text-[#0A4D82] underline underline-offset-2 hover:text-[#0D5B98]"
+                            >
+                              Syarat dan Ketentuan Persetujuan
+                            </button>
+                            <span> atas SPAU elektronik ini.</span>
+                          </div>
                         </div>
-                        {selected.agree ? <div className="mt-3 text-sm font-medium text-emerald-700">Persetujuan sudah diberikan untuk melanjutkan pembayaran.</div> : null}
                       </div>
-                    </ActionCard>
-                    <ActionCard>
-                      <div className="text-[20px] font-bold tracking-tight text-slate-900">Kode Promo</div>
-                      <div className="mt-4 grid gap-4 md:grid-cols-[1fr_140px]"><TextInput value={selected.promoCode} onChange={(value: string) => setAt(flowType, "promoCode", value)} placeholder="Masukkan kode promo yang tersedia" icon={<Search className="h-4 w-4" />} /><button className="rounded-[8px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">Cek Promo</button></div>
-                    </ActionCard>
-                    <ActionCard>
-                      <div className="text-[20px] font-bold tracking-tight text-slate-900">Metode Pembayaran</div>
-                      <div className="mt-4 grid gap-4 md:grid-cols-3">{["Virtual Account", "E-Wallet", "QRIS"].map((m) => <button key={m} onClick={() => { setAt(flowType, "paymentMethod", m); setCheckoutStatus(""); }} className={cls("rounded-xl border px-4 py-4 text-left text-sm font-bold", selected.paymentMethod === m ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300 bg-white text-slate-700")}>{m}</button>)}</div>
-                    </ActionCard>
+                      {!selected.agree ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>Persetujuan atas SPAU elektronik ini harus dibuka dan disetujui sebelum pembayaran.</div></div></div> : null}
+                      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() => { setStep(2); setCheckoutStatus(""); }}
+                          className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-center text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE] sm:flex-1"
+                        >
+                          Kembali ke Data Lanjutan
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { if (canIssue && canProceedPayment) setCheckoutStatus("Pembayaran berhasil disimulasikan. Sistem akan melanjutkan ke validasi pembayaran dan penerbitan dokumen final."); }}
+                          disabled={!canIssue || !canProceedPayment}
+                          className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-bold uppercase tracking-wide text-white shadow-sm sm:flex-1", canIssue && canProceedPayment ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+                        >
+                          {checkoutStatus ? "Pembayaran Selesai" : "Lanjutkan Pembayaran"}
+                        </button>
+                      </div>
+                    </SectionCard>
                   </>
                 ) : null}
               </div>
 
-              {step > 1 || showPremiumDetails ? <aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg md:sticky md:top-32">
-                <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-[18px] font-bold"><FileText className="h-5 w-5" />Ringkasan</div><ChevronDown className="h-5 w-5 text-white/80" /></div>
-                <div className="mt-4 border-t border-white/15 pt-3.5">
-                  <SummaryRow label="Produk" value={flowType === "motor" ? "Total Loss Kendaraan - Motor" : flowType === "carComp" ? "Kendaraan Roda 4 - Comprehensive" : "Total Loss Kendaraan - Mobil"} />
+              {showSidebar ? (
+              <aside className="h-fit self-start rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:sticky md:top-32 md:p-5">
+                <div className="text-[18px] font-bold text-slate-900">Ringkasan Pembayaran</div>
+                <div className="mt-4">
+                  <SummaryRow label="Produk" value={activeProduct?.title || "-"} />
                   <SummaryRow label="Kode Wilayah" value={selected.quote.plateRegion || "-"} />
                   <SummaryRow label="Penggunaan" value={selected.quote.usage || "-"} />
                   {flowType !== "motor" ? <SummaryRow label="Nilai yang Dilindungi" value={formatRupiah(calc?.details?.insuredValue || Number(selected.quote.marketValue || 0))} /> : null}
+                  {flowType !== "motor" && selectedVehicleMeta ? <SummaryRow label="Kategori Kendaraan" value={`${selectedVehicleMeta.ojkCategory} · ${selectedVehicleMeta.fuelType}`} /> : null}
                 </div>
-                <div className="mt-3 border-t border-white/15 pt-3.5">
+                <div className="mt-3 border-t border-slate-100 pt-2.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Rincian</div>
                   <SummaryRow label="Premi" value={formatRupiah(flowType === "carComp" ? calc.mainPremium : getMainPremiumSplit(flowType, calc).ownDamage + getMainPremiumSplit(flowType, calc).theft)} />
                   {calc.extensionTotal > 0 ? <SummaryRow label="Premi Perluasan" value={formatRupiah(calc.extensionTotal)} /> : null}
                   <SummaryRow label="Biaya Meterai" value={formatRupiah(calc.stamp)} />
                 </div>
-                <div className="mt-4 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Estimasi Premi 1 Tahun</div><div className="mt-2 text-right text-[30px] font-bold leading-none">{formatRupiah(calc.total)}</div></div>
-                {step === 1 ? <div className="mt-4"><button onClick={() => setStep(2)} disabled={!isYearEligible(flowType, selected.quote.year) || !validateMaxHP(flowType, Number(selected.quote.marketValue || 0))} className={cls("flex h-[48px] w-full items-center justify-center rounded-[8px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", isYearEligible(flowType, selected.quote.year) ? "bg-[#F5A623] hover:brightness-105" : "bg-white/20")}>Isi Data</button></div> : null}
-                {step === 2 ? <div className="mt-4 space-y-2.5"><button onClick={() => setStep(3)} className="flex h-[48px] w-full items-center justify-center rounded-[8px] bg-[#F5A623] text-sm font-bold uppercase tracking-wide text-white shadow-sm hover:brightness-105">Pembayaran</button><button onClick={() => setStep(1)} className="flex h-11 w-full items-center justify-center rounded-[8px] border border-white/20 bg-white/10 text-sm font-medium text-white hover:bg-white/15">Kembali</button></div> : null}
-                {step === 3 ? <div className="mt-4 space-y-2.5"><button onClick={() => { if (canIssue && canProceedPayment) setCheckoutStatus("Pembayaran berhasil disimulasikan. Sistem akan melanjutkan ke validasi pembayaran dan penerbitan dokumen final."); }} className={cls("flex h-[48px] w-full items-center justify-center rounded-[8px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canIssue && canProceedPayment ? "bg-[#F5A623] hover:brightness-105" : "bg-white/20")}>{operatingBlockedMessage ? "Menunggu Review" : calc.status === "Need Review" ? "Perlu Review Underwriter" : canIssue ? "Bayar Premi" : "Isi Data"}</button><button onClick={() => { setStep(2); setCheckoutStatus(""); }} className="flex h-11 w-full items-center justify-center rounded-[8px] border border-white/20 bg-white/10 text-sm font-medium text-white hover:bg-white/15">Kembali</button></div> : null}
-                {step === 2 && selected.ui.dataMode === "scan" && (!selected.ktpRead || !selected.stnkRead) ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>Dokumen KTP atau STNK belum terbaca penuh. Kamu masih bisa lanjut isi manual bila diperlukan.</div></div></div> : null}
-                {step === 3 && !selected.agree ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>Persetujuan kebijakan harus dibuka dan disetujui sebelum pembayaran.</div></div></div> : null}
-                {step === 3 && operatingBlockedMessage ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>{operatingBlockedMessage}</div></div></div> : null}
-                {step === 3 && checkoutStatus ? <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"><div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4" /><div>{checkoutStatus}</div></div></div> : null}
-              </aside> : null}
+                <div className="mt-4 rounded-2xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4F8FD_100%)] px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.04)] md:px-6 md:py-4">
+                  <div className="mx-auto flex max-w-[460px] flex-col items-center text-center">
+                    <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">{!isInternalMode && readyForNextStage ? "Premi 1 Tahun" : "Estimasi Premi 1 Tahun"}</div>
+                    <div className="mt-2 text-[20px] font-bold tracking-tight text-[#0A4D82] md:text-[22px]">{formatRupiah(calc.total)}</div>
+                  </div>
+                </div>
+                {journeyStatus ? <div className="mt-4 rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{journeyStatus}</div> : null}
+                {step === 2 ? (
+                  <div className="mt-4 grid gap-3">
+                    <button
+                      onClick={() => {
+                        if (isInternalMode) {
+                          if (readyForNextStage) handleSendFinalizedOffer();
+                          return;
+                        }
+                        if (readyForNextStage) {
+                          setJourneyStatus("");
+                          setStep(3);
+                        }
+                      }}
+                      disabled={!readyForNextStage}
+                      className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm", readyForNextStage ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+                    >
+                      {isInternalMode ? "Kirim Penawaran" : "Lanjut ke Pembayaran"}
+                    </button>
+                    {!isInternalMode ? (
+                      <button
+                        type="button"
+                        onClick={() => setJourneyStatus("Tim asuransi akan membantu melengkapi data lanjutan kendaraan ini.")}
+                        className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+                      >
+                        Minta Bantuan Isi Data Lanjutan
+                      </button>
+                    ) : null}
+                    <button onClick={() => { setJourneyStatus(""); setStep(1); }} className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]">{isInternalMode ? "Kembali ke Data Awal" : "Kembali ke Simulasi Premi"}</button>
+                    {!isInternalMode ? (
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => setJourneyStatus("Penawaran kendaraan ini ditandai untuk tidak dilanjutkan.")}
+                          className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+                        >
+                          Tidak mau melanjutkan penawaran
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+                {step === 2 && ((selected.ui.dataMode === "scan" && !selected.ktpRead) || (selected.ui.stnkMode === "scan" && !selected.stnkRead)) ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>Dokumen yang dipilih untuk isi otomatis belum terbaca penuh. Anda masih bisa lanjut dengan pengisian manual bila diperlukan.</div></div></div> : null}
+              </aside>
+              ) : null}
             </div>
           </div>
           <ConsentModal open={showConsentModal} agreed={selected.agree} onClose={() => setShowConsentModal(false)} onAgree={() => { setAt(flowType, "agree", true); setShowConsentModal(false); }} />

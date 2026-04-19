@@ -2324,8 +2324,8 @@ function PartnerConfigStudio({
                       </div>
                     </FormField>
                     <div className="md:col-span-2">
-                      <FormField label="Biaya Sendiri saat Klaim" helper="">
-                        <TextAreaInput rows={2} value={master.deductible || ""} onChange={(value) => patchSection("master", { deductible: value })} placeholder="Isi jika ada biaya sendiri saat klaim." />
+                  <FormField label="Risiko Sendiri saat Klaim" helper="">
+                    <TextAreaInput rows={2} value={master.deductible || ""} onChange={(value) => patchSection("master", { deductible: value })} placeholder="Isi jika ada risiko sendiri saat klaim." />
                       </FormField>
                     </div>
                   </div>

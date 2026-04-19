@@ -29,6 +29,7 @@ export function OfferShareModal({
   productIcon,
   onOpenIndicativeOffer,
   onOpenFinalOffer,
+  onPrintPdf,
   onOpenWhatsApp,
   onOpenEmail,
   onCopyLink,
@@ -38,8 +39,8 @@ export function OfferShareModal({
   if (!open) return null;
   const primaryOpenAction = onOpenFinalOffer || onOpenIndicativeOffer;
   const helperCopy = onOpenFinalOffer
-    ? "Anda dapat meninjau penawaran final terlebih dahulu, atau langsung mengirimkannya ke calon tertanggung melalui pilihan di bawah."
-    : "Anda dapat meninjau penawaran awal terlebih dahulu, atau langsung mengirimkannya ke calon tertanggung melalui pilihan di bawah.";
+    ? "Gunakan menu di bawah untuk membuka penawaran final, mengunduh dokumennya, atau membagikannya ke calon tertanggung melalui WhatsApp, email, tautan, atau QR."
+    : "Gunakan menu di bawah untuk membuka penawaran awal, mengunduh dokumennya, atau membagikannya ke calon tertanggung melalui WhatsApp, email, tautan, atau QR.";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
@@ -87,6 +88,15 @@ export function OfferShareModal({
             variant="primary"
             onClick={primaryOpenAction}
           />
+
+          {onPrintPdf ? (
+            <ActionButton
+              icon={<FileText className="h-4 w-4" />}
+              label="Download Penawaran"
+              variant="accent"
+              onClick={onPrintPdf}
+            />
+          ) : null}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <ActionButton

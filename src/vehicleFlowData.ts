@@ -7,25 +7,25 @@ export const MIN_YEAR_COMP = CURRENT_YEAR - 15;
 export const PRODUCTS = [
   {
     id: "motor",
-    title: "Asuransi TLO Motor",
+    title: "Asuransi Sepeda Motor - Total Loss",
     category: "Kendaraan",
     subtitle:
-      "Perlindungan total kerugian untuk motor bila terjadi kerusakan total, termasuk risiko kebakaran dan pencurian sesuai ketentuan polis.",
+      "Perlindungan untuk sepeda motor terhadap kehilangan akibat pencurian atau kerusakan berat yang termasuk total loss sesuai ketentuan polis.",
     gradient: "from-slate-700 via-slate-600 to-slate-500",
   },
   {
     id: "carComp",
-    title: "Kendaraan Bermotor Roda 4 - Comprehensive",
+    title: "Comprehensive Kendaraan - Mobil",
     category: "Kendaraan",
     subtitle: "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran.",
     gradient: "from-sky-800 via-sky-700 to-sky-600",
   },
   {
     id: "carTlo",
-    title: "Asuransi TLO Mobil",
+    title: "Asuransi Mobil - Total Loss",
     category: "Kendaraan",
     subtitle:
-      "Perlindungan total kerugian untuk mobil bila terjadi kerusakan total, termasuk risiko kebakaran dan pencurian sesuai ketentuan polis.",
+      "Perlindungan mobil terhadap kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.",
     gradient: "from-slate-900 via-slate-800 to-slate-700",
   },
 ] as const;
@@ -164,7 +164,7 @@ export const THEFT_BY_OWN_DRIVER_RATE = 0.001;
 export const AMBULANCE_PREMIUM = 50000;
 
 export const EXT_INFO: Record<string, string> = {
-  tpl: "Jika dicantumkan dalam Ikhtisar Pertanggungan, menjamin tanggung jawab hukum Tertanggung atas kematian, cedera badan, biaya perawatan atau pengobatan, serta kerugian atau kerusakan harta benda milik penumpang atau pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis.",
+  tpl: "Menjamin tanggung jawab hukum Tertanggung terhadap kerusakan harta benda, biaya pengobatan, cedera badan, atau kematian pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis, dengan nilai pertanggungan maksimum Rp1.000.000 untuk setiap kejadian.",
   srcc: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa senjata api, revolusi tanpa senjata api, serta penjarahan yang terjadi dalam peristiwa tersebut.",
   ts: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, atau sabotase.",
   flood: "Menjamin kerugian atau kerusakan yang secara langsung disebabkan oleh banjir, angin topan, badai, hujan es, genangan air, atau tanah longsor yang mengenai kendaraan.",
@@ -182,18 +182,30 @@ export const CONSENT_SECTIONS = [
     key: "produk",
     title: "Pemahaman Produk",
     summary: "Tertanggung menyatakan telah menerima penjelasan, membaca, dan memahami informasi produk asuransi.",
-    detail: "Tertanggung menyatakan telah menerima penjelasan, membaca, dan memahami informasi produk asuransi yang diajukan pada penawaran ini.",
+    detailLines: [
+      'Menyatakan telah menerima penjelasan, membaca, dan memahami informasi produk asuransi PT Asuransi Jasa Indonesia (“Penanggung”) ini;',
+    ],
   },
   {
     key: "data",
     title: "Pemrosesan Data Pribadi",
     summary: "Tertanggung memberi izin pemrosesan data pribadi untuk penerbitan polis, pelayanan klaim, dan peningkatan layanan.",
-    detail: "Tertanggung memberikan izin kepada Penanggung untuk memproses data yang dicantumkan dalam formulir ini dan mengungkapkannya kepada pihak yang ditunjuk untuk pelayanan polis, klaim, dan peningkatan layanan sesuai ketentuan yang berlaku.",
+    detailLines: [
+      "Memberikan izin kepada Penanggung untuk melakukan pemrosesan Informasi/Data (mengumpulkan, memverifikasi, mengolah, menyimpan, memperbarui, mempergunakan, termasuk memusnahkan) yang tercantum dalam SPAU ini dan mengungkapkan Informasi/Data Pribadi (termasuk namun tidak terbatas pada nama, alamat surat menyurat, alamat email, nomor telepon, kontak, dan informasi/keterangan lainnya) kepada afiliasi Penanggung dan/atau pihak ketiga yang ditunjuk oleh Penanggung serta setuju dihubungi melalui sarana komunikasi pribadi sehubungan dengan pengajuan polis asuransi ini, pelayanan klaim, peningkatan layanan konsumen dan/ atau pelaksanaan ketentuan polis asuransi sesuai dengan kebijakan internal Penanggung maupun peraturan perundang-undangan yang berlaku.",
+      "Adapun rincian mengenai tujuan pemrosesan Data Pribadi maupun pihak lain yang dapat memperoleh dan/atau melakukan pemrosesan Informasi/Data Pribadi Kami/Saya untuk menunjang keperluan ini tercantum dalam Kebijakan Privasi Penanggung yang dapat diakses pada",
+    ],
+    detailLinkLabel: "https://bit.ly/JSDPrivasi",
+    detailLinkHref: "https://bit.ly/JSDPrivasi",
   },
   {
     key: "material",
     title: "Kebenaran Fakta Material",
     summary: "Seluruh keterangan yang diberikan harus benar dan menjadi dasar penerbitan polis.",
-    detail: "Tertanggung menyatakan seluruh informasi yang diberikan benar, jujur, dan menjadi dasar bagi penerbitan polis. Ketidaksesuaian data dapat memengaruhi penerimaan risiko maupun penyelesaian klaim.",
+    detailLines: [
+      "Menyatakan bahwa:",
+      "(a) seluruh informasi/keterangan yang dicantumkan dalam SPAU ini dibuat dengan sejujurnya dan sesuai dengan keadaan sebenarnya menurut pengetahuan Kami/Saya atau yang seharusnya Kami/Saya ketahui;",
+      "(b) menyadari bahwa SPAU ini akan digunakan sebagai dasar dan merupakan bagian yang tidak terpisahkan dari polis asuransi yang akan diterbitkan, oleh karenanya ketidakbenarannya merupakan pelanggaran atau tidak terpenuhinya kewajiban penyampaian fakta material. Pelanggaran tersebut mengakibatkan ditolaknya setiap klaim yang diajukan;",
+      "(c) mengerti bahwa pertanggungan yang diminta ini baru berlaku setelah mendapat persetujuan tertulis dari Penanggung.",
+    ],
   },
 ];
