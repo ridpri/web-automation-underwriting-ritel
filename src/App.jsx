@@ -20,6 +20,74 @@ function cls() {
   return Array.from(arguments).filter(Boolean).join(" ");
 }
 
+function isValidSessionRole(value) {
+  return SESSION_OPTIONS.some((item) => item.key === value);
+}
+
+const SESSION_ROLE_STORAGE_KEY = "underwriting-demo-session-role";
+const PUBLIC_URL_SESSION_ROLES = new Set(["external", "partner", "guest"]);
+const INTERNAL_ONLY_JOURNEYS = new Set([
+  "review-internal",
+  "internal-workspace",
+  "property-internal",
+  "property-all-risk-internal",
+  "motor-internal",
+  "car-tlo-internal",
+  "car-comp-internal",
+  "partner-config",
+]);
+const PUBLIC_GUEST_JOURNEYS = new Set([
+  "property-external",
+  "property-all-risk-external",
+  "motor-external",
+  "car-tlo-external",
+  "mobil-comp",
+  "self-care-portal",
+  "self-care-lookup",
+]);
+
+function readStoredSessionRole() {
+  if (typeof window === "undefined") return null;
+  const storedRole = window.sessionStorage.getItem(SESSION_ROLE_STORAGE_KEY);
+  return isValidSessionRole(storedRole) ? storedRole : null;
+}
+
+function resolveUrlSessionRole(value) {
+  return PUBLIC_URL_SESSION_ROLES.has(value) ? value : null;
+}
+
+function inferSessionRoleFromJourney(journey) {
+  if (!journey) return "guest";
+  if (INTERNAL_ONLY_JOURNEYS.has(journey)) return "internal";
+  if (PUBLIC_GUEST_JOURNEYS.has(journey)) return "guest";
+  return "guest";
+}
+
+function sanitizeJourneyForRole(journey, sessionRole) {
+  if (!journey) return "";
+  if (INTERNAL_ONLY_JOURNEYS.has(journey) && sessionRole !== "internal") return "";
+  if (journey === "self-care-portal" && sessionRole === "guest") return "self-care-lookup";
+  return journey;
+}
+
+function resolveInitialNavigationState() {
+  if (typeof window === "undefined") {
+    return { activeJourney: "", sessionRole: "guest" };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const requestedJourney = params.get("journey") || "";
+  const sessionRole =
+    resolveUrlSessionRole(params.get("role"))
+    || readStoredSessionRole()
+    || inferSessionRoleFromJourney(requestedJourney);
+
+  return {
+    activeJourney: sanitizeJourneyForRole(requestedJourney, sessionRole),
+    sessionRole,
+  };
+}
+
 function isExternalUrl(value) {
   return typeof value === "string" && /^https?:\/\//.test(value);
 }
@@ -115,20 +183,23 @@ function JourneyFallback() {
 }
 
 export default function App() {
-  const [sessionRole, setSessionRole] = useState("internal");
-  const [activeJourney, setActiveJourney] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("journey") || "";
-  });
+  const initialNavigationState = useMemo(() => resolveInitialNavigationState(), []);
+  const [activeJourney, setActiveJourney] = useState(initialNavigationState.activeJourney);
+  const [sessionRole, setSessionRole] = useState(initialNavigationState.sessionRole);
   const [partnerConfigRole, setPartnerConfigRole] = useState("Maker");
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [operatingRecords, setOperatingRecords] = useState(OPERATING_QUEUE_SEED);
   const [activeTransactionId, setActiveTransactionId] = useState(OPERATING_QUEUE_SEED[0]?.id || "");
+  const resolvedActiveJourney = useMemo(
+    () => sanitizeJourneyForRole(activeJourney, sessionRole),
+    [activeJourney, sessionRole],
+  );
   const activeSessionName = resolveSessionName(sessionRole);
   const activeSessionProfile = resolveSessionProfile(sessionRole);
   const isInternalSession = sessionRole === "internal";
   const isGuestSession = sessionRole === "guest";
+  const isAuthenticatedCustomerSession = sessionRole === "external" || sessionRole === "partner";
   const propertyItems = useMemo(
     () => ({
       safeItem: sessionRole === "internal" ? "property-internal" : "property-external",
@@ -154,13 +225,30 @@ export default function App() {
   ];
 
   useEffect(() => {
+    if (resolvedActiveJourney === activeJourney) return;
+    setRoleMenuOpen(false);
+    setAccountMenuOpen(false);
+    setActiveJourney(resolvedActiveJourney);
+  }, [activeJourney, resolvedActiveJourney]);
+
+  useEffect(() => {
+    const win = typeof window !== "undefined" ? window : null;
+    if (!win) return;
+    if (sessionRole) win.sessionStorage.setItem(SESSION_ROLE_STORAGE_KEY, sessionRole);
+    else win.sessionStorage.removeItem(SESSION_ROLE_STORAGE_KEY);
+  }, [sessionRole]);
+
+  useEffect(() => {
     const win = typeof window !== "undefined" ? window : null;
     if (!win) return;
     const url = new URL(win.location.href);
-    if (activeJourney) url.searchParams.set("journey", activeJourney);
+    if (resolvedActiveJourney) url.searchParams.set("journey", resolvedActiveJourney);
     else url.searchParams.delete("journey");
+    const publicUrlSessionRole = resolveUrlSessionRole(sessionRole);
+    if (publicUrlSessionRole) url.searchParams.set("role", publicUrlSessionRole);
+    else url.searchParams.delete("role");
     win.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-  }, [activeJourney]);
+  }, [resolvedActiveJourney, sessionRole]);
 
   const handleOpenJourney = (target) => {
     if (isExternalUrl(target)) {
@@ -258,7 +346,7 @@ export default function App() {
     onOpenPartnerConfig: () => setActiveJourney("partner-config"),
   };
 
-  if (activeJourney === "review-internal") {
+  if (resolvedActiveJourney === "review-internal") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <ReviewWorkbench
@@ -276,7 +364,7 @@ export default function App() {
     );
   }
 
-  if (activeJourney === "internal-workspace") {
+  if (resolvedActiveJourney === "internal-workspace") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <ReviewWorkbench
@@ -300,7 +388,7 @@ export default function App() {
     );
   }
 
-  if (activeJourney === "property-internal") {
+  if (resolvedActiveJourney === "property-internal") {
     return buildShell(
       "property-internal",
       (activeRecord, onOperatingSignal) => (
@@ -317,7 +405,7 @@ export default function App() {
       ),
     );
   }
-  if (activeJourney === "property-external") {
+  if (resolvedActiveJourney === "property-external") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <PropertyPrototype
@@ -325,14 +413,14 @@ export default function App() {
           entryMode="external"
           productVariant="property-safe"
           sessionName={activeSessionName}
-          sessionProfile={sessionRole === "external" ? activeSessionProfile : null}
+          sessionProfile={isAuthenticatedCustomerSession ? activeSessionProfile : null}
           onExit={() => setActiveJourney("")}
           onOpenPolicies={() => setActiveJourney("self-care-portal")}
         />
       </Suspense>
     );
   }
-  if (activeJourney === "property-all-risk-internal") {
+  if (resolvedActiveJourney === "property-all-risk-internal") {
     return buildShell(
       "property-all-risk-internal",
       (activeRecord, onOperatingSignal) => (
@@ -349,7 +437,7 @@ export default function App() {
       ),
     );
   }
-  if (activeJourney === "property-all-risk-external") {
+  if (resolvedActiveJourney === "property-all-risk-external") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <PropertyPrototype
@@ -357,14 +445,14 @@ export default function App() {
           entryMode="external"
           productVariant="property-all-risk"
           sessionName={activeSessionName}
-          sessionProfile={sessionRole === "external" ? activeSessionProfile : null}
+          sessionProfile={isAuthenticatedCustomerSession ? activeSessionProfile : null}
           onExit={() => setActiveJourney("")}
           onOpenPolicies={() => setActiveJourney("self-care-portal")}
         />
       </Suspense>
     );
   }
-  if (activeJourney === "motor-internal") {
+  if (resolvedActiveJourney === "motor-internal") {
     return buildShell(
       "motor-internal",
       (activeRecord, onOperatingSignal) => (
@@ -378,18 +466,20 @@ export default function App() {
       ),
     );
   }
-  if (activeJourney === "motor-external") {
+  if (resolvedActiveJourney === "motor-external") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <MotorLatestExact
           entryMode="external"
+          sessionName={activeSessionName}
+          sessionProfile={isAuthenticatedCustomerSession ? activeSessionProfile : null}
           onExit={() => setActiveJourney("")}
           accountMenuItems={externalAccountMenuItems}
         />
       </Suspense>
     );
   }
-  if (activeJourney === "car-tlo-internal") {
+  if (resolvedActiveJourney === "car-tlo-internal") {
     return buildShell(
       "car-tlo-internal",
       (activeRecord, onOperatingSignal) => (
@@ -403,7 +493,7 @@ export default function App() {
       ),
     );
   }
-  if (activeJourney === "car-comp-internal") {
+  if (resolvedActiveJourney === "car-comp-internal") {
     return buildShell(
       "car-comp-internal",
       (activeRecord, onOperatingSignal) => (
@@ -417,31 +507,35 @@ export default function App() {
       ),
     );
   }
-  if (activeJourney === "car-tlo-external") {
+  if (resolvedActiveJourney === "car-tlo-external") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <MotorLatestExact
           entryMode="external"
           initialFlow="carTlo"
+          sessionName={activeSessionName}
+          sessionProfile={isAuthenticatedCustomerSession ? activeSessionProfile : null}
           onExit={() => setActiveJourney("")}
           accountMenuItems={externalAccountMenuItems}
         />
       </Suspense>
     );
   }
-  if (activeJourney === "mobil-comp") {
+  if (resolvedActiveJourney === "mobil-comp") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <MotorLatestExact
           entryMode="external"
           initialFlow="carComp"
+          sessionName={activeSessionName}
+          sessionProfile={isAuthenticatedCustomerSession ? activeSessionProfile : null}
           onExit={() => setActiveJourney("")}
           accountMenuItems={externalAccountMenuItems}
         />
       </Suspense>
     );
   }
-  if (activeJourney === "self-care-portal" || activeJourney === "self-care-lookup") {
+  if (resolvedActiveJourney === "self-care-portal" || resolvedActiveJourney === "self-care-lookup") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <SelfCarePortalBridge
@@ -454,7 +548,7 @@ export default function App() {
       </Suspense>
     );
   }
-  if (activeJourney === "partner-config") {
+  if (resolvedActiveJourney === "partner-config") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <PartnerConfigStudio
@@ -471,7 +565,7 @@ export default function App() {
       </Suspense>
     );
   }
-  if (activeJourney === "brd-property-safe") {
+  if (resolvedActiveJourney === "brd-property-safe") {
     return (
       <Suspense fallback={<JourneyFallback />}>
         <PropertySafeBrdPage onBack={() => setActiveJourney("")} />

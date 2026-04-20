@@ -73,6 +73,7 @@ export function CustomerDataJourneyShell({
   bottomBackLabel = "Kembali ke Ringkasan Penawaran",
   showSidebar = true,
   showPaymentStep = true,
+  guestMode = false,
   children,
 }) {
   const shouldShowPrimaryAction = canContinue || !(secondaryLabel && onSecondary);
@@ -120,20 +121,35 @@ export function CustomerDataJourneyShell({
                 {topActionLabel}
               </button>
             ) : null}
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"
-            >
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>
-              {headerUserName}
-            </button>
-            <button
-              type="button"
-              aria-label="Lihat notifikasi"
-              className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"
-            >
-              <Bell className="h-4 w-4" />
-            </button>
+            {guestMode ? (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "https://esppa.asuransijasindo.co.id/";
+                }}
+                className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
+              >
+                <Home className="h-4 w-4" aria-hidden="true" />
+                Masuk
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"
+                >
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>
+                  {headerUserName}
+                </button>
+                <button
+                  type="button"
+                  aria-label="Lihat notifikasi"
+                  className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"
+                >
+                  <Bell className="h-4 w-4" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -152,9 +168,11 @@ export function CustomerDataJourneyShell({
               </button>
             </div>
             <div className="mt-1 text-center text-white">
-              <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">
-                {headerUserName ? `Halo, ${headerUserName}` : badgeLabel}
-              </div>
+              {!guestMode ? (
+                <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">
+                  {headerUserName ? `Halo, ${headerUserName}` : badgeLabel}
+                </div>
+              ) : null}
               <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{productName}</h1>
               <p className="mx-auto mt-3 max-w-3xl text-[15px] leading-7 text-white/90 md:text-[17px]">{heroDescription}</p>
             </div>
@@ -197,7 +215,7 @@ export function CustomerDataJourneyShell({
             )}
             {!showSidebar ? (
               <div className="rounded-[24px] border border-[#D8E1EA] bg-white p-5 shadow-sm">
-                <div className="text-[18px] font-bold text-slate-900">Lanjutkan Penawaran</div>
+                <div className="text-[18px] font-bold text-slate-900">Lanjut ke Pembayaran</div>
                 <div className="mt-2 text-sm leading-6 text-slate-600">{guidanceText}</div>
 
                 {pendingItems.length ? (
@@ -216,7 +234,7 @@ export function CustomerDataJourneyShell({
                   <div className="mt-4 rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4 text-sm text-slate-700">
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1F8B4C]" />
-                      <span>Data sudah lengkap dan siap dilanjutkan ke pembayaran.</span>
+                      <span>Data sudah lengkap dan siap untuk tahap pembayaran.</span>
                     </div>
                   </div>
                 )}
@@ -296,7 +314,7 @@ export function CustomerDataJourneyShell({
                 <div className="mt-4 rounded-2xl bg-white/10 p-4 text-sm text-white/90">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#9BE4BA]" />
-                    <span>Data sudah lengkap dan siap dilanjutkan ke pembayaran.</span>
+                    <span>Data sudah lengkap dan siap untuk tahap pembayaran.</span>
                   </div>
                 </div>
               )}

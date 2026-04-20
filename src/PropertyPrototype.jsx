@@ -41,10 +41,22 @@ import { OfferShareModal } from "./components/OfferShareModal.jsx";
 
 const PROPERTY_TYPES = ["Rumah Tinggal", "Toko", "Ruko", "Kantor", "Apartment", "Apotek"];
 const CONSTRUCTION_CLASSES = ["Kelas 1", "Kelas 2", "Kelas 3"];
-const WALL_MATERIAL_OPTIONS = ["Mayoritas beton, bata, atau hebel", "Campuran", "Mayoritas kayu atau bahan yang mudah terbakar"];
-const STRUCTURE_MATERIAL_OPTIONS = ["Mayoritas beton atau baja", "Campuran", "Mayoritas kayu atau material ringan"];
-const ROOF_MATERIAL_OPTIONS = ["Beton, metal, atau genteng", "Sirap atau campuran", "Bahan yang mudah terbakar"];
-const FLAMMABLE_MATERIAL_OPTIONS = ["Tidak", "Ya"];
+const WALL_MATERIAL_OPTIONS = [
+  "Seluruhnya dari beton, bata, hebel, atau bahan tidak mudah terbakar",
+  "Ada bagian bahan mudah terbakar, maksimal sekitar 20% dari luas dinding",
+  "Bagian bahan mudah terbakar melebihi 20% dari luas dinding",
+];
+const STRUCTURE_MATERIAL_OPTIONS = [
+  "Beton, baja, atau bahan tidak mudah terbakar",
+  "Kayu",
+  "Material lain di luar ketentuan kelas 1 dan 2",
+];
+const ROOF_MATERIAL_OPTIONS = [
+  "Beton, metal, genteng, atau bahan tidak mudah terbakar",
+  "Sirap kayu keras",
+  "Bahan mudah terbakar lainnya",
+];
+const FLAMMABLE_MATERIAL_OPTIONS = ["Tidak ada", "Ada"];
 const OBJECT_TYPES = ["Bangunan", "Inventaris", "Stok", "Mesin"];
 const CUSTOMER_TYPES = ["Nasabah Perorangan", "Badan Usaha"];
 const OWNERSHIP_TYPES = ["Milik Sendiri", "Sewa", "Kontrak", "Lainnya"];
@@ -114,9 +126,9 @@ const MOCK_CIF = [
 ];
 
 const MOCK_SENT_OFFERS = [
-  { id: "OFR-001", name: "Sony Laksono", product: "Asuransi Properti - Kebakaran", status: "Dibuka, menunggu jawaban" },
-  { id: "OFR-002", name: "PT Maju Sentosa", product: "Asuransi Properti - Kebakaran", status: "Sudah jawab, minta revisi" },
-  { id: "OFR-003", name: "Siti Rahma", product: "Asuransi Properti - Kebakaran", status: "Sudah setuju, menunggu bayar" },
+  { id: "OFR-001", name: "Sony Laksono", product: "Asuransi Kebakaran", status: "Dibuka, menunggu jawaban" },
+  { id: "OFR-002", name: "PT Maju Sentosa", product: "Asuransi Kebakaran", status: "Sudah jawab, minta revisi" },
+  { id: "OFR-003", name: "Siti Rahma", product: "Asuransi Kebakaran", status: "Sudah setuju, menunggu bayar" },
 ];
 
 const CONSTRUCTION_GUIDE = [
@@ -197,7 +209,7 @@ const PERSONAL_PRODUCTS = [
 
 const PROPERTY_PRODUCTS = [
   {
-    title: "Asuransi Properti - Kebakaran",
+    title: "Asuransi Kebakaran",
     category: "Harta Benda",
     subtitle: "Perlindungan untuk bangunan dan isi properti terhadap risiko kebakaran, dengan tambahan perlindungan yang bisa dipilih sesuai kebutuhan.",
     image: "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=900&q=80",
@@ -205,7 +217,7 @@ const PROPERTY_PRODUCTS = [
     variantKey: "property-safe",
   },
   {
-    title: "Asuransi Properti - All Risk",
+    title: "Asuransi Property All Risk",
     category: "Harta Benda",
     subtitle: "Perlindungan untuk bangunan dan isi properti terhadap kerusakan fisik mendadak, dengan tambahan perlindungan yang bisa dipilih sesuai kebutuhan.",
     image: "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=900&q=80",
@@ -538,6 +550,7 @@ function downloadPropertyOfferPdf({
   offerReference,
   downloadedAt,
   shareUrl,
+  showOccupancyCode = true,
 }) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -567,7 +580,7 @@ function downloadPropertyOfferPdf({
   ];
   const summaryPropertyRows = [
     ["Penggunaan Properti", occupancy || "-"],
-    ["Kode Okupasi", occupancyCode || "-"],
+    ...(showOccupancyCode && occupancyCode ? [["Kode Okupasi", occupancyCode]] : []),
     ["Lokasi Properti", location || "-"],
     ["Kelas Konstruksi", constructionClass || "-"],
     ["Nomor Referensi", offerReference || "-"],
@@ -880,19 +893,21 @@ function isFloorRelevant(propertyType, occupancy) {
 
 function deriveConstructionClassFromMaterial({ wallMaterial, structureMaterial, roofMaterial, flammableMaterial }) {
   if (!wallMaterial || !structureMaterial || !roofMaterial || !flammableMaterial) return "";
-  if (
-    wallMaterial.includes("kayu")
-    || structureMaterial.includes("kayu")
-    || roofMaterial.includes("mudah")
-    || flammableMaterial === "Ya"
-  ) {
+
+  const isClassThreeWall = wallMaterial === "Bagian bahan mudah terbakar melebihi 20% dari luas dinding";
+  const isClassThreeStructure = structureMaterial === "Material lain di luar ketentuan kelas 1 dan 2";
+  const isClassThreeRoof = roofMaterial === "Bahan mudah terbakar lainnya";
+  const hasOtherFlammablePart = flammableMaterial === "Ada";
+
+  if (isClassThreeWall || isClassThreeStructure || isClassThreeRoof || hasOtherFlammablePart) {
     return "Kelas 3";
   }
-  if (
-    wallMaterial === "Campuran"
-    || structureMaterial === "Campuran"
-    || roofMaterial === "Sirap atau campuran"
-  ) {
+
+  const hasClassTwoWall = wallMaterial === "Ada bagian bahan mudah terbakar, maksimal sekitar 20% dari luas dinding";
+  const hasClassTwoStructure = structureMaterial === "Kayu";
+  const hasClassTwoRoof = roofMaterial === "Sirap kayu keras";
+
+  if (hasClassTwoWall || hasClassTwoStructure || hasClassTwoRoof) {
     return "Kelas 2";
   }
   return "Kelas 1";
@@ -1641,8 +1656,13 @@ function UnderwritingSections({
   setExpandedRows,
   external = false,
   useAccountProfileCustomerData = false,
+  profileCustomerOverrideEnabled = false,
+  profileCustomerEditMode = false,
   accountIdentityNumber = "",
   accountInsuredAddress = "",
+  onEnableProfileCustomerEdit,
+  onCancelProfileCustomerEdit,
+  onSaveProfileCustomerEdit,
 }) {
   const isCompanyCustomer = customerType === "Badan Usaha";
   const identityLabel = customerType === "Badan Usaha" ? "NPWP" : "NIK";
@@ -1655,7 +1675,18 @@ function UnderwritingSections({
   const hasStockObject = objectRows.some((row) => row.type === "Stok");
   const selectedStockTypeMeta = STOCK_TYPE_OPTIONS.find((item) => item.label === uwForm.stockType);
   const customerDataMode = !isCompanyCustomer ? uwForm.customerDataMode || "scan" : "manual";
-  const canShowCustomerFields = useAccountProfileCustomerData || isCompanyCustomer || customerDataMode === "manual" || Boolean(uwForm.ktpRead);
+  const shouldShowCustomerSummary =
+    external
+    && (
+      useAccountProfileCustomerData
+      || (profileCustomerOverrideEnabled && !profileCustomerEditMode)
+    );
+  const canShowCustomerFields =
+    useAccountProfileCustomerData
+    || profileCustomerOverrideEnabled
+    || isCompanyCustomer
+    || customerDataMode === "manual"
+    || Boolean(uwForm.ktpRead);
   const ktpConfidenceLabel = ktpCheck?.confidence ? `${Math.round(ktpCheck.confidence * 100)}%` : "-";
   const customerSectionTitle = "Informasi Calon Pemegang Polis";
   const propertySectionTitle = "Informasi Properti Lanjutan";
@@ -1668,19 +1699,43 @@ function UnderwritingSections({
     ? undefined
     : "Wajib diisi oleh petugas internal.";
   const externalSectionClassName = external ? "border-[#CFE0F0] bg-[#F8FBFE] shadow-[0_12px_30px_rgba(15,23,42,0.06)]" : "";
+  const customerSectionAction =
+    shouldShowCustomerSummary
+      ? (
+        <button
+          type="button"
+          onClick={onEnableProfileCustomerEdit}
+          className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DEEA] bg-white px-4 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+        >
+          Edit
+        </button>
+      )
+      : external && profileCustomerEditMode
+        ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onCancelProfileCustomerEdit}
+              className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DEEA] bg-white px-4 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={onSaveProfileCustomerEdit}
+              className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
+            >
+              Simpan
+            </button>
+          </div>
+        )
+        : null;
 
   return (
     <div className="space-y-5">
-      <SectionCard title={customerSectionTitle} subtitle={customerSectionSubtitle} className={externalSectionClassName} compactHeader={external}>
+      <SectionCard title={customerSectionTitle} subtitle={customerSectionSubtitle} className={externalSectionClassName} compactHeader={external} action={customerSectionAction}>
         <div className="space-y-5">
-          {useAccountProfileCustomerData ? (
-            <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-3">
-              <div className="text-[13px] font-semibold text-[#0A4D82]">NIK dan alamat calon pemegang polis menggunakan data profil akun Anda.</div>
-              <div className="mt-1 text-xs leading-5 text-slate-600">Jika ada perubahan, silakan perbarui melalui profil akun Anda terlebih dahulu.</div>
-            </div>
-          ) : null}
-
-          {!isCompanyCustomer && !useAccountProfileCustomerData ? (
+          {!isCompanyCustomer && !useAccountProfileCustomerData && !profileCustomerOverrideEnabled ? (
             <div className="grid gap-2.5 md:grid-cols-2">
               <button
                 type="button"
@@ -1705,7 +1760,7 @@ function UnderwritingSections({
             </div>
           ) : null}
 
-          {!isCompanyCustomer && !useAccountProfileCustomerData && customerDataMode === "scan" ? (
+          {!isCompanyCustomer && !useAccountProfileCustomerData && !profileCustomerOverrideEnabled && customerDataMode === "scan" ? (
             <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-3">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className={cls("text-[13px] font-medium", uwForm.ktpRead ? "text-emerald-700" : "text-slate-600")}>
@@ -1724,28 +1779,16 @@ function UnderwritingSections({
           ) : null}
 
           {canShowCustomerFields ? (
-            useAccountProfileCustomerData ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <FieldLabel label={identityLabel} />
-                  <TextInput
-                    value={profileIdentityNumber}
-                    onChange={() => {}}
-                    placeholder={customerType === "Badan Usaha" ? "NPWP profil akun" : "NIK profil akun"}
-                    icon={<User className="h-4 w-4" />}
-                    readOnly
-                    disabled
+            shouldShowCustomerSummary ? (
+              <div className="rounded-[16px] border border-[#D8E1EA] bg-white px-4 py-4">
+                <div className="space-y-1">
+                  <OfferSummaryKeyValue
+                    label={identityLabel}
+                    value={(profileCustomerOverrideEnabled ? String(uwForm.idNumber || "").trim() : profileIdentityNumber) || "-"}
                   />
-                </div>
-                <div className="md:col-span-2">
-                  <FieldLabel label="Alamat Calon Pemegang Polis" required />
-                  <TextInput
-                    value={profileInsuredAddress}
-                    onChange={() => {}}
-                    placeholder="Alamat calon pemegang polis pada profil akun"
-                    icon={<MapPin className="h-4 w-4" />}
-                    readOnly
-                    disabled
+                  <OfferSummaryKeyValue
+                    label="Alamat Calon Pemegang Polis"
+                    value={(profileCustomerOverrideEnabled ? String(uwForm.insuredAddress || "").trim() : profileInsuredAddress) || "-"}
                   />
                 </div>
               </div>
@@ -2596,12 +2639,20 @@ function ExternalPaymentPage({
   operatingRecord,
   isExpired,
   productConfig,
+  stepOneTitle = "Tinjau Penawaran",
+  guestMode = false,
 }) {
   const [openPaymentGroup, setOpenPaymentGroup] = useState("");
   const activeVariant = productConfig || getPropertyVariant("property-safe");
   const operatingBlockedMessage = paymentBlockMessage(operatingRecord);
   const canProceedPayment = canProceedToPaymentFromOperating(operatingRecord);
-  const stepOneTitle = "Tinjau Penawaran";
+  const derivedConstructionClass = deriveConstructionClassFromMaterial({
+    wallMaterial: form.wallMaterial,
+    structureMaterial: form.structureMaterial,
+    roofMaterial: form.roofMaterial,
+    flammableMaterial: form.flammableMaterial,
+  });
+  const effectiveConstructionClass = form.constructionClass || derivedConstructionClass;
   const customerDisplay = customerName || form.identity || "Calon Pemegang Polis";
   const coverageEndDate = calculateCoverageEnd(uwForm.coverageStartDate);
   const coveragePeriod = uwForm.coverageStartDate && coverageEndDate
@@ -2640,6 +2691,9 @@ function ExternalPaymentPage({
   const coverageValue = `Rp ${formatRupiah(totalValue)}`;
   const transactionFee = paymentMethod ? PAYMENT_METHOD_FEE_LOOKUP[paymentMethod] || 0 : 0;
   const totalPayment = estimatedTotal + transactionFee;
+  const paymentPendingItems = [];
+  if (!paymentMethod) paymentPendingItems.push("Pilih salah satu metode pembayaran terlebih dahulu.");
+  if (!policyConsentApproved) paymentPendingItems.push("Buka dan setujui Syarat dan Ketentuan Persetujuan atas SPAU elektronik ini.");
   const transactionFeeLabel = (
     <span className="inline-flex items-center gap-1.5">
       <span>Biaya Transaksi</span>
@@ -2665,8 +2719,23 @@ function ExternalPaymentPage({
             </div>
           </div>
           <div className="flex items-center gap-4 text-white">
-            <button type="button" className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{String(customerDisplay).trim() || "Calon Pemegang Polis"}</button>
-            <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
+            {guestMode ? (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "https://esppa.asuransijasindo.co.id/";
+                }}
+                className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
+              >
+                <Home className="h-4 w-4" aria-hidden="true" />
+                Masuk
+              </button>
+            ) : (
+              <>
+                <button type="button" className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{String(customerDisplay).trim() || "Calon Pemegang Polis"}</button>
+                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -2677,7 +2746,7 @@ function ExternalPaymentPage({
               <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali ke Data Lanjutan</button>
             </div>
             <div className="mt-5 text-center text-white">
-              <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Halo, {String(customerDisplay).trim() || "Calon Pemegang Polis"}</div>
+              {!guestMode ? <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Halo, {String(customerDisplay).trim() || "Calon Pemegang Polis"}</div> : null}
             <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{productTitle}</h1>
             <p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">Pilih metode pembayaran dan tinjau ringkasan singkat penawaran Anda sebelum melanjutkan.</p>
           </div>
@@ -2734,7 +2803,7 @@ function ExternalPaymentPage({
                         icon={Flame}
                         premium={`Rp ${formatRupiah(basePremium)}`}
                         detail={activeVariant.primaryCoverageDescription}
-                        deductible={constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther}
+                        deductible={effectiveConstructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther}
                       />
                     </div>
                     <div>
@@ -2852,6 +2921,7 @@ function ExternalPaymentPage({
                 </div>
               </div>
             </div>
+            {!paymentStatus ? <div className="mt-4"><SummarySidebarAlert items={paymentPendingItems} /></div> : null}
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
@@ -2948,6 +3018,9 @@ export default function PropertyStepOneFrontendCompact({
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showSentOffers, setShowSentOffers] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [externalStepOneEditMode, setExternalStepOneEditMode] = useState(false);
+  const [externalProfileCustomerOverride, setExternalProfileCustomerOverride] = useState(false);
+  const [externalProfileCustomerEditMode, setExternalProfileCustomerEditMode] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectCustomReason, setRejectCustomReason] = useState("");
@@ -2965,6 +3038,8 @@ export default function PropertyStepOneFrontendCompact({
   const [sharedOfferSnapshot, setSharedOfferSnapshot] = useState(null);
   const isInternalUnderwritingContext = entryMode === "internal" || externalViewerMode === "internal";
   const hasParsedExternalShareRef = useRef(false);
+  const externalStepOneSnapshotRef = useRef(null);
+  const externalProfileCustomerSnapshotRef = useRef(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedGuarantees, setSelectedGuarantees] = useState({ riot: false, flood: false, tsfwd: false, earthquake: false });
   const [expandedRows, setExpandedRows] = useState({ fire: false, riot: false, flood: false, tsfwd: false, earthquake: false, exclusions: false, optionalUw: false });
@@ -3214,11 +3289,38 @@ export default function PropertyStepOneFrontendCompact({
       }
       return { ...prev, [key]: value };
     });
+  const authenticatedExternalProfile =
+    entryMode === "external" && sessionProfile?.authenticated ? sessionProfile : null;
+  const isAuthenticatedExternalJourney = Boolean(authenticatedExternalProfile);
+  const isGuestExternalJourney = entryMode === "external" && !isAuthenticatedExternalJourney;
+  const accountIdentity = String(authenticatedExternalProfile?.name || "").trim();
+  const accountCustomerType = String(authenticatedExternalProfile?.customerType || "").trim();
+  const accountPhone = String(authenticatedExternalProfile?.phone || "").trim();
+  const accountEmail = String(authenticatedExternalProfile?.email || "").trim();
+  const accountIdentityNumber = String(authenticatedExternalProfile?.identityNumber || "").trim();
+  const accountInsuredAddress = String(authenticatedExternalProfile?.insuredAddress || "").trim();
+  const useAccountProfileCustomerData =
+    isAuthenticatedExternalJourney
+    && form.customerType !== "Badan Usaha"
+    && !externalProfileCustomerOverride
+    && Boolean(accountIdentityNumber || accountInsuredAddress);
   const setUwField = (key, value) => setUwForm((prev) => ({ ...prev, [key]: value }));
+  const fallbackDemoCustomer = MOCK_CIF[0];
+  const resolvedDemoCustomer = {
+    ...fallbackDemoCustomer,
+    name:
+      String(form.identity || "").split(" - ")[0].trim()
+      || accountIdentity
+      || selectedCustomer?.name
+      || fallbackDemoCustomer.name,
+    type: String(form.customerType || "").trim() || accountCustomerType || selectedCustomer?.type || fallbackDemoCustomer.type,
+    phone: String(form.phone || "").trim() || accountPhone || selectedCustomer?.phone || fallbackDemoCustomer.phone,
+    email: String(form.email || "").trim() || accountEmail || selectedCustomer?.email || fallbackDemoCustomer.email,
+  };
   const handleCaptureKtp = () => {
-    const extractedFullName = selectedCustomer?.name || String(form.identity || "").split(" - ")[0].trim() || "Sony Laksono";
-    const extractedIdentityNumber = uwForm.idNumber || "3173010101010001";
-    const extractedAddress = "Jl. Pahlawan No. 18, Palmerah, Jakarta Barat";
+    const extractedFullName = resolvedDemoCustomer.name;
+    const extractedIdentityNumber = uwForm.idNumber || accountIdentityNumber || "3173010101010001";
+    const extractedAddress = accountInsuredAddress || uwForm.insuredAddress || "Jl. Pahlawan No. 18, Palmerah, Jakarta Barat";
     const extractedData = {
       fullName: extractedFullName,
       identityNumber: extractedIdentityNumber,
@@ -3251,6 +3353,7 @@ export default function PropertyStepOneFrontendCompact({
   const removeObjectRow = (id) => setObjectRows((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
   const totalValue = useMemo(() => objectRows.reduce((sum, row) => sum + parseNumber(row.amount), 0), [objectRows]);
   const occupancyCode = OCCUPANCY_CODE_MAP[form.occupancy] || "";
+  const canShowOccupancyCode = entryMode === "internal";
   const derivedConstructionClass = deriveConstructionClassFromMaterial({
     wallMaterial: form.wallMaterial,
     structureMaterial: form.structureMaterial,
@@ -3274,20 +3377,6 @@ export default function PropertyStepOneFrontendCompact({
   const guaranteeBreakdown = activeGuarantees.filter((item) => selectedGuarantees[item.key]).map((item) => ({ ...item, premium: Math.round(totalValue * item.rate) }));
   const additionalPremiumNumber = guaranteeBreakdown.reduce((sum, item) => sum + item.premium, 0);
   const estimatedTotalNumber = hasQuoteBasis ? basePremiumNumber + additionalPremiumNumber + stampDutyNumber : 0;
-  const authenticatedExternalProfile =
-    entryMode === "external" && sessionProfile?.authenticated ? sessionProfile : null;
-  const isAuthenticatedExternalJourney = Boolean(authenticatedExternalProfile);
-  const isGuestExternalJourney = entryMode === "external" && !isAuthenticatedExternalJourney;
-  const accountIdentity = String(authenticatedExternalProfile?.name || "").trim();
-  const accountCustomerType = String(authenticatedExternalProfile?.customerType || "").trim();
-  const accountPhone = String(authenticatedExternalProfile?.phone || "").trim();
-  const accountEmail = String(authenticatedExternalProfile?.email || "").trim();
-  const accountIdentityNumber = String(authenticatedExternalProfile?.identityNumber || "").trim();
-  const accountInsuredAddress = String(authenticatedExternalProfile?.insuredAddress || "").trim();
-  const useAccountProfileCustomerData =
-    isAuthenticatedExternalJourney
-    && form.customerType !== "Badan Usaha"
-    && Boolean(accountIdentityNumber || accountInsuredAddress);
   const customerName = selectedCustomer ? selectedCustomer.name : (form.identity || accountIdentity);
   const effectiveCustomerName = customerName || sharedCustomerName;
   const referralCode = createReferralCode(sessionName, transactionAuthority.transactionId);
@@ -3337,7 +3426,7 @@ export default function PropertyStepOneFrontendCompact({
       phone: form.phone || accountPhone,
       email: form.email || accountEmail,
       occupancy: form.occupancy,
-      occupancyCode,
+      occupancyCode: canShowOccupancyCode ? occupancyCode : "",
       location: form.locationSearch,
       constructionClass: effectiveConstructionClass,
       objectRows,
@@ -3354,6 +3443,7 @@ export default function PropertyStepOneFrontendCompact({
       offerReference: transactionAuthority.transactionId,
       downloadedAt: formatDisplayDateTime(new Date()),
       shareUrl,
+      showOccupancyCode: canShowOccupancyCode,
     });
     setShareFeedback(
       downloaded
@@ -3398,10 +3488,82 @@ export default function PropertyStepOneFrontendCompact({
           },
         },
       ];
-  const showStepOneCustomerInfo = !isAuthenticatedExternalJourney;
   const effectiveStepOneIdentity = String(form.identity || "").trim() || accountIdentity;
   const effectiveStepOnePhone = String(form.phone || "").trim() || accountPhone;
   const effectiveStepOneEmail = String(form.email || "").trim() || accountEmail;
+  const canShowExternalStepOneCustomerSummary =
+    entryMode === "external"
+    && (isAuthenticatedExternalJourney || hasSharedOfferJourney)
+    && Boolean(effectiveStepOneIdentity && effectiveStepOnePhone && effectiveStepOneEmail);
+  const canEditExternalStepOneCustomerSummary = isAuthenticatedExternalJourney && canShowExternalStepOneCustomerSummary;
+  const showStepOneCustomerInfo = externalStepOneEditMode || !canShowExternalStepOneCustomerSummary;
+  const startExternalStepOneEdit = () => {
+    externalStepOneSnapshotRef.current = {
+      identity: form.identity,
+      customerType: form.customerType,
+      phone: form.phone,
+      email: form.email,
+      selectedCustomer,
+    };
+    setSelectedCustomer(null);
+    setForm((prev) => ({
+      ...prev,
+      identity: prev.identity || accountIdentity,
+      customerType: prev.customerType || accountCustomerType,
+      phone: prev.phone || accountPhone,
+      email: prev.email || accountEmail,
+    }));
+    setExternalStepOneEditMode(true);
+  };
+  const cancelExternalStepOneEdit = () => {
+    const snapshot = externalStepOneSnapshotRef.current;
+    if (snapshot) {
+      setSelectedCustomer(snapshot.selectedCustomer || null);
+      setForm((prev) => ({
+        ...prev,
+        identity: snapshot.identity,
+        customerType: snapshot.customerType,
+        phone: snapshot.phone,
+        email: snapshot.email,
+      }));
+    }
+    setExternalStepOneEditMode(false);
+  };
+  const saveExternalStepOneEdit = () => {
+    setExternalStepOneEditMode(false);
+  };
+  const enableExternalProfileCustomerEdit = () => {
+    externalProfileCustomerSnapshotRef.current = {
+      idNumber: uwForm.idNumber,
+      insuredAddress: uwForm.insuredAddress,
+      sameAsPropertyAddress: uwForm.sameAsPropertyAddress,
+    };
+    setUwForm((prev) => ({
+      ...prev,
+      idNumber: prev.idNumber || accountIdentityNumber || "",
+      insuredAddress: prev.insuredAddress || accountInsuredAddress || "",
+      sameAsPropertyAddress: false,
+    }));
+    setExternalProfileCustomerOverride(true);
+    setExternalProfileCustomerEditMode(true);
+  };
+  const cancelExternalProfileCustomerEdit = () => {
+    const snapshot = externalProfileCustomerSnapshotRef.current;
+    if (snapshot) {
+      setUwForm((prev) => ({
+        ...prev,
+        idNumber: snapshot.idNumber,
+        insuredAddress: snapshot.insuredAddress,
+        sameAsPropertyAddress: snapshot.sameAsPropertyAddress,
+      }));
+    }
+    setExternalProfileCustomerOverride(false);
+    setExternalProfileCustomerEditMode(false);
+  };
+  const saveExternalProfileCustomerEdit = () => {
+    setExternalProfileCustomerOverride(true);
+    setExternalProfileCustomerEditMode(false);
+  };
   const stepOneTitle = isExternalSelfServeJourney ? "Simulasi Premi" : "Tinjau Penawaran";
   const hasValidStepOneIdentity = isAuthenticatedExternalJourney ? Boolean(effectiveStepOneIdentity) : Boolean(form.identity.trim());
   const hasValidPhoneContact = Boolean(effectiveStepOnePhone) && isValidPhone(effectiveStepOnePhone);
@@ -3559,22 +3721,27 @@ export default function PropertyStepOneFrontendCompact({
   }, [activeVariant, effectiveConstructionClass, guaranteeBreakdown, totalValue]);
 
   const fillStepOneDemoData = () => {
-    const demoCustomer = MOCK_CIF[0];
-    const demoIdentity = allowCustomerLookup ? `${demoCustomer.name} - ${demoCustomer.cif}` : demoCustomer.name;
+    const demoCustomer = resolvedDemoCustomer;
+    const demoIdentity =
+      isAuthenticatedExternalJourney
+        ? demoCustomer.name
+        : allowCustomerLookup
+          ? `${demoCustomer.name} - ${demoCustomer.cif}`
+          : demoCustomer.name;
     const demoAddress = "Jl. Sudirman Kav. 44, Jakarta Selatan";
     setInternalStep(1);
     setExternalView("");
-    setSelectedCustomer(allowCustomerLookup ? demoCustomer : null);
+    setSelectedCustomer(allowCustomerLookup && !isAuthenticatedExternalJourney ? demoCustomer : null);
     setField("identity", demoIdentity);
     setField("phone", demoCustomer.phone);
     setField("email", demoCustomer.email);
     setField("propertyType", PROPERTY_TYPES.includes("Rumah Tinggal") ? "Rumah Tinggal" : PROPERTY_TYPES[0]);
     setField("occupancy", "Rumah Tinggal");
     setField("constructionClass", "Kelas 1");
-    setField("wallMaterial", "Mayoritas beton, bata, atau hebel");
-    setField("structureMaterial", "Mayoritas beton atau baja");
-    setField("roofMaterial", "Beton, metal, atau genteng");
-    setField("flammableMaterial", "Tidak");
+    setField("wallMaterial", "Seluruhnya dari beton, bata, hebel, atau bahan tidak mudah terbakar");
+    setField("structureMaterial", "Beton, baja, atau bahan tidak mudah terbakar");
+    setField("roofMaterial", "Beton, metal, genteng, atau bahan tidak mudah terbakar");
+    setField("flammableMaterial", "Tidak ada");
     setField("locationSearch", demoAddress);
     setField("customerType", demoCustomer.type);
     setObjectRows([
@@ -3597,12 +3764,16 @@ export default function PropertyStepOneFrontendCompact({
   };
 
   const fillStepTwoDemoData = () => {
-    const demoCustomer = MOCK_CIF[0];
+    const demoCustomer = resolvedDemoCustomer;
     const selectedCoverageDate = formatDateInput(new Date());
-    const demoAddress = "Jl. Sudirman Kav. 44, Jakarta Selatan";
+    const demoAddress = accountInsuredAddress || uwForm.insuredAddress || "Jl. Sudirman Kav. 44, Jakarta Selatan";
+    const demoIdentityNumber = accountIdentityNumber || uwForm.idNumber || "3173010101010001";
     const declarationTime = formatDateInput(new Date());
+    const demoPhotoDataUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400"><rect width="640" height="400" fill="#eef6fd"/><rect x="40" y="50" width="560" height="300" rx="24" fill="#dbe9f6" stroke="#9bb8d3"/><text x="320" y="190" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#0A4D82">Foto Properti</text><text x="320" y="225" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#5a748b">Simulasi upload untuk langkah data lanjutan</text></svg>'
+    )}`;
     setUwForm({
-      idNumber: "3173010101010001",
+      idNumber: demoIdentityNumber,
       customerDataMode: "scan",
       ktpRead: true,
       sameAsInsured: true,
@@ -3623,7 +3794,7 @@ export default function PropertyStepOneFrontendCompact({
         docType: "KTP",
         extractedData: {
           fullName: demoCustomer.name,
-          identityNumber: "3173010101010001",
+          identityNumber: demoIdentityNumber,
           address: demoAddress,
         },
         expectedData: {
@@ -3634,9 +3805,9 @@ export default function PropertyStepOneFrontendCompact({
       }),
     });
     setUploads({
-      frontView: "data:demo/photo-front",
-      sideRightView: "data:demo/photo-right",
-      sideLeftView: "data:demo/photo-left",
+      frontView: demoPhotoDataUrl,
+      sideRightView: demoPhotoDataUrl,
+      sideLeftView: demoPhotoDataUrl,
     });
     setEvidence({
       location: createLocationEvidence({ declaredAddress: demoAddress, source: "demo" }),
@@ -3771,6 +3942,8 @@ export default function PropertyStepOneFrontendCompact({
           operatingRecord={operatingRecord}
           isExpired={operatingRecord?.status === "Expired"}
           productConfig={activeVariant}
+          stepOneTitle={hasSharedOfferJourney ? "Tinjau Penawaran" : "Simulasi Premi"}
+          guestMode={isGuestExternalJourney}
         />
       </>
     );
@@ -3797,6 +3970,7 @@ export default function PropertyStepOneFrontendCompact({
         contentDescription="Data yang Anda isi pada halaman ini merupakan bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar ringkasan final sebelum pembayaran serta penerbitan polis."
         stepOneTitle={hasSharedOfferJourney ? "Tinjau Penawaran" : "Simulasi Premi"}
         customerName={effectiveCustomerName || "Calon Pemegang Polis"}
+        guestMode={isGuestExternalJourney}
         objectLabel={externalDataObjectLabel}
         sumInsuredLabel="Total Harga Pertanggungan"
         sumInsuredValue={`Rp ${formatRupiah(totalValue)}`}
@@ -3859,8 +4033,13 @@ export default function PropertyStepOneFrontendCompact({
             setExpandedRows={setExpandedRows}
             external={true}
             useAccountProfileCustomerData={useAccountProfileCustomerData}
+            profileCustomerOverrideEnabled={externalProfileCustomerOverride}
+            profileCustomerEditMode={externalProfileCustomerEditMode}
             accountIdentityNumber={accountIdentityNumber}
             accountInsuredAddress={accountInsuredAddress}
+            onEnableProfileCustomerEdit={enableExternalProfileCustomerEdit}
+            onCancelProfileCustomerEdit={cancelExternalProfileCustomerEdit}
+            onSaveProfileCustomerEdit={saveExternalProfileCustomerEdit}
           />
       </CustomerDataJourneyShell>
     );
@@ -3914,29 +4093,22 @@ export default function PropertyStepOneFrontendCompact({
           <div className="relative flex items-center gap-4 text-white">
             <button type="button" onClick={fillDemoForCurrentStep} className="hidden rounded-[10px] border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15 md:inline-flex md:text-sm">Simulasi</button>
             {isGuestExternalJourney ? (
-              <>
-                <button
-                  type="button"
-                  className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
-                  <span className="text-[13px] md:text-sm">ID</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.location.href = "https://esppa.asuransijasindo.co.id/";
-                  }}
-                  className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
-                >
-                  <Home className="h-4 w-4" aria-hidden="true" />
-                  Masuk
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "https://esppa.asuransijasindo.co.id/";
+                }}
+                className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
+              >
+                <Home className="h-4 w-4" aria-hidden="true" />
+                Masuk
+              </button>
             ) : (
-              <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{sessionName}{helpRequestSent ? <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" /> : null}</button>
+              <>
+                <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{sessionName}{helpRequestSent ? <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" /> : null}</button>
+                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
+              </>
             )}
-            <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
             {!isGuestExternalJourney ? (
               <UserMenu
                 open={showUserMenu}
@@ -4022,8 +4194,55 @@ export default function PropertyStepOneFrontendCompact({
                     </div>
                   ) : null}
 
+                  {canShowExternalStepOneCustomerSummary && !externalStepOneEditMode ? (
+                    <SectionCard
+                      title="Informasi Calon Pemegang Polis"
+                      action={
+                        canEditExternalStepOneCustomerSummary ? (
+                          <button
+                            type="button"
+                            onClick={startExternalStepOneEdit}
+                            className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DEEA] bg-white px-4 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+                          >
+                            Edit
+                          </button>
+                        ) : null
+                      }
+                    >
+                      <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4">
+                        <div className="space-y-1">
+                          <OfferSummaryKeyValue label="Nama Calon Pemegang Polis" value={effectiveStepOneIdentity} />
+                          <OfferSummaryKeyValue label="Nomor Handphone" value={effectiveStepOnePhone} />
+                          <OfferSummaryKeyValue label="Alamat Email" value={effectiveStepOneEmail} />
+                        </div>
+                      </div>
+                    </SectionCard>
+                  ) : null}
+
                   {showStepOneCustomerInfo ? (
-                    <SectionCard title="Informasi Calon Pemegang Polis">
+                    <SectionCard
+                      title="Informasi Calon Pemegang Polis"
+                      action={
+                        externalStepOneEditMode ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={cancelExternalStepOneEdit}
+                              className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DEEA] bg-white px-4 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+                            >
+                              Batal
+                            </button>
+                            <button
+                              type="button"
+                              onClick={saveExternalStepOneEdit}
+                              className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
+                            >
+                              Simpan
+                            </button>
+                          </div>
+                        ) : null
+                      }
+                    >
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="md:col-span-2">
                           <FieldLabel label="Nama Calon Pemegang Polis" required />
@@ -4088,12 +4307,12 @@ export default function PropertyStepOneFrontendCompact({
                   <SectionCard title="Informasi Properti">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="md:col-span-2 md:max-w-[760px]">
-                        <div className={cls("grid gap-3", occupancyCode ? "md:grid-cols-[minmax(0,1fr)_180px]" : "md:grid-cols-1")}>
+                        <div className={cls("grid gap-3", canShowOccupancyCode && occupancyCode ? "md:grid-cols-[minmax(0,1fr)_180px]" : "md:grid-cols-1")}>
                           <div className="min-w-0">
                             <FieldLabel label="Penggunaan Properti yang Diasuransikan" required helpText="Pilih penggunaan untuk properti yang akan diasuransikan pada pengajuan ini." />
                             <SelectInput value={form.occupancy} onChange={(value) => setField("occupancy", value)} options={OCCUPANCY_OPTIONS} placeholder="Pilih penggunaan properti yang diasuransikan" />
                           </div>
-                          {occupancyCode ? (
+                          {canShowOccupancyCode && occupancyCode ? (
                             <div className="self-end rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2.5">
                               <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">Kode Okupasi</div>
                               <div className="mt-1 text-sm font-semibold text-[#0A4D82]">{occupancyCode}</div>
@@ -4115,39 +4334,39 @@ export default function PropertyStepOneFrontendCompact({
                             <div className="mt-3 grid gap-3 md:grid-cols-2">
                               <div>
                                 <FieldLabel label="Dinding utama" required />
-                                <SelectInput
-                                  value={form.wallMaterial}
-                                  onChange={(value) => setField("wallMaterial", value)}
-                                  options={WALL_MATERIAL_OPTIONS}
-                                  placeholder="Pilih opsi dinding utama"
-                                />
+                                  <SelectInput
+                                    value={form.wallMaterial}
+                                    onChange={(value) => setField("wallMaterial", value)}
+                                    options={WALL_MATERIAL_OPTIONS}
+                                    placeholder="Dinding utamanya terbuat dari apa?"
+                                  />
                               </div>
                               <div>
                                 <FieldLabel label="Struktur / lantai utama" required />
-                                <SelectInput
-                                  value={form.structureMaterial}
-                                  onChange={(value) => setField("structureMaterial", value)}
-                                  options={STRUCTURE_MATERIAL_OPTIONS}
-                                  placeholder="Pilih opsi struktur utama"
-                                />
+                                  <SelectInput
+                                    value={form.structureMaterial}
+                                    onChange={(value) => setField("structureMaterial", value)}
+                                    options={STRUCTURE_MATERIAL_OPTIONS}
+                                    placeholder="Struktur atau lantai utamanya terbuat dari apa?"
+                                  />
                               </div>
                               <div>
                                 <FieldLabel label="Atap" required />
-                                <SelectInput
-                                  value={form.roofMaterial}
-                                  onChange={(value) => setField("roofMaterial", value)}
-                                  options={ROOF_MATERIAL_OPTIONS}
-                                  placeholder="Pilih opsi atap"
-                                />
+                                  <SelectInput
+                                    value={form.roofMaterial}
+                                    onChange={(value) => setField("roofMaterial", value)}
+                                    options={ROOF_MATERIAL_OPTIONS}
+                                    placeholder="Penutup atapnya terbuat dari apa?"
+                                  />
                               </div>
                               <div>
-                                <FieldLabel label="Bahan mudah terbakar?" required />
-                                <SelectInput
-                                  value={form.flammableMaterial}
-                                  onChange={(value) => setField("flammableMaterial", value)}
-                                  options={FLAMMABLE_MATERIAL_OPTIONS}
-                                  placeholder="Pilih kondisi bahan bangunan"
-                                />
+                                <FieldLabel label="Bagian mudah terbakar lainnya?" required />
+                                  <SelectInput
+                                    value={form.flammableMaterial}
+                                    onChange={(value) => setField("flammableMaterial", value)}
+                                    options={FLAMMABLE_MATERIAL_OPTIONS}
+                                    placeholder="Apakah ada bagian utama bangunan lain yang mudah terbakar?"
+                                  />
                               </div>
                             </div>
                             {selectedConstructionGuide ? (
@@ -4376,7 +4595,30 @@ export default function PropertyStepOneFrontendCompact({
           ) : (
             <div className="mx-auto mt-6 max-w-[860px] px-4 md:px-6">
                 <div className="space-y-5">
-                  <UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} objectRows={objectRows} uwForm={uwForm} setUwField={setUwField} ktpCheck={documentChecks.ktp} onCaptureKtp={handleCaptureKtp} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} expandedRows={expandedRows} setExpandedRows={setExpandedRows} external={true} useAccountProfileCustomerData={useAccountProfileCustomerData} accountIdentityNumber={accountIdentityNumber} accountInsuredAddress={accountInsuredAddress} />
+                  <UnderwritingSections
+                    form={form}
+                    customerType={form.customerType}
+                    selectedCustomer={selectedCustomer}
+                    objectRows={objectRows}
+                    uwForm={uwForm}
+                    setUwField={setUwField}
+                    ktpCheck={documentChecks.ktp}
+                    onCaptureKtp={handleCaptureKtp}
+                    uploads={uploads}
+                    setUploads={setUploads}
+                    setEvidence={setEvidence}
+                    expandedRows={expandedRows}
+                    setExpandedRows={setExpandedRows}
+                    external={true}
+                    useAccountProfileCustomerData={useAccountProfileCustomerData}
+                    profileCustomerOverrideEnabled={externalProfileCustomerOverride}
+                    profileCustomerEditMode={externalProfileCustomerEditMode}
+                    accountIdentityNumber={accountIdentityNumber}
+                    accountInsuredAddress={accountInsuredAddress}
+                    onEnableProfileCustomerEdit={enableExternalProfileCustomerEdit}
+                    onCancelProfileCustomerEdit={cancelExternalProfileCustomerEdit}
+                    onSaveProfileCustomerEdit={saveExternalProfileCustomerEdit}
+                  />
 
                   <SectionCard title="Ringkasan Pembayaran">
                   <PremiumPriceHero label="Total Pembayaran" value={`Rp ${formatRupiah(estimatedTotalNumber)}`} />

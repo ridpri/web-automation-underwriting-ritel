@@ -1480,6 +1480,7 @@ function AccordionRiskRow({ title, premium, summary, detail, deductible, checked
 export default function MotorLatestExact({
   onExit,
   sessionName = "Dita (External)",
+  sessionProfile = null,
   initialFlow = "motor",
   entryMode = "external",
   operatingRecord = null,
@@ -1488,6 +1489,7 @@ export default function MotorLatestExact({
 }: {
   onExit?: () => void;
   sessionName?: string;
+  sessionProfile?: any;
   initialFlow?: FlowType;
   entryMode?: EntryMode;
   operatingRecord?: any;
@@ -1504,7 +1506,6 @@ export default function MotorLatestExact({
   const [paymentPanel, setPaymentPanel] = useState("");
   const [checkoutStatus, setCheckoutStatus] = useState("");
   const [journeyStatus, setJourneyStatus] = useState("");
-  const [userName] = useState(sessionName);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSentOffers, setShowSentOffers] = useState(false);
   const [showOfferShareModal, setShowOfferShareModal] = useState(false);
@@ -1788,11 +1789,24 @@ export default function MotorLatestExact({
 
   if (!flowType && screen === "flow") return null;
   const selected = currentData!;
+  const userName = sessionName;
   const isInternalMode = entryMode === "internal";
+  const authenticatedExternalProfile =
+    entryMode === "external" && sessionProfile?.authenticated ? sessionProfile : null;
+  const isAuthenticatedExternalJourney = Boolean(authenticatedExternalProfile);
+  const isGuestExternalSession = entryMode === "external" && !isAuthenticatedExternalJourney;
+  const accountIdentity = String(authenticatedExternalProfile?.name || "").trim();
+  const accountCustomerType = String(authenticatedExternalProfile?.customerType || "").trim();
+  const accountPhone = String(authenticatedExternalProfile?.phone || "").trim();
+  const accountEmail = String(authenticatedExternalProfile?.email || "").trim();
+  const accountIdentityNumber = String(authenticatedExternalProfile?.identityNumber || "").trim();
+  const accountInsuredAddress = String(authenticatedExternalProfile?.insuredAddress || "").trim();
   const isInternalPreview = isInternalMode && viewerMode === "internal";
   const isCustomerPreview = !isInternalPreview;
-  const isGuestExternalSession = !isInternalMode && /Tanpa Login/i.test(String(userName || ""));
-  const externalDisplayName = String(selected?.insured?.fullName || "").trim() || "Calon Pemegang Polis";
+  const externalDisplayName =
+    accountIdentity
+    || String(selected?.insured?.fullName || "").trim()
+    || "Calon Pemegang Polis";
   const displayUserName = isInternalMode ? userName : externalDisplayName;
   const heroGreeting = isInternalMode ? `Selamat datang kembali, ${userName}` : `Halo, ${externalDisplayName}`;
   const showPaymentStep = entryMode === "external" || viewerMode === "customer";
@@ -1843,7 +1857,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const showSidebar = false;
   const shouldAutoSyncOperatingSignals = false;
   const policySummaryTitle = "Polis Standar Asuransi Kendaraan Bermotor Indonesia";
-  const insuredSummaryName = String(selected.insured.fullName || "").trim() || "Calon Pemegang Polis";
+  const insuredSummaryName = String(selected.insured.fullName || accountIdentity || "").trim() || "Calon Pemegang Polis";
   const insuredSummaryEmail = String(selected.insured.email || "").trim() || "-";
   const insuredSummaryPhone = String(selected.insured.phone || "").trim() || "-";
   const vehicleSummaryName = String(selected.quote.vehicleName || "").trim() || "-";
@@ -1886,7 +1900,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const dataComplete = selected ? !!(selected.insured.customerType && selected.insured.fullName && selected.insured.address && selected.insured.email && selected.insured.phone && selected.vehicle.plateNumber && selected.vehicle.chassisNumber && selected.vehicle.engineNumber) : false;
   const periodComplete = selected ? !!(selected.quote.coverageStart && selected.quote.coverageEnd) : false;
   const readyForNextStage = !!(selected && calc && uploadsComplete && dataComplete && periodComplete && calc.status !== "Need Review");
-  const canIssue = !!(readyForNextStage && selected.agree);
+  const canIssue = !!(readyForNextStage && selected.agree && selected.paymentMethod);
   const coverageEndDate = selected?.quote?.coverageStart ? addOneYear(selected.quote.coverageStart) : "";
   const coverageStartDisplay = selected?.quote?.coverageStart ? formatDisplayDate(new Date(`${selected.quote.coverageStart}T00:00:00`)) : "-";
   const coverageEndDisplay = coverageEndDate ? formatDisplayDate(new Date(`${coverageEndDate}T00:00:00`)) : "-";
@@ -1923,7 +1937,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
       },
     },
   });
-  const shareRecipientName = selected?.insured?.fullName || "Calon Pemegang Polis";
+  const shareRecipientName = String(selected?.insured?.fullName || accountIdentity || "").trim() || "Calon Pemegang Polis";
   const shareLabel = activeProduct?.title || "Asuransi Kendaraan";
   const shareSubject = `${shareLabel} - ${shareRecipientName}`;
   const fraudAlerts = useMemo(
@@ -2075,6 +2089,52 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
       setSelectedCustomers((prev) => ({ ...prev, [flowType]: null }));
     }
   }, [entryMode, flowType]);
+
+  useEffect(() => {
+    if (!flowType || !isAuthenticatedExternalJourney || !authenticatedExternalProfile) return;
+    setFlows((prev) => {
+      const current = prev[flowType];
+      const nextInsured = {
+        ...current.insured,
+        customerType: current.insured.customerType || accountCustomerType,
+        nik: current.insured.nik || accountIdentityNumber,
+        fullName: current.insured.fullName || accountIdentity,
+        lookup: current.insured.lookup || accountIdentity,
+        address: current.insured.address || accountInsuredAddress,
+        email: current.insured.email || accountEmail,
+        phone: current.insured.phone || accountPhone,
+      };
+
+      const unchanged =
+        nextInsured.customerType === current.insured.customerType
+        && nextInsured.nik === current.insured.nik
+        && nextInsured.fullName === current.insured.fullName
+        && nextInsured.lookup === current.insured.lookup
+        && nextInsured.address === current.insured.address
+        && nextInsured.email === current.insured.email
+        && nextInsured.phone === current.insured.phone;
+
+      if (unchanged) return prev;
+
+      return {
+        ...prev,
+        [flowType]: {
+          ...current,
+          insured: nextInsured,
+        },
+      };
+    });
+  }, [
+    accountCustomerType,
+    accountEmail,
+    accountIdentity,
+    accountIdentityNumber,
+    accountInsuredAddress,
+    accountPhone,
+    authenticatedExternalProfile,
+    flowType,
+    isAuthenticatedExternalJourney,
+  ]);
 
   useEffect(() => {
     if (!isSharedCustomerPreview) {
@@ -3212,25 +3272,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               </button>
             ) : null}
             {isGuestExternalSession ? (
-              <>
-                <button
-                  type="button"
-                  className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
-                  <span className="text-[13px] md:text-sm">ID</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.location.href = "https://esppa.asuransijasindo.co.id/";
-                  }}
-                  className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
-                >
-                  <Home className="h-4 w-4" aria-hidden="true" />
-                  Masuk
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "https://esppa.asuransijasindo.co.id/";
+                }}
+                className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
+              >
+                <Home className="h-4 w-4" aria-hidden="true" />
+                Masuk
+              </button>
             ) : (
               <div className="relative">
                 <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm">
@@ -3249,9 +3300,11 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                 />
               </div>
             )}
-            <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
-              <Bell className="h-4 w-4" />
-            </button>
+            {!isGuestExternalSession ? (
+              <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
+                <Bell className="h-4 w-4" />
+              </button>
+            ) : null}
           </div>
         </div>
       </header>
@@ -3614,6 +3667,12 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                     </SectionCard>
 
                     <SectionCard title="Lanjutkan Pembayaran" subtitle="Selesaikan persetujuan atas SPAU elektronik ini terlebih dahulu, lalu lanjutkan pembayaran.">
+                      {(() => {
+                        const paymentPendingItems = [];
+                        if (!selected.paymentMethod) paymentPendingItems.push("Pilih salah satu metode pembayaran terlebih dahulu.");
+                        if (!selected.agree) paymentPendingItems.push("Buka dan setujui Syarat dan Ketentuan Persetujuan atas SPAU elektronik ini.");
+                        return (
+                          <>
                       <div className="rounded-2xl border border-[#D8E1EA] bg-white px-4 py-4">
                         <div className="flex items-start gap-3">
                           <button
@@ -3640,7 +3699,19 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                           </div>
                         </div>
                       </div>
-                      {!selected.agree ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>Persetujuan atas SPAU elektronik ini harus dibuka dan disetujui sebelum pembayaran.</div></div></div> : null}
+                      {!checkoutStatus && paymentPendingItems.length ? (
+                        <div className="mt-4 rounded-xl border border-[#F0D8A8] bg-[#FFF7E8] p-3 text-[12px] leading-[1.45] text-[#8A6830]">
+                          <div className="font-semibold text-[#8A6830]">Yang masih perlu dilengkapi</div>
+                          <div className="mt-1.5 space-y-1.5">
+                            {paymentPendingItems.map((item) => (
+                              <div key={item} className="flex items-start gap-2">
+                                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#C1892E]" />
+                                <span>{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                         <button
                           type="button"
@@ -3658,6 +3729,9 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                           {checkoutStatus ? "Pembayaran Selesai" : "Lanjutkan Pembayaran"}
                         </button>
                       </div>
+                          </>
+                        );
+                      })()}
                     </SectionCard>
                   </>
                 ) : null}

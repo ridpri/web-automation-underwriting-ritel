@@ -173,27 +173,25 @@ function cls(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
+function normalizeLookupKey(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
 function GuestLookupPortal({ onGoHome, sessionName }) {
   const [searchType, setSearchType] = useState("policy");
   const [query, setQuery] = useState("");
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeLookupKey(query);
 
   const policyResults = useMemo(() => {
     if (!normalizedQuery) return [];
-    return DEMO_POLICIES.filter((policy) =>
-      [policy.policyNumber, policy.productName, policy.objectName].some((field) =>
-        String(field).toLowerCase().includes(normalizedQuery),
-      ),
-    );
+    return DEMO_POLICIES.filter((policy) => normalizeLookupKey(policy.policyNumber) === normalizedQuery);
   }, [normalizedQuery]);
 
   const claimResults = useMemo(() => {
     if (!normalizedQuery) return [];
-    return DEMO_CLAIMS.filter((claim) =>
-      [claim.id, claim.title, claim.status].some((field) =>
-        String(field).toLowerCase().includes(normalizedQuery),
-      ),
-    );
+    return DEMO_CLAIMS.filter((claim) => normalizeLookupKey(claim.id) === normalizedQuery);
   }, [normalizedQuery]);
 
   const hasResults = searchType === "policy" ? policyResults.length : claimResults.length;
@@ -216,7 +214,7 @@ function GuestLookupPortal({ onGoHome, sessionName }) {
             </div>
             <div className="mt-5 text-[34px] font-black tracking-tight text-white md:text-[44px]">Cari polis atau klaim</div>
             <div className="mt-3 max-w-[640px] text-base leading-8 text-white/90">
-              Masukkan nomor polis atau nomor klaim untuk melihat data yang tersedia sesuai informasi yang Anda butuhkan.
+              Masukkan nomor polis lengkap atau nomor klaim lengkap untuk melihat data yang tersedia sesuai informasi yang Anda butuhkan.
             </div>
           </div>
         </div>
@@ -261,7 +259,7 @@ function GuestLookupPortal({ onGoHome, sessionName }) {
                 <FileSearch className="mx-auto h-8 w-8 text-[#0A4D82]" />
                 <div className="mt-3 text-base font-semibold text-slate-900">Masukkan nomor untuk mulai mencari</div>
                 <div className="mt-2 text-sm leading-6 text-slate-600">
-                  Untuk melindungi data, informasi baru ditampilkan setelah nomor polis atau nomor klaim dicari.
+                  Untuk melindungi data, informasi baru ditampilkan setelah nomor polis atau nomor klaim lengkap dicari.
                 </div>
               </div>
             ) : hasResults ? (
@@ -303,7 +301,7 @@ function GuestLookupPortal({ onGoHome, sessionName }) {
                 <ShieldCheck className="mx-auto h-8 w-8 text-[#0A4D82]" />
                 <div className="mt-3 text-base font-semibold text-slate-900">Data tidak ditemukan</div>
                 <div className="mt-2 text-sm leading-6 text-slate-600">
-                  Periksa kembali nomor yang dimasukkan atau gunakan kanal bantuan resmi bila Anda membutuhkan arahan.
+                  Periksa kembali nomor lengkap yang dimasukkan atau gunakan kanal bantuan resmi bila Anda membutuhkan arahan.
                 </div>
               </div>
             )}
