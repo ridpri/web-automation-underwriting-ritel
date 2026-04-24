@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Accessibility,
+  Activity,
   BadgeCheck,
   Bell,
   Binary,
@@ -126,7 +127,7 @@ const MISSING_OPTIONS = ["CREATE_NEW", "BLOCK_AND_REVIEW"];
 const STEP_LIST = [
   { id: "general", label: "Informasi Umum", short: "Umum", icon: NotebookPen },
   { id: "object", label: "Obyek Pertanggungan", short: "Obyek", icon: ShieldCheck },
-  { id: "clause", label: "Wording & Klausul", short: "Klausul", icon: FileSpreadsheet },
+  { id: "clause", label: "Wording & Klausula", short: "Klausula", icon: FileSpreadsheet },
   { id: "summary", label: "Ringkasan", short: "Ringkasan", icon: BadgeCheck },
 ];
 
@@ -197,6 +198,81 @@ const TRIP_TRAVEL_CLAUSE_OPTIONS = [
   "Klausul Pengecualian Risiko Mengendarai Sepeda Motor",
   "Klausul Risiko Mengendarai Sepeda Motor dan Sejenisnya",
 ];
+
+const TRAVEL_SAFE_COVERAGE_OPTIONS = [
+  { code: "79401", label: "79401 - DOMESTIK", category: "DOM" },
+  { code: "79402", label: "79402 - INTERNATIONAL NON SCHENGEN", category: "INT" },
+  { code: "79405", label: "79405 - INTERNATIONAL SCHENGEN", category: "INT" },
+];
+
+const TRAVEL_SAFE_WORDING_LABEL = "Wording Standar Travel Jasindo";
+const TRAVEL_SAFE_WORDING_NOTE =
+  "Travel Safe menggunakan wording standar Travel Jasindo tanpa pilihan jenis cetakan polis, konfigurasi klausula tambahan, atau package klausula terpisah.";
+
+const TRAVEL_SAFE_EXTENSION_LIBRARY = [
+  {
+    id: "cat_trv",
+    title: "Ketidaknyamanan Perjalanan",
+    icon: Route,
+    items: [
+      { id: "trv_1", label: "Perlindungan Bagasi Pribadi" },
+      { id: "trv_2", label: "Kehilangan Uang, Dokumen Perjalanan" },
+      { id: "trv_3", label: "Kehilangan Barang Elektronik dan Barang Fashion" },
+      { id: "trv_4", label: "Penundaan Perjalanan" },
+      { id: "trv_5", label: "Biaya Hotel Karena Penundaan" },
+      { id: "trv_6", label: "Biaya Perjalanan Pengganti" },
+      { id: "trv_7", label: "Penundaan Bagasi" },
+      { id: "trv_8", label: "Pembatalan Perjalanan (Tiket/Hotel)" },
+      { id: "trv_9", label: "Pengurangan Perjalanan/Kepulangan Lebih Awal" },
+      { id: "trv_10", label: "Kehilangan Transportasi Lanjutan" },
+      { id: "trv_11", label: "Ketidaksesuaian Fasilitas Hotel" },
+      { id: "trv_12", label: "Kehilangan Reservasi Hotel" },
+    ],
+  },
+  {
+    id: "cat_oth",
+    title: "Manfaat Lain-Lain",
+    icon: Puzzle,
+    items: [
+      { id: "oth_1", label: "Tanggung Jawab Pribadi" },
+      { id: "oth_2", label: "Penolakan Visa" },
+      { id: "oth_3", label: "Biaya Risiko Sendiri Atas Kendaraan Sewaan" },
+      { id: "oth_4", label: "Perpanjangan Polis Secara Otomatis", isCheckOnly: true },
+    ],
+  },
+  {
+    id: "cat_fun",
+    title: "Perlindungan Kegiatan Hiburan",
+    icon: Activity,
+    items: [{ id: "fun_1", label: "Meninggal Dunia dan Cacat Tetap Akibat Kecelakaan Kegiatan Ekstrim" }],
+  },
+  {
+    id: "cat_home",
+    title: "Perlindungan Rumah",
+    icon: Home,
+    items: [
+      { id: "home_1", label: "Kebakaran Rumah Tinggal" },
+      { id: "home_2", label: "Kehilangan Isi Rumah Karena Pencurian" },
+    ],
+  },
+];
+
+const TRAVEL_SAFE_ASSISTANCE_INFO = {
+  title: "Bantuan Medis di Seluruh Dunia",
+  description:
+    "Evakuasi & repatriasi medis darurat, repatriasi jenazah, layanan transportasi bagi anggota keluarga, 24 jam hotline bantuan darurat, pemulangan anak dan pendampingan pengasuh, serta pemantauan medis.",
+  idrFee: 40000,
+  usdFee: 10,
+};
+
+const TRAVEL_SAFE_STARTER_PERLUASAN = {
+  trv_1: { checked: true, hpMin: "5.000", hpMax: "10.000", rate: "0,05", premiMin: "3", premiMax: "5" },
+  trv_4: { checked: true, hpMin: "500", hpMax: "1.000", rate: "0,02", premiMin: "0", premiMax: "0" },
+  trv_8: { checked: true, hpMin: "2.500", hpMax: "5.000", rate: "0,03", premiMin: "1", premiMax: "2" },
+  oth_2: { checked: true, hpMin: "1.000", hpMax: "2.000", rate: "0,03", premiMin: "0", premiMax: "1" },
+  home_1: { checked: true, hpMin: "10.000", hpMax: "20.000", rate: "0,04", premiMin: "4", premiMax: "8" },
+  oth_4: { checked: true, hpMin: "", hpMax: "", rate: "", premiMin: "", premiMax: "" },
+};
 
 const FIELD_HELPERS = {
   "Nama / CIF": "Ketik nama untuk mencari data CIF, atau lanjutkan sebagai nasabah baru.",
@@ -586,6 +662,17 @@ function formatRupiah(value) {
   return new Intl.NumberFormat("id-ID").format(Number(value || 0));
 }
 
+function parseFlexibleNumber(value) {
+  return Number(String(value || "0").split(".").join("").replace(",", ".")) || 0;
+}
+
+function formatRateInput(value) {
+  const cleaned = String(value || "").replace(/[^0-9,]/g, "");
+  const parts = cleaned.split(",");
+  if (parts.length <= 1) return cleaned;
+  return `${parts[0]},${parts.slice(1).join("")}`;
+}
+
 function getStatusTone(status) {
   if (status === "Draft") return "border-amber-200 bg-amber-50 text-amber-700";
   if (status === "Checker") return "border-sky-200 bg-sky-50 text-sky-700";
@@ -735,6 +822,117 @@ function getLifeGuardComputed(master) {
   };
 }
 
+function getTravelSafeCoverageLabel(code) {
+  return TRAVEL_SAFE_COVERAGE_OPTIONS.find((item) => item.code === code)?.label || code;
+}
+
+function getTravelSafeCoverageText(master) {
+  const coverageCodes = Array.isArray(master?.coverageCodes) ? master.coverageCodes : [];
+  if (coverageCodes.length > 0) {
+    return coverageCodes.map((code) => getTravelSafeCoverageLabel(code)).join(", ");
+  }
+  return master?.coverageType || "-";
+}
+
+function isTravelSafeInternational(master) {
+  return (master?.coverageCodes || []).some((code) => TRAVEL_SAFE_COVERAGE_OPTIONS.find((item) => item.code === code)?.category === "INT");
+}
+
+function getTravelSafeLockedCurrency(master) {
+  return isTravelSafeInternational(master) ? "201 - US.$." : "101 - RP.";
+}
+
+function getTravelSafeAssistanceFee(master) {
+  return isTravelSafeInternational(master) ? TRAVEL_SAFE_ASSISTANCE_INFO.usdFee : TRAVEL_SAFE_ASSISTANCE_INFO.idrFee;
+}
+
+function getTravelSafeAssistanceFeeText(master) {
+  return `${isTravelSafeInternational(master) ? "USD" : "IDR"} ${formatRupiah(getTravelSafeAssistanceFee(master))}`;
+}
+
+function getTravelSafeComputed(master) {
+  const criteria = master?.npCriteria || "antara";
+  const lockedCurrency = getTravelSafeLockedCurrency(master);
+  const currencyCode = getLifeGuardCurrencyCode(lockedCurrency);
+  const coverageText = getTravelSafeCoverageText(master);
+  const accidentMin = parseNumber(master?.npAccidentLimitMin || "0");
+  const accidentMax = parseNumber(master?.npAccidentLimitMax || "0");
+  const accidentRate = parseFlexibleNumber(master?.npAccidentRate || "0");
+  const medicalPercent = parseFlexibleNumber(master?.npMedicalPercentage || "0");
+  const medicalRate = parseFlexibleNumber(master?.npMedicalRate || "0");
+  const medicalMin = Math.round(accidentMin * (medicalPercent / 100));
+  const medicalMax = Math.round(accidentMax * (medicalPercent / 100));
+  const accidentPremiumMin = Math.round(accidentMin * (accidentRate / 100));
+  const accidentPremiumMax = Math.round(accidentMax * (accidentRate / 100));
+  const medicalPremiumMin = Math.round(medicalMin * (medicalRate / 100));
+  const medicalPremiumMax = Math.round(medicalMax * (medicalRate / 100));
+
+  const formatBenefit = (min, max) => {
+    if (criteria === "setara") return `${currencyCode} ${formatRupiah(min)}`;
+    if (criteria === "lebih_besar") return `> ${currencyCode} ${formatRupiah(min)}`;
+    if (criteria === "kurang_dari") return `< ${currencyCode} ${formatRupiah(min)}`;
+    return `${currencyCode} ${formatRupiah(min)} - ${formatRupiah(max)}`;
+  };
+
+  const activeBenefitRows = TRAVEL_SAFE_EXTENSION_LIBRARY.flatMap((category) =>
+    category.items
+      .filter((item) => master?.perluasanSelections?.[item.id]?.checked)
+      .map((item) => {
+        const selection = master?.perluasanSelections?.[item.id] || {};
+        const hpMin = parseNumber(selection.hpMin || "0");
+        const hpMax = parseNumber(selection.hpMax || "0");
+        const rate = parseFlexibleNumber(selection.rate || "0");
+        const premiumMin = item.isCheckOnly ? 0 : Math.round(hpMin * (rate / 100));
+        const premiumMax = item.isCheckOnly ? 0 : Math.round(hpMax * (rate / 100));
+        return {
+          id: item.id,
+          category: category.title,
+          label: item.label,
+          isCheckOnly: Boolean(item.isCheckOnly),
+          limitText: item.isCheckOnly ? "-" : formatBenefit(hpMin, hpMax),
+          rateText: item.isCheckOnly ? "-" : `${selection.rate || "0"}%`,
+          premiumText: item.isCheckOnly ? "-" : formatBenefit(premiumMin, premiumMax),
+          premiumMin,
+          premiumMax,
+        };
+      })
+  );
+
+  const extensionPremiumMin = activeBenefitRows.reduce((sum, item) => sum + item.premiumMin, 0);
+  const extensionPremiumMax = activeBenefitRows.reduce((sum, item) => sum + item.premiumMax, 0);
+  const assistanceFee = master?.assistanceEnabled ? getTravelSafeAssistanceFee(master) : 0;
+  const totalPremiumMin = accidentPremiumMin + medicalPremiumMin + extensionPremiumMin + assistanceFee;
+  const totalPremiumMax = accidentPremiumMax + medicalPremiumMax + extensionPremiumMax + assistanceFee;
+
+  return {
+    criteria,
+    lockedCurrency,
+    currencyCode,
+    coverageText,
+    coverageCount: Array.isArray(master?.coverageCodes) ? master.coverageCodes.length : 0,
+    assistanceEnabled: Boolean(master?.assistanceEnabled),
+    assistanceFee,
+    assistanceFeeText: master?.assistanceEnabled ? getTravelSafeAssistanceFeeText(master) : "Tidak aktif",
+    accidentText: formatBenefit(accidentMin, accidentMax),
+    medicalText: formatBenefit(medicalMin, medicalMax),
+    accidentRateText: master?.npAccidentRate ? `${master.npAccidentRate}%` : "-",
+    medicalRateText: master?.npMedicalRate ? `${master.npMedicalRate}%` : "-",
+    accidentPremiumText: formatBenefit(accidentPremiumMin, accidentPremiumMax),
+    medicalPremiumText: formatBenefit(medicalPremiumMin, medicalPremiumMax),
+    accidentPremiumMin,
+    accidentPremiumMax,
+    medicalPremiumMin,
+    medicalPremiumMax,
+    totalPremiumMin,
+    totalPremiumMax,
+    totalPremiumText: formatBenefit(totalPremiumMin, totalPremiumMax),
+    medicalMin,
+    medicalMax,
+    activeBenefitRows,
+    activeBenefitCount: activeBenefitRows.length,
+  };
+}
+
 function buildCsvHeader(config) {
   return getPartnerFacingFields(config)
     .sort((a, b) => Number(b.rule.required) - Number(a.rule.required))
@@ -816,7 +1014,21 @@ function getPendingItems(config) {
     return items;
   }
 
-  if (["health-group", "travel-group"].includes(config.family)) {
+  if (config.family === "travel-group") {
+    if (!config.title) items.push("Nama konfigurasi belum diisi.");
+    if (!blueprint.insuredCode) items.push("Kode tertanggung belum diisi.");
+    if (!blueprint.acquisitionCode) items.push("Kode akuisisi belum dipilih.");
+    if (!blueprint.correspondenceEmail && !blueprint.ownerEmail) items.push("Email korespondensi belum diisi.");
+    if (!master.masterPolicyNo) items.push("Nomor polis induk / PKS belum diisi.");
+    if (!(master.coverageCodes || []).length) items.push("Jenis pertanggungan travel belum dipilih.");
+    if (!master.npAccidentLimitMin || !master.npAccidentRate) items.push("Limit manfaat utama atau rate premi dasar belum lengkap.");
+    if (!master.wordingType) items.push("Tipe wording belum dipilih.");
+    if (!review.checklist.documentBound) items.push("Dokumen PKS / wording belum ditandai terikat.");
+    if (!review.checklist.syncReady) items.push("Konfigurasi belum ditandai siap diproses.");
+    return items;
+  }
+
+  if (config.family === "health-group") {
     if (!config.title) items.push("Nama konfigurasi belum diisi.");
     if (!blueprint.insuredCode) items.push("Kode tertanggung belum diisi.");
     if (!blueprint.acquisitionCode) items.push("Kode akuisisi belum dipilih.");
@@ -869,7 +1081,24 @@ function getReadiness(config) {
     return Math.round((done / checks.length) * 100);
   }
 
-  if (["health-group", "travel-group"].includes(config.family)) {
+  if (config.family === "travel-group") {
+    checks.push(Boolean(config.title));
+    checks.push(Boolean(config.partnerName));
+    checks.push(Boolean(blueprint.insuredCode));
+    checks.push(Boolean(blueprint.acquisitionCode));
+    checks.push(Boolean(blueprint.correspondenceEmail || blueprint.ownerEmail));
+    checks.push(Boolean(master.masterPolicyNo));
+    checks.push(Boolean((master.coverageCodes || []).length));
+    checks.push(Boolean(master.npAccidentLimitMin));
+    checks.push(Boolean(master.npAccidentRate));
+    checks.push(Boolean(master.wordingType));
+    checks.push(Boolean(review.checklist.documentBound));
+    checks.push(Boolean(review.checklist.syncReady));
+    const done = checks.filter(Boolean).length;
+    return Math.round((done / checks.length) * 100);
+  }
+
+  if (config.family === "health-group") {
     checks.push(Boolean(config.title));
     checks.push(Boolean(config.partnerName));
     checks.push(Boolean(blueprint.insuredCode));
@@ -945,6 +1174,67 @@ function getAccountMeta(role) {
     return { name: "Ridho (HO)", initials: "RI" };
   }
   return { name: "Akun Internal", initials: "AI" };
+}
+
+function getLifeGuardStatusMeta(status) {
+  if (status === "Checker") {
+    return { label: "CHECKER (UDW)", badge: "bg-blue-50 text-blue-700 border-blue-200", step: 2 };
+  }
+  if (status === "Approval") {
+    return { label: "APPROVAL (HO)", badge: "bg-indigo-50 text-indigo-700 border-indigo-200", step: 3 };
+  }
+  if (status === "Active") {
+    return { label: "AKTIF (POLIS TERBIT)", badge: "bg-green-50 text-green-700 border-green-200", step: 3 };
+  }
+  return { label: "DRAFT", badge: "bg-yellow-50 text-yellow-700 border-yellow-200", step: 1 };
+}
+
+function getLifeGuardRoleMeta(role) {
+  if (role === "Checker") {
+    return { label: "ADMIN UDW (CHECKER)", shortLabel: "Admin UDW (Checker)", avatar: "UW", actor: "UDW", tone: "bg-orange-500" };
+  }
+  if (role === "Approval") {
+    return { label: "HO UDW (APPROVAL)", shortLabel: "HO UDW (Approval)", avatar: "HO", actor: "HO", tone: "bg-emerald-600" };
+  }
+  return { label: "ROM (MAKER)", shortLabel: "ROM (Maker)", avatar: "RM", actor: "ROM", tone: "bg-[#004d7a]" };
+}
+
+function getLifeGuardReviewField(role) {
+  if (role === "Checker") return "checkerNote";
+  if (role === "Approval") return "approvalNote";
+  return "makerNote";
+}
+
+function getLifeGuardNoteLabel(role) {
+  if (role === "Checker") return "Analisa Reviewer (Admin UDW)";
+  if (role === "Approval") return "Analisa Persetujuan (HO)";
+  return "Analisa Maker (ROM)";
+}
+
+function getLifeGuardReferenceCode(config) {
+  const productCode = config?.data?.master?.productCode || "705";
+  const partnerCode = (config?.data?.blueprint?.partnerCode || "MOMO").toUpperCase();
+  const year = (config?.data?.blueprint?.startDate || "").slice(0, 4) || "2026";
+  return `C-${productCode}-${partnerCode}-${year}-001`;
+}
+
+function getLifeGuardTotalDays(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "-";
+  const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return "Range Salah";
+  return `${diff} Hari`;
+}
+
+function getLifeGuardSelectedClauseList(master) {
+  const libraryTitles = new Set(LIFE_GUARD_ADDITIONAL_CLAUSE_LIBRARY.map((item) => item.title));
+  const customTitles = (master?.customClauses || []).map((item) => item.title);
+  return Array.from(
+    new Set(
+      (master?.clausePackage || []).filter((item) => libraryTitles.has(item) || customTitles.includes(item))
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function createMappingRow(sourceField = "", target = "", sampleValue = "", transform = "trim") {
@@ -1025,6 +1315,240 @@ function blankSampleByFamily(family) {
     null,
     2
   );
+}
+
+const LIFE_GUARD_STARTER_BLUEPRINT = {
+  agreementNo: "P-MOMO-2026-001",
+  insuredCode: "009281",
+  partnerCode: "MOMO",
+  acquisitionCode: "110 - PS Perusahaan",
+  phoneNumber: "081234567891",
+  ownerEmail: "admin@momotrip.co.id",
+  correspondenceEmail: "admin@momotrip.co.id",
+  insuredName: "PT MOMOTRIP AXIA INDONESIA",
+  npwp: "01.234.567.8-901.000",
+  address: "Gedung Cyber 2, Lt. 15, Jl. HR Rasuna Said Blok X-5, Jakarta Selatan",
+  picList: "",
+  qqTambahan: "",
+  startDate: "2026-01-01",
+  endDate: "2027-01-01",
+  channels: ["partner-portal", "internal-assisted"],
+  integrationMode: "CSV Upload",
+  syncTarget: "STAR Core Registry",
+  starCheckMode: "AUTO_CHECK",
+  ifExists: "ENDORSEMENT",
+  ifMissing: "CREATE_NEW",
+  endpoint: "/partner/momotrip/life-guard/upload",
+  primaryKey: "partner_policy_ref",
+};
+
+const LIFE_GUARD_STARTER_MASTER = {
+  productFamily: "PA Kumpulan",
+  productCode: "705",
+  productName: "705 Kecelakaan Diri",
+  masterPolicyNo: "P-MOMO-2026-001",
+  plan: "General",
+  sumInsured: "",
+  baseRate: "1,50",
+  adminFee: "5.000",
+  clausePackage: [
+    "Meninggal Dunia karena Kecelakaan",
+    "Cacat Tetap Total / Sebagian",
+    "Biaya Pengobatan Akibat Kecelakaan",
+    "Klausul Usia",
+  ],
+  benefitSummary: "Meninggal dunia, cacat tetap, dan biaya pengobatan akibat kecelakaan.",
+  coverageType: "70501 - KECELAKAAN DIRI",
+  npCriteria: "antara",
+  currencyCode: "101 - RP.",
+  npAMin: "100.000.000",
+  npAMax: "250.000.000",
+  npBPercent: "100",
+  npCPercent: "10",
+  ageMin: "19",
+  ageMax: "63",
+  riskClass: "Kelas III",
+  riskExposure: "Tersebar",
+  deductible: "",
+  wordingType: "PSAKDI",
+  printDocumentType: "Ikhtisar",
+  additionalClauseTitle: "",
+  additionalClauseDescription: "",
+  customClauses: [],
+  discountPercent: "0",
+  commissionPercent: "15",
+  stampDuty: "Sesuai STAR",
+};
+
+const LIFE_GUARD_STARTER_SAMPLE_PAYLOAD = {
+  partner_policy_ref: "P-MOMO-2026-001",
+  participant_name: "Budi Santoso",
+  member_id: "LG0001",
+  birth_date: "1990-02-11",
+  effective_date: "2026-01-01",
+  certificate_no: "LG-CERT-0001",
+  unit_name: "GENERAL",
+};
+
+const TRAVEL_SAFE_STARTER_BLUEPRINT = {
+  ...LIFE_GUARD_STARTER_BLUEPRINT,
+  integrationMode: "Portal Form",
+  endpoint: "/partner/momotrip/travel-safe/upload",
+};
+
+const TRAVEL_SAFE_STARTER_MASTER = {
+  productFamily: "Travel Kumpulan",
+  productCode: "794",
+  productName: "Travel Safe",
+  masterPolicyNo: "P-MOMO-2026-001",
+  plan: "International",
+  sumInsured: "",
+  baseRate: "0,15",
+  adminFee: "5.000",
+  clausePackage: [],
+  benefitSummary: "Perlindungan perjalanan grup dengan manfaat dasar, medis, dan perluasan travel inconvenience.",
+  coverageType: "79402 - INTERNATIONAL NON SCHENGEN",
+  coverageCodes: ["79402"],
+  npCriteria: "antara",
+  currencyCode: "201 - US.$.",
+  npAccidentLimitMin: "100.000",
+  npAccidentLimitMax: "200.000",
+  npAccidentRate: "0,15",
+  npMedicalPercentage: "50",
+  npMedicalLimitMin: "50.000",
+  npMedicalLimitMax: "100.000",
+  npMedicalRate: "0,10",
+  npMedicalPremiMin: "50",
+  npMedicalPremiMax: "100",
+  deductible: "10% dari nilai klaim yang disetujui, minimum USD 25 per kejadian.",
+  assistanceEnabled: true,
+  wordingType: TRAVEL_SAFE_WORDING_LABEL,
+  printDocumentType: "",
+  additionalClauseTitle: "",
+  additionalClauseDescription: "",
+  customClauses: [],
+  discountPercent: "0",
+  commissionPercent: "15",
+  stampDuty: "Sesuai STAR",
+  perluasanSelections: JSON.parse(JSON.stringify(TRAVEL_SAFE_STARTER_PERLUASAN)),
+};
+
+const TRAVEL_SAFE_STARTER_SAMPLE_PAYLOAD = {
+  partner_policy_ref: "P-MOMO-2026-001",
+  participant_name: "Dewi Maharani",
+  birth_date: "1995-10-01",
+  effective_date: "2026-08-01",
+  cert_no: "TRV-0001",
+  plan: "INTL-SCHENGEN",
+};
+
+function buildLifeGuardStarterMappingRows() {
+  return [
+    createMappingRow("partner_policy_ref", "partner_policy_ref", "P-MOMO-2026-001", "trim|upper"),
+    createMappingRow("participant_name", "participant_name", "Budi Santoso", "trim|title"),
+    createMappingRow("member_id", "partner_member_id", "LG0001", "trim|upper"),
+    createMappingRow("birth_date", "birth_date", "1990-02-11", "trim"),
+    createMappingRow("effective_date", "effective_date", "2026-01-01", "trim"),
+    createMappingRow("certificate_no", "certificate_no", "LG-CERT-0001", "trim|upper"),
+    createMappingRow("unit_name", "class_room", "GENERAL", "trim|upper"),
+  ];
+}
+
+function buildLifeGuardStarterFieldRules() {
+  const fields = generateFieldRulesForFamily("group-pa");
+  return {
+    ...fields,
+    participant_name: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
+    partner_member_id: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
+    birth_date: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
+    effective_date: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
+    certificate_no: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
+    class_room: { active: true, required: true, source: "Partner", editable: "Partner Can Override", defaultValue: "" },
+    plan_code: { active: true, required: false, source: "Master Policy", editable: "Internal Only", defaultValue: "GENERAL" },
+    sum_insured: { active: true, required: false, source: "Master Policy", editable: "Internal Only", defaultValue: "" },
+  };
+}
+
+function buildTravelSafeStarterMappingRows() {
+  return [
+    createMappingRow("partner_policy_ref", "partner_policy_ref", "P-MOMO-2026-001", "trim|upper"),
+    createMappingRow("participant_name", "participant_name", "Dewi Maharani", "trim|title"),
+    createMappingRow("birth_date", "birth_date", "1995-10-01", "trim"),
+    createMappingRow("effective_date", "effective_date", "2026-08-01", "trim"),
+    createMappingRow("cert_no", "certificate_no", "TRV-0001", "trim|upper"),
+    createMappingRow("plan", "plan_code", "INTL-SCHENGEN", "trim|upper"),
+  ];
+}
+
+function buildTravelSafeStarterFieldRules() {
+  const fields = generateFieldRulesForFamily("travel-group");
+  return {
+    ...fields,
+    participant_name: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
+    birth_date: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
+    effective_date: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
+    certificate_no: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
+    plan_code: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "INTL-SCHENGEN" },
+  };
+}
+
+function applyLifeGuardStarterConfig(config) {
+  if (!config || config.family !== "group-pa") return config;
+  config.partnerName = "PT MOMOTRIP AXIA INDONESIA";
+  config.productName = "705 Kecelakaan Diri";
+  config.data.blueprint = {
+    ...config.data.blueprint,
+    ...LIFE_GUARD_STARTER_BLUEPRINT,
+  };
+  config.data.master = {
+    ...config.data.master,
+    ...LIFE_GUARD_STARTER_MASTER,
+  };
+  config.data.mapping = {
+    ...config.data.mapping,
+    sourceKind: "CSV",
+    samplePayload: JSON.stringify(LIFE_GUARD_STARTER_SAMPLE_PAYLOAD, null, 2),
+    rows: buildLifeGuardStarterMappingRows(),
+  };
+  config.data.realisasi = {
+    ...config.data.realisasi,
+    notes: "Partner cukup kirim 6 field dasar. Manfaat, rate, dan biaya polis mengikuti master policy Life Guard 705.",
+    fields: buildLifeGuardStarterFieldRules(),
+  };
+  return config;
+}
+
+function applyTravelSafeStarterConfig(config) {
+  if (!config || config.family !== "travel-group") return config;
+  config.partnerName = "PT MOMOTRIP AXIA INDONESIA";
+  config.productName = "Travel Safe";
+  config.data.blueprint = {
+    ...config.data.blueprint,
+    ...TRAVEL_SAFE_STARTER_BLUEPRINT,
+  };
+  config.data.master = {
+    ...config.data.master,
+    ...TRAVEL_SAFE_STARTER_MASTER,
+    perluasanSelections: JSON.parse(JSON.stringify(TRAVEL_SAFE_STARTER_PERLUASAN)),
+  };
+  config.data.mapping = {
+    ...config.data.mapping,
+    sourceKind: "JSON",
+    samplePayload: JSON.stringify(TRAVEL_SAFE_STARTER_SAMPLE_PAYLOAD, null, 2),
+    rows: buildTravelSafeStarterMappingRows(),
+  };
+  config.data.realisasi = {
+    ...config.data.realisasi,
+    notes: "Partner mengirim data peserta, tanggal efektif, nomor sertifikat, dan plan perjalanan untuk penerbitan Travel Safe.",
+    fields: buildTravelSafeStarterFieldRules(),
+  };
+  return config;
+}
+
+function applyProductStarterConfig(config) {
+  applyLifeGuardStarterConfig(config);
+  applyTravelSafeStarterConfig(config);
+  return config;
 }
 
 function createBlankConfig(family = "group-pa") {
@@ -1134,130 +1658,45 @@ function cloneConfig(config) {
   };
 }
 
-const SEED_CONFIGS = [
-  {
-    id: "cfg-momo-705",
-    family: "group-pa",
-    title: "PA Kumpulan - Basic",
-    partnerName: "Partner PA Sample",
-    productName: "705 Kecelakaan Diri",
-    version: "v1.4",
-    status: "Draft",
-    owner: "ROM Jakarta 1",
-    updatedAt: "11 Apr 2026, 09.20",
-    data: {
-      blueprint: {
-        agreementNo: "PKS-PA-2026-001",
-        insuredCode: "009281",
-        partnerCode: "PABS",
-        acquisitionCode: "110 - PS Perusahaan",
-        phoneNumber: "081234567890",
-        ownerEmail: "pa.ops@jasindo.co.id",
-        correspondenceEmail: "admin@lifeguard.co.id",
-        insuredName: "PT LIFE GUARD INDONESIA",
-        npwp: "01.234.567.8-901.000",
-        address: "Gedung Cyber 2, Lt. 15, Jl. HR Rasuna Said Blok X-5, Jakarta Selatan",
-        picList: "Alpha",
-        qqTambahan: "",
-        startDate: "2026-01-01",
-        endDate: "2026-12-31",
-        channels: ["partner-portal", "internal-assisted"],
-        integrationMode: "CSV Upload",
-        syncTarget: "STAR Core Registry",
-        starCheckMode: "AUTO_CHECK",
-        ifExists: "ENDORSEMENT",
-        ifMissing: "CREATE_NEW",
-        endpoint: "/partner/pa/basic/upload",
-        primaryKey: "partner_policy_ref",
-        notes: "Konfigurasi dasar untuk batch peserta sekolah. Bisnis owner cukup atur mapping dan template tanpa menunggu TI.",
-      },
-      master: {
-        productFamily: "PA Kumpulan",
-        productCode: "705",
-        productName: "705 Kecelakaan Diri",
-        masterPolicyNo: "PKS-PA-2026-001",
-        plan: "Silver",
-        sumInsured: "25000000",
-        baseRate: "1,50",
-        adminFee: "5000",
-        clausePackage: ["Meninggal Dunia karena Kecelakaan", "Cacat Tetap Total / Sebagian", "Klausul Usia"],
-        benefitSummary: "Meninggal dunia, cacat tetap, biaya medis kecelakaan.",
-        coverageType: "70501 - KECELAKAAN DIRI",
-        npCriteria: "antara",
-        currencyCode: "101 - RP.",
-        npAMin: "100.000.000",
-        npAMax: "250.000.000",
-        npBPercent: "100",
-        npCPercent: "10",
-        ageMin: "19",
-        ageMax: "63",
-        riskClass: "Kelas III",
-        riskExposure: "Tersebar",
-        deductible: "",
-        wordingType: "PSAKDI",
-        printDocumentType: "Ikhtisar",
-        additionalClauseTitle: "",
-        additionalClauseDescription: "",
-        customClauses: [],
-        discountPercent: "0",
-        commissionPercent: "15",
-        stampDuty: "Sesuai STAR",
-      },
-      mapping: {
-        sourceKind: "CSV",
-        samplePayload: JSON.stringify(
-          {
-            partner_policy_ref: "MOMO-BATCH-001",
-            student_name: "Budi Santoso",
-            student_id: "SMP1001",
-            dob: "2012-02-11",
-            start_date: "2026-07-01",
-            cert_no: "CERT-0001",
-            class_room: "8A",
-          },
-          null,
-          2
-        ),
-        rows: [
-          createMappingRow("partner_policy_ref", "partner_policy_ref", "MOMO-BATCH-001", "trim|upper"),
-          createMappingRow("student_name", "participant_name", "Budi Santoso", "trim|title"),
-          createMappingRow("student_id", "partner_member_id", "SMP1001", "trim|upper"),
-          createMappingRow("dob", "birth_date", "2012-02-11", "trim"),
-          createMappingRow("start_date", "effective_date", "2026-07-01", "trim"),
-          createMappingRow("cert_no", "certificate_no", "CERT-0001", "trim|upper"),
-          createMappingRow("class_room", "class_room", "8A", "trim|upper"),
-        ],
-      },
-      realisasi: {
-        notes: "Partner hanya perlu kirim 6 field. Premi dan plan diambil dari master policy.",
-        fields: {
-          participant_name: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
-          partner_member_id: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
-          birth_date: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
-          effective_date: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
-          certificate_no: { active: true, required: true, source: "Partner", editable: "Locked", defaultValue: "" },
-          class_room: { active: true, required: true, source: "Partner", editable: "Partner Can Override", defaultValue: "" },
-          plan_code: { active: true, required: false, source: "Master Policy", editable: "Internal Only", defaultValue: "Silver" },
-          sum_insured: { active: true, required: false, source: "Master Policy", editable: "Internal Only", defaultValue: "25000000" },
-        },
-      },
-      review: {
-        makerNote: "Siap dipakai untuk batch onboarding sekolah baru tanpa setup ulang ke TI.",
-        checkerNote: "",
-        approvalNote: "",
-        checklist: {
-          mappingReviewed: true,
-          documentBound: true,
-          partnerUat: false,
-          syncReady: false,
-        },
+const LIFE_GUARD_SEED_CONFIG = {
+  id: "cfg-momo-705",
+  family: "group-pa",
+  title: "Momotrip - Life Guard 705",
+  partnerName: "PT MOMOTRIP AXIA INDONESIA",
+  productName: "705 Kecelakaan Diri",
+  version: "v1.4",
+  status: "Draft",
+  owner: "ROM Jakarta 1",
+  updatedAt: "11 Apr 2026, 09.20",
+  data: {
+    blueprint: {
+      notes: "Konfigurasi general partner 705 mengikuti referensi Life Guard dari partner portal.",
+    },
+    master: {},
+    mapping: {},
+    realisasi: {},
+    review: {
+      makerNote: "Isian Life Guard sudah disesuaikan dengan referensi partner untuk review checker.",
+      checkerNote: "",
+      approvalNote: "",
+      checklist: {
+        mappingReviewed: true,
+        documentBound: true,
+        partnerUat: false,
+        syncReady: false,
       },
     },
-    audit: [
-        { at: "11 Apr 2026, 09.20", actor: "ROM", action: "Draft konfigurasi dibuat." },
-      { at: "11 Apr 2026, 09.36", actor: "ROM", action: "Field contract partner dirampingkan menjadi 6 field." },
-    ],
   },
+  audit: [
+    { at: "11 Apr 2026, 09.20", actor: "ROM", action: "Draft konfigurasi dibuat." },
+    { at: "11 Apr 2026, 09.36", actor: "ROM", action: "Isian Life Guard diselaraskan dengan referensi partner 705 general." },
+  ],
+};
+
+applyLifeGuardStarterConfig(LIFE_GUARD_SEED_CONFIG);
+
+const SEED_CONFIGS = [
+  LIFE_GUARD_SEED_CONFIG,
   {
     id: "cfg-spn-health",
     family: "health-group",
@@ -1363,6 +1802,40 @@ const SEED_CONFIGS = [
     ],
   },
   {
+    id: "cfg-momo-travel",
+    family: "travel-group",
+    title: "Momotrip - Travel Safe",
+    partnerName: "PT MOMOTRIP AXIA INDONESIA",
+    productName: "Travel Safe",
+    version: "v1.2",
+    status: "Draft",
+    owner: "ROM Travel Safe",
+    updatedAt: "12 Apr 2026, 10.18",
+    data: {
+      blueprint: {
+        notes: "Konfigurasi Travel Safe mengikuti referensi simulator travel dengan general info yang disamakan ke Life Guard 705.",
+      },
+      master: {},
+      mapping: {},
+      realisasi: {},
+      review: {
+        makerNote: "Travel Safe sudah diselaraskan dengan pola tampilan portal partner dan siap untuk cek checker.",
+        checkerNote: "",
+        approvalNote: "",
+        checklist: {
+          mappingReviewed: true,
+          documentBound: true,
+          partnerUat: false,
+          syncReady: false,
+        },
+      },
+    },
+    audit: [
+      { at: "12 Apr 2026, 09.42", actor: "ROM", action: "Draft konfigurasi Travel Safe dibuat." },
+      { at: "12 Apr 2026, 10.18", actor: "ROM", action: "General info dan summary Travel Safe diselaraskan dengan pola Life Guard." },
+    ],
+  },
+  {
     id: "cfg-gns-property",
     family: "property-group",
     title: "Garasi Niaga â€¢ Dealer Blanket",
@@ -1457,6 +1930,8 @@ const SEED_CONFIGS = [
   },
 ];
 
+applyTravelSafeStarterConfig(SEED_CONFIGS.find((item) => item.id === "cfg-momo-travel"));
+
 function PartnerConfigStudio({
   initialRole = "Maker",
   role: controlledRole = null,
@@ -1487,8 +1962,11 @@ function PartnerConfigStudio({
   const [toast, setToast] = useState("");
   const [headerAccountMenuOpen, setHeaderAccountMenuOpen] = useState(false);
   const [lifeGuardExpanded, setLifeGuardExpanded] = useState("main-accident");
+  const [travelSafeExpandedCategory, setTravelSafeExpandedCategory] = useState("cat_trv");
   const [partnerClauseExpanded, setPartnerClauseExpanded] = useState("wording:PSAKDI");
   const [lifeGuardClauseSearch, setLifeGuardClauseSearch] = useState("");
+  const [lifeGuardSidebarCollapsed, setLifeGuardSidebarCollapsed] = useState(false);
+  const [lifeGuardPendingAction, setLifeGuardPendingAction] = useState("");
   const role = controlledRole || roleState;
 
   const selectedConfig = useMemo(
@@ -1613,6 +2091,27 @@ function PartnerConfigStudio({
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    if (!selectedConfig || selectedConfig.family !== "travel-group") return;
+    const master = selectedConfig.data.master || {};
+    const needsNormalize =
+      master.wordingType !== TRAVEL_SAFE_WORDING_LABEL ||
+      Boolean(master.printDocumentType) ||
+      Boolean((master.clausePackage || []).length);
+
+    if (!needsNormalize) return;
+
+    updateSelected((draft) => {
+      draft.data.master = {
+        ...draft.data.master,
+        wordingType: TRAVEL_SAFE_WORDING_LABEL,
+        printDocumentType: "",
+        clausePackage: [],
+      };
+      return draft;
+    });
+  }, [selectedConfig]);
+
   const filteredConfigs = useMemo(() => {
     const query = search.trim().toLowerCase();
     return configs.filter((item) => {
@@ -1665,7 +2164,33 @@ function PartnerConfigStudio({
         },
       ];
     }
-    if (["health-group", "travel-group"].includes(selectedConfig.family)) {
+    if (selectedConfig.family === "travel-group") {
+      return [
+        {
+          done:
+            Boolean(selectedConfig.title) &&
+            Boolean(selectedConfig.partnerName) &&
+            Boolean(selectedConfig.data.blueprint.insuredCode) &&
+            Boolean(selectedConfig.data.blueprint.acquisitionCode) &&
+            Boolean(selectedConfig.data.blueprint.correspondenceEmail || selectedConfig.data.blueprint.ownerEmail) &&
+            Boolean(selectedConfig.data.master.masterPolicyNo),
+        },
+        {
+          done:
+            Boolean((selectedConfig.data.master.coverageCodes || []).length) &&
+            Boolean(selectedConfig.data.master.npAccidentLimitMin) &&
+            Boolean(selectedConfig.data.master.npAccidentRate),
+        },
+        {
+          done: Boolean(selectedConfig.data.master.wordingType),
+        },
+        {
+          done: getPendingItems(selectedConfig).length === 0,
+        },
+      ];
+    }
+
+    if (selectedConfig.family === "health-group") {
       return [
         {
           done:
@@ -1758,9 +2283,9 @@ function PartnerConfigStudio({
     });
   }
 
-  function appendAudit(action, actor = role.toUpperCase()) {
+  function appendAudit(action, actor = role.toUpperCase(), note = "") {
     updateSelected((draft) => {
-      draft.audit = [{ at: nowLabel(), actor, action }, ...(draft.audit || [])];
+      draft.audit = [{ at: nowLabel(), actor, action, note }, ...(draft.audit || [])];
       return draft;
     });
   }
@@ -1785,6 +2310,70 @@ function PartnerConfigStudio({
     if (label === conflictA && next.includes(conflictA)) next = next.filter((item) => item !== conflictB);
     if (label === conflictB && next.includes(conflictB)) next = next.filter((item) => item !== conflictA);
     patchSection("master", { clausePackage: next });
+  }
+
+  function patchTravelSafeMaster(changes) {
+    if (!selectedConfig || selectedConfig.family !== "travel-group") return;
+    const nextMaster = {
+      ...selectedConfig.data.master,
+      ...changes,
+    };
+    const accidentMin = parseNumber(nextMaster.npAccidentLimitMin || "0");
+    const accidentMax = parseNumber(nextMaster.npAccidentLimitMax || "0");
+    const medicalPercent = parseFlexibleNumber(nextMaster.npMedicalPercentage || "0");
+    const medicalRate = parseFlexibleNumber(nextMaster.npMedicalRate || "0");
+    const accidentRate = parseFlexibleNumber(nextMaster.npAccidentRate || "0");
+    const medicalMin = Math.round(accidentMin * (medicalPercent / 100));
+    const medicalMax = Math.round(accidentMax * (medicalPercent / 100));
+
+    nextMaster.npMedicalLimitMin = formatNumber(String(medicalMin));
+    nextMaster.npMedicalLimitMax = formatNumber(String(medicalMax));
+    nextMaster.npAccidentPremiMin = formatNumber(String(Math.round(accidentMin * (accidentRate / 100))));
+    nextMaster.npAccidentPremiMax = formatNumber(String(Math.round(accidentMax * (accidentRate / 100))));
+    nextMaster.npMedicalPremiMin = formatNumber(String(Math.round(medicalMin * (medicalRate / 100))));
+    nextMaster.npMedicalPremiMax = formatNumber(String(Math.round(medicalMax * (medicalRate / 100))));
+    nextMaster.coverageType = getTravelSafeCoverageText(nextMaster);
+    nextMaster.currencyCode = getTravelSafeLockedCurrency(nextMaster);
+
+    patchSection("master", nextMaster);
+  }
+
+  function toggleTravelSafeCoverage(code) {
+    if (!selectedConfig || selectedConfig.family !== "travel-group") return;
+    const nextCodes = [code];
+    patchTravelSafeMaster({
+      coverageCodes: nextCodes,
+      coverageType: getTravelSafeCoverageLabel(code),
+    });
+  }
+
+  function updateTravelSafeBenefit(itemId, changes) {
+    if (!selectedConfig || selectedConfig.family !== "travel-group") return;
+    const currentSelections = { ...(selectedConfig.data.master.perluasanSelections || {}) };
+    const itemMeta = TRAVEL_SAFE_EXTENSION_LIBRARY.flatMap((category) => category.items).find((item) => item.id === itemId);
+    const currentSelection = currentSelections[itemId] || { checked: false, hpMin: "", hpMax: "", rate: "", premiMin: "", premiMax: "" };
+    const nextSelection = {
+      ...currentSelection,
+      ...changes,
+    };
+
+    if (Object.prototype.hasOwnProperty.call(changes, "hpMin")) nextSelection.hpMin = formatNumber(changes.hpMin);
+    if (Object.prototype.hasOwnProperty.call(changes, "hpMax")) nextSelection.hpMax = formatNumber(changes.hpMax);
+    if (Object.prototype.hasOwnProperty.call(changes, "rate")) nextSelection.rate = formatRateInput(changes.rate);
+
+    if (!nextSelection.checked) {
+      nextSelection.premiMin = "";
+      nextSelection.premiMax = "";
+    } else if (!itemMeta?.isCheckOnly) {
+      const hpMin = parseNumber(nextSelection.hpMin || "0");
+      const hpMax = parseNumber(nextSelection.hpMax || "0");
+      const rate = parseFlexibleNumber(nextSelection.rate || "0");
+      nextSelection.premiMin = formatNumber(String(Math.round(hpMin * (rate / 100))));
+      nextSelection.premiMax = formatNumber(String(Math.round(hpMax * (rate / 100))));
+    }
+
+    currentSelections[itemId] = nextSelection;
+    patchTravelSafeMaster({ perluasanSelections: currentSelections });
   }
 
   function addLifeGuardCustomClause() {
@@ -1940,6 +2529,7 @@ function PartnerConfigStudio({
     item.data.master.productName = meta.defaultProduct;
     item.data.master.productFamily = meta.title;
     item.data.blueprint.notes = meta.description;
+    applyProductStarterConfig(item);
     setConfigs((prev) => [item, ...prev]);
     setSelectedFamily(family);
     setSelectedId(item.id);
@@ -1989,6 +2579,7 @@ function PartnerConfigStudio({
     item.data.master.productName = meta.defaultProduct;
     item.data.master.productFamily = meta.title;
     item.data.blueprint.notes = meta.description;
+    applyProductStarterConfig(item);
     setConfigs((prev) => [item, ...prev]);
     setSelectedFamily(family);
     setSelectedId(item.id);
@@ -2072,6 +2663,96 @@ function PartnerConfigStudio({
       appendAudit("Dikembalikan ke checker untuk revisi.", "HO");
       setToast("Dikembalikan ke Checker");
     }
+  }
+
+  function setLifeGuardReviewNote(value) {
+    if (!selectedConfig || !["group-pa", "travel-group"].includes(selectedConfig.family)) return;
+    patchSection("review", { [getLifeGuardReviewField(role)]: value });
+  }
+
+  function removeLifeGuardCustomClause(clauseId) {
+    if (!selectedConfig || selectedConfig.family !== "group-pa") return;
+    const customClauses = selectedConfig.data.master.customClauses || [];
+    const clause = customClauses.find((item) => item.id === clauseId);
+    patchSection("master", {
+      customClauses: customClauses.filter((item) => item.id !== clauseId),
+      clausePackage: (selectedConfig.data.master.clausePackage || []).filter((item) => item !== clause?.title),
+    });
+    setToast("Klausula tambahan dihapus");
+  }
+
+  function resetLifeGuardWorkflow() {
+    if (!selectedConfig || !["group-pa", "travel-group"].includes(selectedConfig.family)) return;
+    updateSelected((draft) => {
+      draft.status = "Draft";
+      draft.data.review = {
+        ...draft.data.review,
+        makerNote: "",
+        checkerNote: "",
+        approvalNote: "",
+      };
+      return draft;
+    });
+    updateRole("Maker");
+    setStepIndex(0);
+    setLifeGuardPendingAction("");
+    appendAudit("Simulator direset ke awal.", "SYSTEM");
+    setToast("Simulator direset");
+  }
+
+  function editLifeGuardFromSuccess() {
+    if (!selectedConfig || !["group-pa", "travel-group"].includes(selectedConfig.family)) return;
+    updateSelected((draft) => {
+      draft.status = "Checker";
+      return draft;
+    });
+    updateRole("Checker");
+    setStepIndex(0);
+    appendAudit("Pengeditan ulang konfigurasi aktif.", "UDW", "Beralih ke mode edit untuk peninjauan ulang konfigurasi aktif.");
+    setToast("Beralih ke mode edit");
+  }
+
+  function applyLifeGuardAction(action) {
+    if (!selectedConfig || !["group-pa", "travel-group"].includes(selectedConfig.family)) return;
+    if (action === "RESET") {
+      resetLifeGuardWorkflow();
+      return;
+    }
+
+    const reviewField = getLifeGuardReviewField(role);
+    const note = String(selectedConfig.data.review?.[reviewField] || "").trim();
+    if (!note) {
+      setToast("Gagal: kolom analisa wajib diisi");
+      return;
+    }
+
+    const actorMeta = getLifeGuardRoleMeta(role);
+    const actionMap = {
+      TO_UDW: { status: "Checker", actor: actorMeta.actor, text: "Kirim ke Checker" },
+      REJECT: { status: "Draft", actor: actorMeta.actor, text: "Tolak" },
+      RETURN_MAKER: { status: "Draft", actor: actorMeta.actor, text: "Kembali ke Maker" },
+      TO_HO: { status: "Approval", actor: actorMeta.actor, text: "Forward ke Approval" },
+      RETURN_UDW: { status: "Checker", actor: actorMeta.actor, text: "Kembali ke Admin UDW" },
+      ISSUE: { status: "Active", actor: actorMeta.actor, text: "Setuju & Terbitkan Polis" },
+    };
+    const target = actionMap[action];
+    if (!target) return;
+
+    updateSelected((draft) => {
+      draft.status = target.status;
+      return draft;
+    });
+    appendAudit(target.text, target.actor, note);
+    setLifeGuardPendingAction("");
+    setToast(target.text);
+  }
+
+  function openLifeGuardAction(action) {
+    setLifeGuardPendingAction(action);
+  }
+
+  function closeLifeGuardAction() {
+    setLifeGuardPendingAction("");
   }
 
   function renderStep() {
@@ -3702,6 +4383,1993 @@ function PartnerConfigStudio({
     );
   }
 
+  function renderLifeGuardStudio() {
+    if (!selectedConfig || selectedConfig.family !== "group-pa") return null;
+
+    const blueprint = selectedConfig.data.blueprint;
+    const master = selectedConfig.data.master;
+    const review = selectedConfig.data.review;
+    const statusMeta = getLifeGuardStatusMeta(selectedConfig.status);
+    const roleMeta = getLifeGuardRoleMeta(role);
+    const lifeGuardComputed = getLifeGuardComputed(master);
+    const currencyCode = lifeGuardComputed.currencyCode;
+    const totalDaysLabel = getLifeGuardTotalDays(blueprint.startDate, blueprint.endDate);
+    const ageInvalid = Number(master.ageMin || 0) > Number(master.ageMax || 0);
+    const canEdit = (role === "Maker" && selectedConfig.status === "Draft") || (role === "Checker" && selectedConfig.status === "Checker");
+    const noteField = getLifeGuardReviewField(role);
+    const noteValue = review?.[noteField] || "";
+    const selectedClauses = getLifeGuardSelectedClauseList(master);
+    const referenceCode = getLifeGuardReferenceCode(selectedConfig);
+    const showSuccess = selectedConfig.status === "Active";
+    const showReviewSummary = !showSuccess && role === "Approval";
+    const showEntry = !showSuccess && role !== "Approval";
+    const lifeGuardPendingItems = getPendingItems(selectedConfig);
+    const lifeGuardReadiness = getReadiness(selectedConfig);
+    const lifeGuardBeneficiary = `${String(blueprint.insuredName || selectedConfig.partnerName || "-").toUpperCase()}${
+      blueprint.qqTambahan ? ` ${String(blueprint.qqTambahan).toUpperCase()}` : ""
+    }`;
+    const lifeGuardPeriodLabel = `${blueprint.startDate || "-"} s/d ${blueprint.endDate || "-"}`;
+    const lifeGuardPremiumText =
+      lifeGuardComputed.criteria === "antara"
+        ? `${currencyCode} ${formatRupiah(lifeGuardComputed.premiumMin)} - ${formatRupiah(lifeGuardComputed.premiumMax)}`
+        : `${currencyCode} ${formatRupiah(lifeGuardComputed.premiumMin)}`;
+    const lifeGuardSummaryRows = [
+      { label: "Nomor Polis Induk / PKS", value: master.masterPolicyNo || blueprint.agreementNo || "-" },
+      { label: "Jenis Produk", value: master.coverageType || "-" },
+      { label: "Kelas Risiko", value: master.riskClass || "-" },
+    ];
+    const lifeGuardFeeRows = [
+      { label: "Biaya Polis", value: `${currencyCode} ${master.adminFee || "0"}` },
+      { label: "Biaya Meterai", value: master.stampDuty || "Sesuai STAR" },
+      { label: "Brokerage / Komisi", value: `${master.commissionPercent || "0"}%` },
+    ];
+    const lifeGuardDetailItems = [
+      { label: "Penerima Manfaat", value: lifeGuardBeneficiary },
+      { label: "Nomor Polis Induk / PKS", value: master.masterPolicyNo || blueprint.agreementNo || "-" },
+      { label: "Jangka Waktu Pertanggungan", value: lifeGuardPeriodLabel },
+      { label: "Jenis Produk / Pertanggungan", value: master.coverageType || "-" },
+      { label: "NP Meninggal Dunia (A)", value: lifeGuardComputed.npAText },
+      { label: "NP Cacat Tetap (B)", value: lifeGuardComputed.npBText },
+      { label: "NP Pengobatan (C)", value: lifeGuardComputed.npCText },
+      { label: "Batasan Usia", value: `${master.ageMin || "-"} - ${master.ageMax || "-"} Thn` },
+      { label: "Kelas Risiko", value: master.riskClass || "-" },
+      { label: "Risk Exposure", value: master.riskExposure || "-" },
+      { label: "Rate Premi (‰)", value: master.baseRate || "-" },
+      { label: "Premi", value: lifeGuardPremiumText },
+    ];
+    const lifeGuardChecklistItems = [
+      {
+        key: "mappingReviewed",
+        title: "Mapping Reviewed",
+        detail: "Field mapping, transform, dan mandatory target sudah dicek.",
+        checked: Boolean(review.checklist.mappingReviewed),
+      },
+      {
+        key: "documentBound",
+        title: "Document Bound",
+        detail: "PKS, wording, dan package klausula sudah terikat ke konfigurasi.",
+        checked: Boolean(review.checklist.documentBound),
+      },
+      {
+        key: "partnerUat",
+        title: "Partner UAT",
+        detail: "Payload partner dan template file sudah diuji sebelum approval.",
+        checked: Boolean(review.checklist.partnerUat),
+      },
+      {
+        key: "syncReady",
+        title: "Sync Ready",
+        detail: "Konfigurasi siap dihubungkan ke core / STAR sesuai strategi sinkronisasi.",
+        checked: Boolean(review.checklist.syncReady),
+      },
+    ];
+    const formInputClass =
+      "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[13px] font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
+    const formInputDisabledClass = "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500";
+    const classicLabelClass = "text-[11px] font-bold uppercase text-[#004d7a]";
+    const toggleLifeGuardChecklist = (key, value) =>
+      patchSection("review", {
+        checklist: { ...review.checklist, [key]: value },
+      });
+    const modalMeta = {
+      TO_UDW: {
+        title: "Kirim ke Admin UDW untuk tahap Checker?",
+        icon: <ChevronRight className="h-7 w-7 text-blue-600" />,
+      },
+      REJECT: {
+        title: "Tolak konfigurasi ini?",
+        icon: <X className="h-7 w-7 text-red-600" />,
+      },
+      RETURN_MAKER: {
+        title: "Kembalikan dokumen ke Maker?",
+        icon: <ArrowLeft className="h-7 w-7 text-orange-500" />,
+      },
+      TO_HO: {
+        title: "Teruskan dokumen ke Approver HO?",
+        icon: <ChevronRight className="h-7 w-7 text-indigo-600" />,
+      },
+      RETURN_UDW: {
+        title: "Kembalikan ke Admin UDW?",
+        icon: <ArrowLeft className="h-7 w-7 text-blue-600" />,
+      },
+      ISSUE: {
+        title: "Setujui & terbitkan polis secara resmi?",
+        icon: <CheckCircle2 className="h-7 w-7 text-emerald-600" />,
+      },
+      RESET: {
+        title: "Reset simulator ke awal? Semua progres akan hilang.",
+        icon: <RefreshCcw className="h-7 w-7 text-slate-600" />,
+      },
+    }[lifeGuardPendingAction];
+
+    const renderActionButtons = () => {
+      if (selectedConfig.status === "Draft") {
+        if (role === "Maker") {
+          return (
+            <button
+              type="button"
+              onClick={() => openLifeGuardAction("TO_UDW")}
+              className="rounded-xl bg-[#004d7a] px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-[#003554]"
+            >
+              Kirim ke Checker
+            </button>
+          );
+        }
+        return <div className="text-[10px] font-bold uppercase italic text-slate-400">Draft stage - menunggu maker...</div>;
+      }
+
+      if (selectedConfig.status === "Checker") {
+        if (role === "Checker") {
+          return (
+            <>
+              <button type="button" onClick={() => openLifeGuardAction("REJECT")} className="rounded-xl bg-red-600 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-red-700">
+                Tolak
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("RETURN_MAKER")} className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-50">
+                Kembali ke Maker
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("TO_HO")} className="rounded-xl bg-[#004d7a] px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-[#003a5c]">
+                Forward ke Approval
+              </button>
+            </>
+          );
+        }
+        return <div className="text-[10px] font-bold uppercase italic tracking-tight text-blue-600">Checker stage - ganti peran ke admin UDW...</div>;
+      }
+
+      if (selectedConfig.status === "Approval") {
+        if (role === "Approval") {
+          return (
+            <>
+              <button type="button" onClick={() => openLifeGuardAction("REJECT")} className="rounded-xl bg-red-600 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-red-700">
+                Tolak
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("RETURN_UDW")} className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-50">
+                Kembali ke Admin UDW
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("RETURN_MAKER")} className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-50">
+                Kembali ke Maker
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("ISSUE")} className="rounded-xl bg-emerald-600 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-emerald-700">
+                Setuju
+              </button>
+            </>
+          );
+        }
+        return <div className="text-[10px] font-bold uppercase italic tracking-tight text-indigo-600">Approval stage - ganti peran ke HO UDW...</div>;
+      }
+
+      return null;
+    };
+
+    return (
+      <div className="min-h-screen bg-[#f4f7fa] text-slate-800">
+        <AppProductHeader
+          sessionName={sessionName}
+          sessionRoleLabel={sessionRoleLabel}
+          accountInitials={accountMeta.initials}
+          onHome={exitToShell}
+          accountMenuOpen={headerAccountMenuOpen}
+          onToggleAccountMenu={() => setHeaderAccountMenuOpen((current) => !current)}
+          accountMenuItems={accountMenuItems}
+        />
+
+        <main className="relative">
+          {toast ? (
+            <div className="pointer-events-none fixed right-4 top-20 z-[70]">
+              <div className="rounded-xl border border-white/10 bg-slate-900 px-5 py-3 text-[10px] font-black text-white shadow-2xl">
+                {toast.toUpperCase()}
+              </div>
+            </div>
+          ) : null}
+
+          {!showSuccess ? (
+            <header className="relative overflow-hidden bg-[#0A4D82] pb-7 md:pb-8">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.20),transparent_28%),radial-gradient(circle_at_80%_25%,rgba(255,255,255,0.14),transparent_24%),radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.12),transparent_24%)]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0A4D82]/60 to-[#0A4D82]/75" />
+              <div className="relative mx-auto max-w-[1800px] px-4 pt-4 md:px-6 md:pt-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={backToCatalog}
+                      className="inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 focus-visible:ring-4 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A4D82]"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Kembali ke Daftar Konfigurasi
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 text-center text-white md:mt-5">
+                  <div className="inline-flex rounded-full bg-white/10 px-3.5 py-1 text-[12px] font-medium text-white/90 md:px-4 md:py-1.5 md:text-sm">
+                    Selamat datang kembali, {accountMeta.name}
+                  </div>
+                  <h1 className="mt-3 text-[28px] font-bold tracking-tight md:mt-4 md:text-[40px]">
+                    {fixDisplayText(studioHeroTitle)}
+                  </h1>
+                  <p className="mx-auto mt-1.5 max-w-3xl text-[13px] leading-6 text-white/90 md:mt-2 md:text-[17px] md:leading-7">
+                    {fixDisplayText(selectedCardMeta?.description || "Pengaturan partner disesuaikan per produk dan dikelola langsung dari portal internal.")}
+                  </p>
+                </div>
+
+                <StudioJourneySteps
+                  stepIndex={stepIndex}
+                  stepState={stepState}
+                  maxUnlockedStep={maxUnlockedStep}
+                  onSelect={(nextStep) => setStepIndex(nextStep)}
+                />
+
+                <div className="mt-4 flex justify-center">
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/95 p-1.5 shadow-lg shadow-black/10 backdrop-blur">
+                      <div className="flex items-center px-2">
+                        <span className="mr-2 whitespace-nowrap text-[9px] font-black uppercase text-slate-400">Ganti Peran:</span>
+                        <select
+                          value={role}
+                          onChange={(event) => updateRole(event.target.value)}
+                          className="rounded-lg bg-transparent px-3 py-1 text-[11px] font-black text-[#004d7a] outline-none ring-0"
+                        >
+                          <option value="Maker">ROM (MAKER)</option>
+                          <option value="Checker">ADMIN UDW (CHECKER)</option>
+                          <option value="Approval">HO UDW (APPROVAL)</option>
+                        </select>
+                      </div>
+                      <div className="mx-1 h-6 w-px bg-slate-200" />
+                      <button
+                        type="button"
+                        onClick={() => openLifeGuardAction("RESET")}
+                        className="rounded-lg border border-red-100 bg-white px-3 py-1 text-[10px] font-black uppercase text-red-500 transition hover:bg-red-50"
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          <RefreshCcw className="h-3.5 w-3.5" />
+                          Reset
+                        </span>
+                      </button>
+                    </div>
+                    <div className={cls("flex h-10 w-10 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-lg shadow-black/10", roleMeta.tone)}>
+                      {roleMeta.avatar}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </header>
+          ) : null}
+
+          <div className="mx-auto max-w-6xl px-4 py-5 md:px-6">
+            <div className="pb-40">
+                {showSuccess ? (
+                  <div className="animate-fade-in py-20 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-green-200 bg-green-100 text-green-500 shadow-sm">
+                        <CheckCircle2 className="h-10 w-10" />
+                      </div>
+                      <h2 className="mb-2 text-2xl font-bold uppercase tracking-tight text-slate-800">Configuration Active</h2>
+                      <p className="mb-8 text-sm text-slate-500">
+                        Production ready for <span className="font-bold text-slate-700">{blueprint.insuredName || selectedConfig.partnerName}</span>.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-4">
+                        <button type="button" onClick={resetLifeGuardWorkflow} className="rounded-xl bg-[#004d7a] px-8 py-3 text-xs font-black uppercase text-white shadow-lg transition hover:bg-[#003554]">
+                          Start New Config
+                        </button>
+                        <button type="button" onClick={editLifeGuardFromSuccess} className="rounded-xl border-2 border-[#004d7a] bg-white px-8 py-3 text-xs font-black uppercase text-[#004d7a] shadow-md transition hover:bg-slate-50">
+                          Edit Existing Config
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {showEntry ? (
+                  <div>
+                    <div className="sticky top-0 z-20 mb-6 flex overflow-x-auto rounded-t-2xl border-b border-slate-200 bg-white shadow-sm">
+                      {STEP_LIST.map((step, index) => (
+                        <button
+                          key={step.id}
+                          type="button"
+                          onClick={() => setStepIndex(index)}
+                          className={cls(
+                            "whitespace-nowrap border-b-[3px] px-7 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.05em] transition",
+                            stepIndex === index
+                              ? "border-[#004d7a] bg-[rgba(0,77,122,0.03)] text-[#004d7a]"
+                              : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                          )}
+                        >
+                          {index + 1}. {step.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {stepIndex === 0 ? (
+                      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="p-8">
+                          <div className="grid grid-cols-1 gap-x-8 gap-y-6 text-slate-700 md:grid-cols-2">
+                            <div className="rounded-xl border border-blue-100 bg-blue-50/30 p-4 md:col-span-2">
+                              <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-blue-700">
+                                Kode Tertanggung <span className="ml-1 text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={blueprint.insuredCode || ""}
+                                onChange={(event) => patchSection("blueprint", { insuredCode: onlyDigits(event.target.value) })}
+                                disabled={!canEdit}
+                                className={cls(formInputClass, "border-blue-200 text-base font-black text-blue-800 shadow-sm", !canEdit && formInputDisabledClass)}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-2 flex text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Nama Tertanggung</label>
+                              <input type="text" value={String(blueprint.insuredName || "").toUpperCase()} disabled className={cls(formInputClass, formInputDisabledClass, "font-bold uppercase text-slate-900")} />
+                            </div>
+                            <div>
+                              <label className="mb-2 flex text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">NPWP</label>
+                              <input type="text" value={blueprint.npwp || ""} disabled className={cls(formInputClass, formInputDisabledClass, "font-medium")} />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="mb-2 flex text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Alamat Korespondensi</label>
+                              <textarea value={blueprint.address || ""} rows={2} disabled className={cls("min-h-[78px]", formInputClass, formInputDisabledClass, "resize-none font-medium")} />
+                            </div>
+                            <div>
+                              <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">
+                                Email Korespondensi <span className="ml-1 text-red-500">*</span>
+                              </label>
+                              <input
+                                type="email"
+                                value={blueprint.correspondenceEmail || blueprint.ownerEmail || ""}
+                                onChange={(event) => patchSection("blueprint", { correspondenceEmail: event.target.value, ownerEmail: event.target.value })}
+                                disabled={!canEdit}
+                                className={cls(formInputClass, "font-medium lowercase", !canEdit && formInputDisabledClass)}
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-8 border-t border-slate-50 pt-6 md:col-span-2 md:grid-cols-2">
+                              <div>
+                                <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">
+                                  Kode Akuisisi <span className="ml-1 text-red-500">*</span>
+                                </label>
+                                <select
+                                  value={blueprint.acquisitionCode || LIFE_GUARD_ACQUISITION_OPTIONS[1]}
+                                  onChange={(event) => patchSection("blueprint", { acquisitionCode: event.target.value })}
+                                  disabled={!canEdit}
+                                  className={cls(formInputClass, "font-bold shadow-sm", !canEdit && formInputDisabledClass)}
+                                >
+                                  {LIFE_GUARD_ACQUISITION_OPTIONS.map((item) => (
+                                    <option key={item} value={item}>
+                                      {item}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">
+                                  Nomor Polis Induk / Nomor PKS <span className="ml-1 text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={master.masterPolicyNo || blueprint.agreementNo || ""}
+                                  onChange={(event) => {
+                                    patchSection("master", { masterPolicyNo: event.target.value });
+                                    patchSection("blueprint", { agreementNo: event.target.value });
+                                  }}
+                                  disabled={!canEdit}
+                                  className={cls(formInputClass, "font-bold uppercase", !canEdit && formInputDisabledClass)}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="border-t border-slate-50 pt-6 md:col-span-2">
+                              <label className="mb-2 flex text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">Daftar QQ Tambahan</label>
+                              <textarea
+                                rows={2}
+                                value={blueprint.qqTambahan || ""}
+                                onChange={(event) => patchSection("blueprint", { qqTambahan: event.target.value })}
+                                disabled={!canEdit}
+                                placeholder="Masukkan QQ jika ada..."
+                                className={cls("min-h-[78px] resize-none font-medium", formInputClass, !canEdit && formInputDisabledClass)}
+                              />
+                            </div>
+
+                            <div className="border-t border-slate-50 pt-6 md:col-span-2">
+                              <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">
+                                Jangka Waktu Pertanggungan <span className="ml-1 text-red-500">*</span>
+                              </label>
+                              <div className="flex flex-wrap items-center gap-4">
+                                <input type="date" value={blueprint.startDate || ""} onChange={(event) => patchSection("blueprint", { startDate: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "w-48 font-bold shadow-sm", !canEdit && formInputDisabledClass)} />
+                                <span className="text-[10px] font-bold uppercase text-slate-400">s/d</span>
+                                <input type="date" value={blueprint.endDate || ""} onChange={(event) => patchSection("blueprint", { endDate: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "w-48 font-bold shadow-sm", !canEdit && formInputDisabledClass)} />
+                                <span className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-black uppercase tracking-tight text-blue-700 shadow-sm">{totalDaysLabel}</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4 border-t border-slate-50 pt-6 md:col-span-2">
+                              <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                <Upload className="h-4 w-4 text-blue-600" />
+                                Unggah Dokumen PKS & Lampiran <span className="text-red-500">*</span>
+                              </h4>
+                              <div className="cursor-pointer rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/10 p-8 text-center font-bold text-blue-400 transition hover:border-blue-400">
+                                <Upload className="mx-auto mb-3 h-8 w-8" />
+                                <p className="text-xs tracking-tight">Klik atau seret file ke sini</p>
+                                <input type="file" className="hidden" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {stepIndex === 1 ? (
+                      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="p-8 text-slate-700">
+                          <div className="mx-auto max-w-4xl space-y-6">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                              <div className="md:w-1/3">
+                                <div className={classicLabelClass}>Jenis Pertanggungan <span className="text-red-500">*</span></div>
+                              </div>
+                              <div className="md:w-2/3">
+                                <select
+                                  value={master.coverageType || LIFE_GUARD_COVERAGE_OPTIONS[0]}
+                                  onChange={(event) => patchSection("master", { coverageType: event.target.value, productCode: event.target.value.split(" - ")[0], productName: event.target.value })}
+                                  disabled={!canEdit}
+                                  className={cls(formInputClass, "w-full md:w-3/4 shadow-sm", !canEdit && formInputDisabledClass)}
+                                >
+                                  <option value="">-- Pilih --</option>
+                                  {LIFE_GUARD_COVERAGE_OPTIONS.map((item) => (
+                                    <option key={item} value={item}>
+                                      {item}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2 md:flex-row md:items-start">
+                              <div className="md:w-1/3">
+                                <div className={classicLabelClass}>Batasan Usia Peserta <span className="text-red-500">*</span></div>
+                              </div>
+                              <div className="md:w-2/3">
+                                <div className="flex items-center gap-3">
+                                  <input type="number" value={master.ageMin || ""} onChange={(event) => patchSection("master", { ageMin: onlyDigits(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "w-24 text-center font-bold shadow-sm", !canEdit && formInputDisabledClass)} />
+                                  <span className="font-bold text-slate-400">-</span>
+                                  <input type="number" value={master.ageMax || ""} onChange={(event) => patchSection("master", { ageMax: onlyDigits(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "w-24 text-center font-bold shadow-sm", !canEdit && formInputDisabledClass)} />
+                                </div>
+                                {ageInvalid ? <div className="mt-1 text-xs font-bold text-red-500">Minimal usia tidak boleh melebihi maksimal</div> : null}
+                              </div>
+                            </div>
+
+                            <div className="border-t border-slate-50 pt-6">
+                              <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                                <div className="lg:w-1/3">
+                                  <div className={classicLabelClass}>Kriteria Validasi Santunan <span className="text-red-500">*</span></div>
+                                </div>
+                                <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:items-center">
+                                  <select value={master.npCriteria || "antara"} onChange={(event) => patchSection("master", { npCriteria: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "w-60 font-bold text-blue-800", !canEdit && formInputDisabledClass)}>
+                                    <option value="setara">Setara dengan</option>
+                                    <option value="antara">Antara (Min & Maks)</option>
+                                    <option value="lebih_besar">Lebih besar dari</option>
+                                    <option value="kurang_dari">Kurang dari</option>
+                                  </select>
+                                  <div className="flex items-center gap-2">
+                                    <span className="whitespace-nowrap text-[10px] font-black uppercase text-[#004d7a]">
+                                      Mata Uang <span className="text-red-500">*</span>
+                                    </span>
+                                    <select value={master.currencyCode || LIFE_GUARD_CURRENCY_OPTIONS[0]} onChange={(event) => patchSection("master", { currencyCode: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "w-40 bg-yellow-50 font-bold text-slate-900 shadow-inner", !canEdit && formInputDisabledClass)}>
+                                      {LIFE_GUARD_CURRENCY_OPTIONS.map((item) => (
+                                        <option key={item} value={item}>
+                                          {item}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div className="flex flex-col gap-3 md:flex-row md:items-start">
+                                <div className="pt-2 md:w-1/3">
+                                  <div className={classicLabelClass}>NP Meninggal Dunia (A) <span className="text-red-500">*</span></div>
+                                </div>
+                                <div className="flex items-center gap-3 md:w-2/3">
+                                  <input type="text" value={master.npAMin || ""} onChange={(event) => patchSection("master", { npAMin: formatNumber(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "w-44 text-right font-black text-[#004d7a] shadow-sm", !canEdit && formInputDisabledClass)} />
+                                  {master.npCriteria === "antara" ? <span className="font-bold text-slate-400">-</span> : null}
+                                  {master.npCriteria === "antara" ? (
+                                    <input type="text" value={master.npAMax || ""} onChange={(event) => patchSection("master", { npAMax: formatNumber(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "w-44 text-right font-black text-[#004d7a] shadow-sm", !canEdit && formInputDisabledClass)} />
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-3 md:flex-row md:items-start">
+                                <div className="pt-2 md:w-1/3">
+                                  <div className={classicLabelClass}>NP Cacat Tetap (B)</div>
+                                </div>
+                                <div className="flex items-center gap-4 md:w-2/3">
+                                  <div className="relative w-24">
+                                    <input type="number" value={master.npBPercent || "100"} onChange={(event) => patchSection("master", { npBPercent: onlyDigits(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "pr-8 text-center font-bold", !canEdit && formInputDisabledClass)} />
+                                    <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">%</span>
+                                  </div>
+                                  <div className="min-w-[200px] rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-black text-blue-700 shadow-sm">
+                                    {lifeGuardComputed.npBText}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-3 md:flex-row md:items-start">
+                                <div className="pt-2 md:w-1/3">
+                                  <div className={classicLabelClass}>NP Pengobatan (C)</div>
+                                </div>
+                                <div className="flex items-center gap-4 md:w-2/3">
+                                  <div className="relative w-24">
+                                    <input type="number" value={master.npCPercent || "10"} onChange={(event) => patchSection("master", { npCPercent: onlyDigits(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "pr-8 text-center font-bold", !canEdit && formInputDisabledClass)} />
+                                    <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">%</span>
+                                  </div>
+                                  <div className="min-w-[200px] rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-black text-blue-700 shadow-sm">
+                                    {lifeGuardComputed.npCText}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-8 border-t border-slate-50 pt-6 md:grid-cols-2">
+                              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                                <div className="md:w-1/2">
+                                  <div className={classicLabelClass}>Kelas Risiko <span className="text-red-500">*</span></div>
+                                </div>
+                                <div className="md:w-1/2">
+                                  <select value={master.riskClass || "Kelas III"} onChange={(event) => patchSection("master", { riskClass: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "font-bold shadow-sm", !canEdit && formInputDisabledClass)}>
+                                    <option value="">-- Pilih --</option>
+                                    <option value="Kelas I">Kelas I</option>
+                                    <option value="Kelas II">Kelas II</option>
+                                    <option value="Kelas III">Kelas III</option>
+                                    <option value="Kelas IV">Kelas IV</option>
+                                    <option value="Single Rate">Single Rate</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                                <div className="md:w-1/2">
+                                  <div className={classicLabelClass}>Risk Exposure <span className="text-red-500">*</span></div>
+                                </div>
+                                <div className="md:w-1/2">
+                                  <select value={master.riskExposure || "Tersebar"} onChange={(event) => patchSection("master", { riskExposure: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "font-bold shadow-sm", !canEdit && formInputDisabledClass)}>
+                                    <option value="Tersebar">Tersebar</option>
+                                    <option value="Terlokalisir">Terlokalisir</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-3 border-t border-slate-50 pt-6 md:flex-row md:items-center">
+                              <div className="md:w-1/3">
+                                <div className={classicLabelClass}>Rate Premi (‰)</div>
+                              </div>
+                              <div className="flex items-center gap-2 md:w-2/3">
+                                <input
+                                  type="text"
+                                  value={master.baseRate || ""}
+                                  onChange={(event) => patchSection("master", { baseRate: event.target.value.replace(/[^0-9,]/g, "").replace(/(,.*?),(.*)/g, "$1$2") })}
+                                  disabled={!canEdit}
+                                  className={cls(formInputClass, "w-24 text-center font-black text-blue-600 shadow-sm", !canEdit && formInputDisabledClass)}
+                                />
+                                <span className="text-xs font-black text-slate-500">‰</span>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                              <div className="md:w-1/3">
+                                <div className={classicLabelClass}>Premi <span className="text-red-500">*</span></div>
+                              </div>
+                              <div className="flex items-center gap-3 md:w-2/3">
+                                <input type="text" value={formatRupiah(lifeGuardComputed.premiumMin)} readOnly className={cls(formInputClass, "w-44 text-right font-bold text-[#004d7a] shadow-sm", "bg-slate-50")} />
+                                {master.npCriteria === "antara" ? <span className="font-bold text-slate-400">-</span> : null}
+                                {master.npCriteria === "antara" ? <input type="text" value={formatRupiah(lifeGuardComputed.premiumMax)} readOnly className={cls(formInputClass, "w-44 text-right font-bold text-[#004d7a] shadow-sm", "bg-slate-50")} /> : null}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-3 border-t border-slate-50 pt-6 md:flex-row md:items-center">
+                              <div className="md:w-1/3">
+                                <div className={classicLabelClass}>Risiko Sendiri (Deductible)</div>
+                              </div>
+                              <div className="md:w-2/3">
+                                <textarea rows={2} value={master.deductible || ""} onChange={(event) => patchSection("master", { deductible: event.target.value })} disabled={!canEdit} className={cls("min-h-[78px] resize-none font-medium", formInputClass, !canEdit && formInputDisabledClass)} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {stepIndex === 2 ? (
+                      <div className="mb-6 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
+                        <div className="space-y-10 bg-white p-8 text-[11px] text-slate-600">
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                              <FileCode2 className="h-5 w-5" />
+                              Wording
+                            </div>
+                            <div className="flex flex-wrap gap-10 pl-4 text-slate-700">
+                              {WORDING_OPTIONS.map((item) => (
+                                <label key={item} className="flex cursor-pointer items-center gap-3">
+                                  <input type="radio" name="wording_type" checked={master.wordingType === item} onChange={() => patchSection("master", { wordingType: item })} disabled={!canEdit} className="h-4 w-4 text-blue-600 shadow-sm" />
+                                  <span className="font-bold uppercase tracking-tight text-slate-700">{item}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                              <ClipboardList className="h-5 w-5" />
+                              Klausul
+                            </div>
+                            <div className="grid grid-cols-1 gap-x-12 gap-y-4 pl-4 text-slate-700 md:grid-cols-2">
+                              {LIFE_GUARD_ADDITIONAL_CLAUSE_LIBRARY.map((item) => (
+                                <label key={item.title} className="flex cursor-pointer items-center gap-3">
+                                  <input type="checkbox" checked={(master.clausePackage || []).includes(item.title)} onChange={() => toggleClause(item.title)} disabled={!canEdit} className="h-4 w-4 rounded text-blue-600 shadow-sm" />
+                                  <span className="font-semibold">{item.title}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-4 border-t border-slate-100 pt-8 text-slate-700">
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                              <NotebookPen className="h-5 w-5" />
+                              Klausul Tambahan / Subjectivity
+                            </div>
+                            <div className="grid grid-cols-1 gap-8 rounded-2xl border border-blue-100 bg-[#f8faff] p-6 shadow-sm md:grid-cols-2">
+                              <div className="space-y-4 text-slate-800">
+                                <input
+                                  type="text"
+                                  value={master.additionalClauseTitle || ""}
+                                  onChange={(event) => patchSection("master", { additionalClauseTitle: event.target.value })}
+                                  disabled={!canEdit}
+                                  placeholder="Judul Klausula..."
+                                  className={cls(formInputClass, "text-[11px] font-black", !canEdit && formInputDisabledClass)}
+                                />
+                                <textarea
+                                  rows={4}
+                                  value={master.additionalClauseDescription || ""}
+                                  onChange={(event) => patchSection("master", { additionalClauseDescription: event.target.value })}
+                                  disabled={!canEdit}
+                                  placeholder="Deskripsi Klausula..."
+                                  className={cls("min-h-[112px] resize-none border-slate-200 text-xs font-medium", formInputClass, !canEdit && formInputDisabledClass)}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={addLifeGuardCustomClause}
+                                  disabled={!canEdit}
+                                  className={cls("flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[10px] font-black uppercase text-white shadow-lg transition", canEdit ? "bg-blue-600 hover:bg-blue-700" : "cursor-not-allowed bg-slate-400")}
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                  Tambahkan Klausula
+                                </button>
+                              </div>
+                              <div className="flex flex-col justify-start">
+                                <div className="max-h-[220px] space-y-3 overflow-y-auto py-2 pr-2">
+                                  {(master.customClauses || []).length === 0 ? (
+                                    <div className="py-16 text-center text-[10px] font-black uppercase tracking-widest text-slate-300 opacity-50">Belum ada tambahan</div>
+                                  ) : (
+                                    (master.customClauses || []).map((item) => (
+                                      <div key={item.id} className="group relative mb-2 rounded-xl border border-slate-200 bg-white p-3 text-left text-slate-800 shadow-sm transition-all hover:border-blue-200">
+                                        <div className="flex items-start gap-3">
+                                          <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+                                          <div className="flex-1 pr-6">
+                                            <span className="block text-[10px] font-black text-blue-800">{item.title}</span>
+                                            <p className="mt-1 text-[9px] font-medium italic leading-relaxed text-slate-500">{item.description}</p>
+                                          </div>
+                                          {canEdit ? (
+                                            <button type="button" onClick={() => removeLifeGuardCustomClause(item.id)} className="absolute right-3 top-3 p-1 text-slate-300 opacity-0 transition-colors group-hover:opacity-100 hover:text-red-500">
+                                              <X className="h-3.5 w-3.5" />
+                                            </button>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {stepIndex === 3 ? (
+                      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="p-8">
+                          <div className="mb-10 grid grid-cols-1 gap-8 text-slate-700 md:grid-cols-2">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                              <div className="md:w-1/2">
+                                <div className={classicLabelClass}>Biaya Polis <span className="text-red-500">*</span></div>
+                              </div>
+                              <div className="md:w-1/2">
+                                <input type="text" value={master.adminFee || ""} onChange={(event) => patchSection("master", { adminFee: formatNumber(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "font-bold shadow-sm", !canEdit && formInputDisabledClass)} />
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                              <div className="md:w-1/2">
+                                <div className={classicLabelClass}>Biaya Materai (Sesuai Star)</div>
+                              </div>
+                              <div className="md:w-1/2">
+                                <input type="text" value={master.stampDuty || "Sesuai STAR"} disabled className={cls(formInputClass, formInputDisabledClass, "text-center font-bold shadow-sm")} />
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                              <div className="md:w-1/2">
+                                <div className={classicLabelClass}>Diskon (%)</div>
+                              </div>
+                              <div className="md:w-1/2">
+                                <input type="number" value={master.discountPercent || "0"} onChange={(event) => patchSection("master", { discountPercent: onlyDigits(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "font-bold shadow-sm", !canEdit && formInputDisabledClass)} />
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                              <div className="md:w-1/2">
+                                <div className={classicLabelClass}>Brokerage / Komisi (%)</div>
+                              </div>
+                              <div className="md:w-1/2">
+                                <input type="number" value={master.commissionPercent || "15"} onChange={(event) => patchSection("master", { commissionPercent: onlyDigits(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "font-bold shadow-sm", !canEdit && formInputDisabledClass)} />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="border-t border-slate-100 pt-8">
+                            <h4 className="mb-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Pratinjau Data Pertanggungan</h4>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Limit Meninggal (A)</p>
+                                <p className="text-[11px] font-black text-blue-800">{lifeGuardComputed.npAText}</p>
+                              </div>
+                              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Jangka Waktu</p>
+                                <p className="text-[11px] font-black text-slate-700">{`${blueprint.startDate || "-"} s/d ${blueprint.endDate || "-"}`}</p>
+                              </div>
+                              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Rate Premi (‰)</p>
+                                <p className="text-[11px] font-black text-slate-700">{master.baseRate ? `${master.baseRate} ‰` : "-"}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-10 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                            <div className="space-y-6">
+                              <LifeGuardConfigurationSnapshotCard items={lifeGuardDetailItems} />
+                              <LifeGuardConfigurationReviewCard
+                                readiness={lifeGuardReadiness}
+                                statusLabel={statusMeta.label}
+                                roleLabel={roleMeta.shortLabel}
+                                referenceCode={referenceCode}
+                                periodLabel={lifeGuardPeriodLabel}
+                                checklistItems={lifeGuardChecklistItems}
+                                activeNoteLabel={getLifeGuardNoteLabel(role)}
+                                activeNoteValue={noteValue}
+                                onToggleChecklist={toggleLifeGuardChecklist}
+                                canToggleChecklist={!showSuccess}
+                              />
+                            </div>
+
+                            <div className="xl:sticky xl:top-28 xl:self-start">
+                              <LifeGuardSidebarSummaryCard
+                                beneficiary={lifeGuardBeneficiary}
+                                infoRows={lifeGuardSummaryRows}
+                                premiumRows={lifeGuardFeeRows}
+                                premiumValue={lifeGuardPremiumText}
+                                pendingItems={lifeGuardPendingItems}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {showReviewSummary ? (
+                  <div className="mb-6 animate-fade-in text-slate-800">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-xl">
+                      <div className="flex items-center justify-between border-b border-slate-100 bg-[#1e293b] px-8 py-6">
+                        <div className="flex items-center gap-3 text-white">
+                          <FileSpreadsheet className="h-5 w-5 text-blue-400" />
+                          <span>Tinjauan Konfigurasi T&C</span>
+                        </div>
+                        <span className="rounded border border-blue-500/30 bg-blue-500/20 px-3 py-1 text-[10px] uppercase tracking-widest text-blue-400 shadow-sm">Review Mode</span>
+                      </div>
+                      <div className="space-y-10 bg-white p-10 text-[11px] text-slate-800">
+                        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                          <div className="md:col-span-2">
+                            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Penerima Manfaat (Tertanggung & QQ)</p>
+                            <p className="truncate text-base font-black uppercase leading-tight text-blue-800">
+                              {`${String(blueprint.insuredName || "-").toUpperCase()}${blueprint.qqTambahan ? ` ${String(blueprint.qqTambahan).toUpperCase()}` : ""}`}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Nomor Polis Induk / Nomor PKS</p>
+                            <p className="text-[13px] font-bold text-slate-800">{master.masterPolicyNo || "-"}</p>
+                          </div>
+                          <div>
+                            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Jangka Waktu Pertanggungan</p>
+                            <p className="text-[13px] font-bold text-slate-800">{`${blueprint.startDate || "-"} s/d ${blueprint.endDate || "-"}`}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Jenis Produk / Pertanggungan</p>
+                            <p className="text-[13px] font-bold text-slate-800">{master.coverageType || "-"}</p>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 shadow-inner">
+                          <h4 className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase text-[#004d7a]">
+                            <span className="h-4 w-1.5 rounded-full bg-blue-600" />
+                            Limit & Manfaat Santunan
+                          </h4>
+                          <div className="grid grid-cols-1 gap-8 text-center uppercase tracking-tight md:grid-cols-3">
+                            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                              <p className="text-[10px] font-black uppercase text-blue-700">NP Meninggal Dunia (A)</p>
+                              <p className="text-[12px] font-black text-blue-800">{lifeGuardComputed.npAText}</p>
+                            </div>
+                            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                              <p className="text-[10px] font-black uppercase text-slate-700">NP Cacat Tetap (B)</p>
+                              <p className="text-[12px] font-black text-slate-800">{lifeGuardComputed.npBText}</p>
+                            </div>
+                            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                              <p className="text-[10px] font-black uppercase text-slate-700">NP Pengobatan (C)</p>
+                              <p className="text-[12px] font-black text-slate-800">{lifeGuardComputed.npCText}</p>
+                            </div>
+                          </div>
+                          <div className="mt-6 grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-6 text-center uppercase tracking-tight md:grid-cols-4">
+                            <div>
+                              <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Kelas Risiko</p>
+                              <p className="text-[13px] font-bold text-slate-800">{master.riskClass || "-"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Risk Exposure</p>
+                              <p className="text-[13px] font-bold text-slate-800">{master.riskExposure || "-"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Batasan Usia</p>
+                              <p className="text-[13px] font-bold text-slate-800">{`${master.ageMin || "-"} - ${master.ageMax || "-"} Thn`}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-red-500">Risiko Sendiri</p>
+                              <p className="text-[13px] font-bold text-red-600">{master.deductible || "-"}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-6 text-slate-700">
+                          <h4 className="mb-3 border-b pb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Warranty & Daftar Klausula Lengkap</h4>
+                          <div>
+                            <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Tipe Wording</p>
+                            <p className="text-[13px] font-bold text-slate-800">{master.wordingType || "-"}</p>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 pl-0 md:grid-cols-2">
+                            {selectedClauses.length === 0 ? (
+                              <p className="col-span-2 py-4 text-center text-[10px] italic text-slate-400">Tidak ada klausula dipilih.</p>
+                            ) : (
+                              selectedClauses.map((item) => (
+                                <div key={item} className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2 text-[10px] font-bold text-slate-700 shadow-sm">
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                                  {item}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+                          <h4 className="border-b pb-2 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Rincian Finansial & Struktur Biaya</h4>
+                          <div className="grid grid-cols-1 gap-8 text-center uppercase tracking-tight md:grid-cols-2">
+                            <div className="rounded-xl border border-yellow-100 bg-yellow-50 p-4">
+                              <p className="text-[10px] font-extrabold uppercase text-yellow-700">Rate Premi (‰)</p>
+                              <p className="text-xl font-black text-yellow-800">{master.baseRate ? `${master.baseRate} ‰` : "-"}</p>
+                            </div>
+                            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                              <p className="text-[10px] font-extrabold uppercase text-blue-700">Premi</p>
+                              <p className="text-xl font-black text-blue-800">
+                                {master.npCriteria === "antara"
+                                  ? `${currencyCode} ${formatRupiah(lifeGuardComputed.premiumMin)} - ${formatRupiah(lifeGuardComputed.premiumMax)}`
+                                  : `${currencyCode} ${formatRupiah(lifeGuardComputed.premiumMin)}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-6 pt-4 text-center md:grid-cols-4">
+                            <div>
+                              <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Biaya Polis</p>
+                              <p className="text-[13px] font-bold text-slate-800">{`${currencyCode} ${master.adminFee || "0"}`}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Biaya Materai Sesuai STAR</p>
+                              <p className="text-[13px] font-bold text-slate-800">{master.stampDuty || "Sesuai STAR"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Diskon</p>
+                              <p className="text-[13px] font-bold text-orange-600">{`${master.discountPercent || "0"}%`}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Brokerage/Komisi</p>
+                              <p className="text-[13px] font-bold text-green-600">{`${master.commissionPercent || "0"}%`}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {!showSuccess ? (
+                  <>
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4 text-[10px] font-black uppercase tracking-widest">
+                        <h3>Log Aktivitas Alur Kerja</h3>
+                        <ClipboardList className="h-5 w-5 text-slate-400" />
+                      </div>
+                      <div className="max-h-[300px] space-y-4 overflow-y-auto bg-slate-50/30 p-6 text-xs">
+                        {(selectedConfig.audit || []).map((item, index) => {
+                          const itemRole = String(item.actor || "");
+                          const itemTone = itemRole.includes("HO") ? "bg-emerald-600" : itemRole.includes("UDW") ? "bg-orange-500" : "bg-blue-600";
+                          const itemAvatar = itemRole.includes("HO") ? "HO" : itemRole.includes("UDW") ? "UW" : itemRole.includes("SYSTEM") ? "SY" : "RM";
+                          return (
+                            <div key={`${item.at}-${index}`} className="group relative flex gap-4 pb-4 text-xs text-slate-700">
+                              <div className="absolute bottom-0 left-[11px] top-6 w-px bg-slate-200 last:hidden" />
+                              <div className={cls("z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[8px] font-bold uppercase text-white shadow-sm", itemTone)}>
+                                {itemAvatar}
+                              </div>
+                              <div className="flex-1 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                                <div className="mb-1 flex items-center justify-between gap-3">
+                                  <span className="text-[10px] font-black uppercase tracking-tight text-slate-800">{item.action}</span>
+                                  <span className="text-[9px] font-bold text-slate-400">{item.at}</span>
+                                </div>
+                                <p className="text-[11px] italic leading-relaxed text-slate-500">"{item.note || "Aktivitas workflow tercatat pada simulator."}"</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="mt-8 animate-fade-in rounded-2xl border border-slate-200 bg-white p-6 text-slate-800 shadow-md">
+                      <div className="mb-4 flex items-center gap-2 text-[#004d7a]">
+                        <NotebookPen className="h-5 w-5" />
+                        <h4 className="text-[10px] font-black uppercase tracking-widest">{getLifeGuardNoteLabel(role)}</h4>
+                      </div>
+                      <div className="relative">
+                        <textarea
+                          rows={4}
+                          maxLength={500}
+                          value={noteValue}
+                          onChange={(event) => setLifeGuardReviewNote(event.target.value)}
+                          placeholder="Wajib diisi sebagai pertimbangan alur kerja..."
+                          className={cls("min-h-[120px] resize-none border-slate-200 text-[13px] font-medium text-slate-800 shadow-sm", formInputClass)}
+                        />
+                        <div className="absolute bottom-3 right-4 text-[8px] font-black uppercase tracking-widest text-slate-300">
+                          {noteValue.length} / 500 Chars
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
+
+            {!showSuccess ? (
+              <footer className="shrink-0 border-t border-slate-200 bg-white px-6 py-4 shadow-md md:px-10">
+                <div className="mx-auto flex max-w-6xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-8 text-xs font-bold text-slate-500">
+                    <div>
+                      <span className="mb-0.5 block text-[9px] font-black uppercase tracking-widest">Status Konfigurasi</span>
+                      <span className={cls("rounded-lg border px-3 py-1 text-[10px] font-black uppercase shadow-sm", statusMeta.badge)}>
+                        {statusMeta.label}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">{renderActionButtons()}</div>
+                </div>
+              </footer>
+            ) : null}
+          </main>
+
+        {lifeGuardPendingAction && modalMeta ? (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-[420px] overflow-hidden rounded-2xl bg-white text-center text-slate-800 shadow-2xl ring-1 ring-white/10">
+              <div className="flex items-center justify-between border-b bg-slate-50 px-8 py-5 text-[10px] font-black uppercase tracking-widest">
+                <span>Konfirmasi Sesi</span>
+                <button type="button" onClick={closeLifeGuardAction} className="text-gray-400 transition hover:text-slate-600">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-8 text-center font-medium text-slate-800">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                  {modalMeta.icon}
+                </div>
+                <p className="mb-2 text-sm leading-relaxed text-gray-600">{modalMeta.title}</p>
+              </div>
+              <div className="flex justify-end gap-3 border-t bg-gray-50 px-8 py-5">
+                <button type="button" onClick={closeLifeGuardAction} className="rounded-xl border border-gray-300 px-6 py-2.5 text-[10px] font-black uppercase text-slate-700 transition">
+                  Batal
+                </button>
+                <button type="button" onClick={() => applyLifeGuardAction(lifeGuardPendingAction)} className="rounded-xl bg-[#004d7a] px-8 py-2.5 text-[10px] font-black uppercase text-white shadow-lg transition hover:bg-[#003a5c]">
+                  Ya, Proses
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  function renderTravelSafeStudio() {
+    if (!selectedConfig || selectedConfig.family !== "travel-group") return null;
+
+    const blueprint = selectedConfig.data.blueprint;
+    const master = selectedConfig.data.master;
+    const review = selectedConfig.data.review;
+    const statusMeta = getLifeGuardStatusMeta(selectedConfig.status);
+    const roleMeta = getLifeGuardRoleMeta(role);
+    const travelComputed = getTravelSafeComputed(master);
+    const totalDaysLabel = getLifeGuardTotalDays(blueprint.startDate, blueprint.endDate);
+    const canEdit = (role === "Maker" && selectedConfig.status === "Draft") || (role === "Checker" && selectedConfig.status === "Checker");
+    const noteField = getLifeGuardReviewField(role);
+    const noteValue = review?.[noteField] || "";
+    const referenceCode = getLifeGuardReferenceCode(selectedConfig);
+    const showSuccess = selectedConfig.status === "Active";
+    const showReviewSummary = !showSuccess && role === "Approval";
+    const showEntry = !showSuccess && role !== "Approval";
+    const pendingItems = getPendingItems(selectedConfig);
+    const readiness = getReadiness(selectedConfig);
+    const beneficiary = `${String(blueprint.insuredName || selectedConfig.partnerName || "-").toUpperCase()}${
+      blueprint.qqTambahan ? ` ${String(blueprint.qqTambahan).toUpperCase()}` : ""
+    }`;
+    const periodLabel = `${blueprint.startDate || "-"} s/d ${blueprint.endDate || "-"}`;
+    const summaryRows = [
+      { label: "Nomor Polis Induk / PKS", value: master.masterPolicyNo || blueprint.agreementNo || "-" },
+      { label: "Jenis Produk", value: travelComputed.coverageText },
+      { label: "Perluasan Aktif", value: `${travelComputed.activeBenefitCount} manfaat` },
+      { label: "Tambahan Perlindungan", value: travelComputed.assistanceFeeText },
+      { label: "Wording", value: master.wordingType || "-" },
+    ];
+    const feeRows = [
+      { label: "Biaya Polis", value: `${travelComputed.currencyCode} ${master.adminFee || "0"}` },
+      { label: "Bantuan Medis Dunia", value: travelComputed.assistanceFeeText },
+      { label: "Biaya Meterai", value: master.stampDuty || "Sesuai STAR" },
+      { label: "Brokerage / Komisi", value: `${master.commissionPercent || "0"}%` },
+    ];
+    const detailItems = [
+      { label: "Penerima Manfaat", value: beneficiary },
+      { label: "Nomor Polis Induk / PKS", value: master.masterPolicyNo || blueprint.agreementNo || "-" },
+      { label: "Jangka Waktu Pertanggungan", value: periodLabel },
+      { label: "Jenis Produk / Pertanggungan", value: travelComputed.coverageText },
+      { label: "Mata Uang", value: travelComputed.lockedCurrency || "-" },
+      { label: "Kriteria Validasi", value: master.npCriteria || "-" },
+      { label: "NP Kecelakaan Diri", value: travelComputed.accidentText },
+      { label: "NP Perlindungan Medis", value: travelComputed.medicalText },
+      { label: "Rate Manfaat Utama", value: `${master.npAccidentRate || "-"}% / ${master.npMedicalRate || "-"}%` },
+      { label: "Perluasan Aktif", value: `${travelComputed.activeBenefitCount} manfaat` },
+      { label: "Tambahan Perlindungan", value: travelComputed.assistanceFeeText },
+      { label: "Wording", value: master.wordingType || "-" },
+      { label: "Risiko Sendiri", value: master.deductible || "-" },
+    ];
+    const checklistItems = [
+      {
+        key: "mappingReviewed",
+        title: "Mapping Reviewed",
+        detail: "Mapping peserta, plan perjalanan, dan sertifikat sudah dicek.",
+        checked: Boolean(review.checklist.mappingReviewed),
+      },
+      {
+        key: "documentBound",
+        title: "Document Bound",
+        detail: "PKS, wording, dan manfaat Travel Safe sudah diikat ke konfigurasi.",
+        checked: Boolean(review.checklist.documentBound),
+      },
+      {
+        key: "partnerUat",
+        title: "Partner UAT",
+        detail: "Template peserta dan manfaat tambahan sudah diuji sebelum approval.",
+        checked: Boolean(review.checklist.partnerUat),
+      },
+      {
+        key: "syncReady",
+        title: "Sync Ready",
+        detail: "Konfigurasi siap diteruskan ke proses penerbitan dan core system.",
+        checked: Boolean(review.checklist.syncReady),
+      },
+    ];
+    const formInputClass =
+      "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[13px] font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
+    const formInputDisabledClass = "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500";
+    const classicLabelClass = "text-[11px] font-bold uppercase text-[#004d7a]";
+    const toggleChecklist = (key, value) =>
+      patchSection("review", {
+        checklist: { ...review.checklist, [key]: value },
+      });
+    const modalMeta = {
+      TO_UDW: {
+        title: "Kirim ke Admin UDW untuk tahap Checker?",
+        icon: <ChevronRight className="h-7 w-7 text-blue-600" />,
+      },
+      REJECT: {
+        title: "Tolak konfigurasi ini?",
+        icon: <X className="h-7 w-7 text-red-600" />,
+      },
+      RETURN_MAKER: {
+        title: "Kembalikan dokumen ke Maker?",
+        icon: <ArrowLeft className="h-7 w-7 text-orange-500" />,
+      },
+      TO_HO: {
+        title: "Teruskan dokumen ke Approver HO?",
+        icon: <ChevronRight className="h-7 w-7 text-indigo-600" />,
+      },
+      RETURN_UDW: {
+        title: "Kembalikan ke Admin UDW?",
+        icon: <ArrowLeft className="h-7 w-7 text-blue-600" />,
+      },
+      ISSUE: {
+        title: "Setujui & terbitkan polis secara resmi?",
+        icon: <CheckCircle2 className="h-7 w-7 text-emerald-600" />,
+      },
+      RESET: {
+        title: "Reset simulator ke awal? Semua progres akan hilang.",
+        icon: <RefreshCcw className="h-7 w-7 text-slate-600" />,
+      },
+    }[lifeGuardPendingAction];
+
+    const renderActionButtons = () => {
+      if (selectedConfig.status === "Draft") {
+        if (role === "Maker") {
+          return (
+            <button
+              type="button"
+              onClick={() => openLifeGuardAction("TO_UDW")}
+              className="rounded-xl bg-[#004d7a] px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-[#003554]"
+            >
+              Kirim ke Checker
+            </button>
+          );
+        }
+        return <div className="text-[10px] font-bold uppercase italic text-slate-400">Draft stage - menunggu maker...</div>;
+      }
+
+      if (selectedConfig.status === "Checker") {
+        if (role === "Checker") {
+          return (
+            <>
+              <button type="button" onClick={() => openLifeGuardAction("REJECT")} className="rounded-xl bg-red-600 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-red-700">
+                Tolak
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("RETURN_MAKER")} className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-50">
+                Kembali ke Maker
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("TO_HO")} className="rounded-xl bg-[#004d7a] px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-[#003a5c]">
+                Forward ke Approval
+              </button>
+            </>
+          );
+        }
+        return <div className="text-[10px] font-bold uppercase italic tracking-tight text-blue-600">Checker stage - ganti peran ke admin UDW...</div>;
+      }
+
+      if (selectedConfig.status === "Approval") {
+        if (role === "Approval") {
+          return (
+            <>
+              <button type="button" onClick={() => openLifeGuardAction("REJECT")} className="rounded-xl bg-red-600 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-red-700">
+                Tolak
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("RETURN_UDW")} className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-50">
+                Kembali ke Admin UDW
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("RETURN_MAKER")} className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-50">
+                Kembali ke Maker
+              </button>
+              <button type="button" onClick={() => openLifeGuardAction("ISSUE")} className="rounded-xl bg-emerald-600 px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-emerald-700">
+                Setuju
+              </button>
+            </>
+          );
+        }
+        return <div className="text-[10px] font-bold uppercase italic tracking-tight text-indigo-600">Approval stage - ganti peran ke HO UDW...</div>;
+      }
+
+      return null;
+    };
+
+    return (
+      <div className="min-h-screen bg-[#f4f7fa] text-slate-800">
+        <AppProductHeader
+          sessionName={sessionName}
+          sessionRoleLabel={sessionRoleLabel}
+          accountInitials={accountMeta.initials}
+          onHome={exitToShell}
+          accountMenuOpen={headerAccountMenuOpen}
+          onToggleAccountMenu={() => setHeaderAccountMenuOpen((current) => !current)}
+          accountMenuItems={accountMenuItems}
+        />
+
+        <main className="relative">
+          {toast ? (
+            <div className="pointer-events-none fixed right-4 top-20 z-[70]">
+              <div className="rounded-xl border border-white/10 bg-slate-900 px-5 py-3 text-[10px] font-black text-white shadow-2xl">
+                {toast.toUpperCase()}
+              </div>
+            </div>
+          ) : null}
+
+          {!showSuccess ? (
+            <header className="relative overflow-hidden bg-[#0A4D82] pb-7 md:pb-8">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.20),transparent_28%),radial-gradient(circle_at_80%_25%,rgba(255,255,255,0.14),transparent_24%),radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.12),transparent_24%)]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0A4D82]/60 to-[#0A4D82]/75" />
+              <div className="relative mx-auto max-w-[1800px] px-4 pt-4 md:px-6 md:pt-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={backToCatalog}
+                      className="inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 focus-visible:ring-4 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A4D82]"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Kembali ke Daftar Konfigurasi
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 text-center text-white md:mt-5">
+                  <div className="inline-flex rounded-full bg-white/10 px-3.5 py-1 text-[12px] font-medium text-white/90 md:px-4 md:py-1.5 md:text-sm">
+                    Selamat datang kembali, {accountMeta.name}
+                  </div>
+                  <h1 className="mt-3 text-[28px] font-bold tracking-tight md:mt-4 md:text-[40px]">
+                    {fixDisplayText(studioHeroTitle)}
+                  </h1>
+                  <p className="mx-auto mt-1.5 max-w-3xl text-[13px] leading-6 text-white/90 md:mt-2 md:text-[17px] md:leading-7">
+                    {fixDisplayText(selectedCardMeta?.description || "Pengaturan partner disesuaikan per produk dan dikelola langsung dari portal internal.")}
+                  </p>
+                </div>
+
+                <StudioJourneySteps
+                  stepIndex={stepIndex}
+                  stepState={stepState}
+                  maxUnlockedStep={maxUnlockedStep}
+                  onSelect={(nextStep) => setStepIndex(nextStep)}
+                />
+
+                <div className="mt-4 flex justify-center">
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/95 p-1.5 shadow-lg shadow-black/10 backdrop-blur">
+                      <div className="flex items-center px-2">
+                        <span className="mr-2 whitespace-nowrap text-[9px] font-black uppercase text-slate-400">Ganti Peran:</span>
+                        <select
+                          value={role}
+                          onChange={(event) => updateRole(event.target.value)}
+                          className="rounded-lg bg-transparent px-3 py-1 text-[11px] font-black text-[#004d7a] outline-none ring-0"
+                        >
+                          <option value="Maker">ROM (MAKER)</option>
+                          <option value="Checker">ADMIN UDW (CHECKER)</option>
+                          <option value="Approval">HO UDW (APPROVAL)</option>
+                        </select>
+                      </div>
+                      <div className="mx-1 h-6 w-px bg-slate-200" />
+                      <button
+                        type="button"
+                        onClick={() => openLifeGuardAction("RESET")}
+                        className="rounded-lg border border-red-100 bg-white px-3 py-1 text-[10px] font-black uppercase text-red-500 transition hover:bg-red-50"
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          <RefreshCcw className="h-3.5 w-3.5" />
+                          Reset
+                        </span>
+                      </button>
+                    </div>
+                    <div className={cls("flex h-10 w-10 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-lg shadow-black/10", roleMeta.tone)}>
+                      {roleMeta.avatar}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </header>
+          ) : null}
+
+          <div className="mx-auto max-w-6xl px-4 py-5 md:px-6">
+            <div className="pb-40">
+              {showSuccess ? (
+                <div className="animate-fade-in py-20 text-center">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-green-200 bg-green-100 text-green-500 shadow-sm">
+                      <CheckCircle2 className="h-10 w-10" />
+                    </div>
+                    <h2 className="mb-2 text-2xl font-bold uppercase tracking-tight text-slate-800">Configuration Active</h2>
+                    <p className="mb-8 text-sm text-slate-500">
+                      Production ready for <span className="font-bold text-slate-700">{blueprint.insuredName || selectedConfig.partnerName}</span>.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-4">
+                      <button type="button" onClick={resetLifeGuardWorkflow} className="rounded-xl bg-[#004d7a] px-8 py-3 text-xs font-black uppercase text-white shadow-lg transition hover:bg-[#003554]">
+                        Start New Config
+                      </button>
+                      <button type="button" onClick={editLifeGuardFromSuccess} className="rounded-xl border-2 border-[#004d7a] bg-white px-8 py-3 text-xs font-black uppercase text-[#004d7a] shadow-md transition hover:bg-slate-50">
+                        Edit Existing Config
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {showEntry ? (
+                <div>
+                  <div className="sticky top-0 z-20 mb-6 flex overflow-x-auto rounded-t-2xl border-b border-slate-200 bg-white shadow-sm">
+                    {STEP_LIST.map((step, index) => (
+                      <button
+                        key={step.id}
+                        type="button"
+                        onClick={() => setStepIndex(index)}
+                        className={cls(
+                          "whitespace-nowrap border-b-[3px] px-7 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.05em] transition",
+                          stepIndex === index
+                            ? "border-[#004d7a] bg-[rgba(0,77,122,0.03)] text-[#004d7a]"
+                            : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                        )}
+                      >
+                        {index + 1}. {step.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {stepIndex === 0 ? (
+                    <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      <div className="p-8">
+                        <div className="grid grid-cols-1 gap-x-8 gap-y-6 text-slate-700 md:grid-cols-2">
+                          <div className="rounded-xl border border-blue-100 bg-blue-50/30 p-4 md:col-span-2">
+                            <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-blue-700">
+                              Kode Tertanggung <span className="ml-1 text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={blueprint.insuredCode || ""}
+                              onChange={(event) => patchSection("blueprint", { insuredCode: onlyDigits(event.target.value) })}
+                              disabled={!canEdit}
+                              className={cls(formInputClass, "border-blue-200 text-base font-black text-blue-800 shadow-sm", !canEdit && formInputDisabledClass)}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 flex text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Nama Tertanggung</label>
+                            <input type="text" value={String(blueprint.insuredName || "").toUpperCase()} disabled className={cls(formInputClass, formInputDisabledClass, "font-bold uppercase text-slate-900")} />
+                          </div>
+                          <div>
+                            <label className="mb-2 flex text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">NPWP</label>
+                            <input type="text" value={blueprint.npwp || ""} disabled className={cls(formInputClass, formInputDisabledClass, "font-medium")} />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="mb-2 flex text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Alamat Korespondensi</label>
+                            <textarea value={blueprint.address || ""} rows={2} disabled className={cls("min-h-[78px]", formInputClass, formInputDisabledClass, "resize-none font-medium")} />
+                          </div>
+                          <div>
+                            <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">
+                              Email Korespondensi <span className="ml-1 text-red-500">*</span>
+                            </label>
+                            <input
+                              type="email"
+                              value={blueprint.correspondenceEmail || blueprint.ownerEmail || ""}
+                              onChange={(event) => patchSection("blueprint", { correspondenceEmail: event.target.value, ownerEmail: event.target.value })}
+                              disabled={!canEdit}
+                              className={cls(formInputClass, "font-medium lowercase", !canEdit && formInputDisabledClass)}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-8 border-t border-slate-50 pt-6 md:col-span-2 md:grid-cols-2">
+                            <div>
+                              <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">
+                                Kode Akuisisi <span className="ml-1 text-red-500">*</span>
+                              </label>
+                              <select
+                                value={blueprint.acquisitionCode || LIFE_GUARD_ACQUISITION_OPTIONS[1]}
+                                onChange={(event) => patchSection("blueprint", { acquisitionCode: event.target.value })}
+                                disabled={!canEdit}
+                                className={cls(formInputClass, "font-bold shadow-sm", !canEdit && formInputDisabledClass)}
+                              >
+                                {LIFE_GUARD_ACQUISITION_OPTIONS.map((item) => (
+                                  <option key={item} value={item}>
+                                    {item}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">
+                                Nomor Polis Induk / Nomor PKS <span className="ml-1 text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={master.masterPolicyNo || blueprint.agreementNo || ""}
+                                onChange={(event) => {
+                                  patchSection("blueprint", { agreementNo: event.target.value });
+                                  patchTravelSafeMaster({ masterPolicyNo: event.target.value });
+                                }}
+                                disabled={!canEdit}
+                                className={cls(formInputClass, "font-bold uppercase", !canEdit && formInputDisabledClass)}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="border-t border-slate-50 pt-6 md:col-span-2">
+                            <label className="mb-2 flex text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">Daftar QQ Tambahan</label>
+                            <textarea
+                              rows={2}
+                              value={blueprint.qqTambahan || ""}
+                              onChange={(event) => patchSection("blueprint", { qqTambahan: event.target.value })}
+                              disabled={!canEdit}
+                              placeholder="Masukkan QQ jika ada..."
+                              className={cls("min-h-[78px] resize-none font-medium", formInputClass, !canEdit && formInputDisabledClass)}
+                            />
+                          </div>
+
+                          <div className="border-t border-slate-50 pt-6 md:col-span-2">
+                            <label className="mb-2 flex items-center text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-600">
+                              Jangka Waktu Pertanggungan <span className="ml-1 text-red-500">*</span>
+                            </label>
+                            <div className="flex flex-wrap items-center gap-4">
+                              <input type="date" value={blueprint.startDate || ""} onChange={(event) => patchSection("blueprint", { startDate: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "w-48 font-bold shadow-sm", !canEdit && formInputDisabledClass)} />
+                              <span className="text-[10px] font-bold uppercase text-slate-400">s/d</span>
+                              <input type="date" value={blueprint.endDate || ""} onChange={(event) => patchSection("blueprint", { endDate: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "w-48 font-bold shadow-sm", !canEdit && formInputDisabledClass)} />
+                              <span className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-black uppercase tracking-tight text-blue-700 shadow-sm">{totalDaysLabel}</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4 border-t border-slate-50 pt-6 md:col-span-2">
+                            <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                              <Upload className="h-4 w-4 text-blue-600" />
+                              Unggah Dokumen PKS & Lampiran <span className="text-red-500">*</span>
+                            </h4>
+                            <div className="cursor-pointer rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/10 p-8 text-center font-bold text-blue-400 transition hover:border-blue-400">
+                              <Upload className="mx-auto mb-3 h-8 w-8" />
+                              <p className="text-xs tracking-tight">Klik atau seret file ke sini</p>
+                              <input type="file" className="hidden" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {stepIndex === 1 ? (
+                    <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      <div className="p-8 text-slate-700">
+                        <div className="space-y-8">
+                          <div>
+                            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#004d7a]">
+                              Jenis Pertanggungan <span className="text-red-500">*</span>
+                            </div>
+                            <div className="mt-4 flex flex-wrap gap-3">
+                              {TRAVEL_SAFE_COVERAGE_OPTIONS.map((item) => {
+                                const selected = (master.coverageCodes || []).includes(item.code);
+                                return (
+                                  <button
+                                    key={item.code}
+                                    type="button"
+                                    onClick={() => (canEdit ? toggleTravelSafeCoverage(item.code) : null)}
+                                    className={cls(
+                                      "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition",
+                                      selected ? "border-[#0A4D82] bg-[#0A4D82] text-white shadow-lg" : "border-slate-200 bg-[#F8FBFE] text-slate-600"
+                                    )}
+                                  >
+                                    <span className={cls("flex h-5 w-5 items-center justify-center rounded-full border-2", selected ? "border-white bg-white text-[#0A4D82]" : "border-slate-300 bg-white text-transparent")}>
+                                      {selected ? <div className="h-2.5 w-2.5 rounded-full bg-[#0A4D82]" /> : null}
+                                    </span>
+                                    <span className="text-[12px] font-bold uppercase tracking-tight">{item.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div className="mt-3 text-[12px] leading-5 text-slate-500">
+                              Pilih satu jenis pertanggungan. Mata uang akan otomatis terkunci ke IDR untuk domestik dan USD untuk international.
+                            </div>
+                          </div>
+
+                          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+                            <div className="rounded-[24px] border border-[#D7E3EF] bg-[#F7FAFD] p-6">
+                              <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div>
+                                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Kriteria Validasi Santunan</div>
+                                  <div className="mt-2">
+                                    <select value={master.npCriteria || "antara"} onChange={(event) => patchTravelSafeMaster({ npCriteria: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "w-full font-bold text-blue-800", !canEdit && formInputDisabledClass)}>
+                                      <option value="setara">Setara dengan</option>
+                                      <option value="antara">Antara (Min & Maks)</option>
+                                      <option value="lebih_besar">Lebih besar dari</option>
+                                      <option value="kurang_dari">Kurang dari</option>
+                                    </select>
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Mata Uang</div>
+                                  <div className="mt-2">
+                                    <input type="text" value={travelComputed.lockedCurrency} disabled className={cls(formInputClass, formInputDisabledClass, "w-full min-w-[220px] bg-yellow-50 font-bold text-slate-900 shadow-inner")} />
+                                  </div>
+                                  <div className="mt-2 text-[11px] leading-5 text-slate-500">Otomatis mengikuti jenis pertanggungan yang dipilih.</div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="grid gap-4">
+                              <MiniStat icon={Globe2} label="Coverage Dipilih" value={`${travelComputed.coverageCount} opsi`} />
+                              <MiniStat icon={Route} label="Perluasan Aktif" value={`${travelComputed.activeBenefitCount} manfaat`} />
+                            </div>
+                          </div>
+
+                          <div className="rounded-[24px] border border-[#D7E3EF] bg-white p-6 shadow-sm">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#004d7a]">
+                                  NP Kecelakaan Diri <span className="text-red-500">*</span>
+                                </div>
+                                <div className="mt-1 text-[13px] text-slate-500">Manfaat utama untuk peserta perjalanan Travel Safe.</div>
+                              </div>
+                              <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-blue-700">
+                                {travelComputed.lockedCurrency}
+                              </span>
+                            </div>
+                            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                  <input type="text" value={master.npAccidentLimitMin || ""} onChange={(event) => patchTravelSafeMaster({ npAccidentLimitMin: formatNumber(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "w-full text-right font-black text-[#004d7a]", !canEdit && formInputDisabledClass)} />
+                                  {master.npCriteria === "antara" ? <span className="font-bold text-slate-400">-</span> : null}
+                                  {master.npCriteria === "antara" ? <input type="text" value={master.npAccidentLimitMax || ""} onChange={(event) => patchTravelSafeMaster({ npAccidentLimitMax: formatNumber(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "w-full text-right font-black text-[#004d7a]", !canEdit && formInputDisabledClass)} /> : null}
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div>
+                                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Rate (%)</div>
+                                    <input type="text" value={master.npAccidentRate || ""} onChange={(event) => patchTravelSafeMaster({ npAccidentRate: formatRateInput(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "text-center font-black text-blue-700", !canEdit && formInputDisabledClass)} />
+                                  </div>
+                                  <div className="rounded-[20px] border border-blue-100 bg-blue-50 px-4 py-3">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600">Premi Dasar</div>
+                                    <div className="mt-2 text-[15px] font-bold text-blue-900">{travelComputed.accidentPremiumText}</div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                                <SmallDataCard label="NP Kecelakaan" value={travelComputed.accidentText} />
+                                <SmallDataCard label="Rate" value={travelComputed.accidentRateText} />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="rounded-[24px] border border-[#D7E3EF] bg-white p-6 shadow-sm">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#004d7a]">
+                                  NP Perlindungan Medis <span className="text-red-500">*</span>
+                                </div>
+                                <div className="mt-1 text-[13px] text-slate-500">Turunan otomatis dari manfaat kecelakaan sesuai persentase yang ditetapkan.</div>
+                              </div>
+                              <div className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-blue-700">
+                                {master.npMedicalPercentage || "0"}% dari manfaat utama
+                              </div>
+                            </div>
+                            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+                              <div className="space-y-4">
+                                <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)] md:items-end">
+                                  <div>
+                                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">% dari NP Kecelakaan</div>
+                                    <input type="text" value={master.npMedicalPercentage || ""} onChange={(event) => patchTravelSafeMaster({ npMedicalPercentage: formatRateInput(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "text-center font-black text-blue-700", !canEdit && formInputDisabledClass)} />
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <input type="text" value={master.npMedicalLimitMin || ""} readOnly className={cls(formInputClass, formInputDisabledClass, "text-right font-bold")} />
+                                    {master.npCriteria === "antara" ? <span className="font-bold text-slate-400">-</span> : null}
+                                    {master.npCriteria === "antara" ? <input type="text" value={master.npMedicalLimitMax || ""} readOnly className={cls(formInputClass, formInputDisabledClass, "text-right font-bold")} /> : null}
+                                  </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div>
+                                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Rate (%)</div>
+                                    <input type="text" value={master.npMedicalRate || ""} onChange={(event) => patchTravelSafeMaster({ npMedicalRate: formatRateInput(event.target.value) })} disabled={!canEdit} className={cls(formInputClass, "text-center font-black text-blue-700", !canEdit && formInputDisabledClass)} />
+                                  </div>
+                                  <div className="rounded-[20px] border border-blue-100 bg-blue-50 px-4 py-3">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600">Premi Medis</div>
+                                    <div className="mt-2 text-[15px] font-bold text-blue-900">{travelComputed.medicalPremiumText}</div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                                <SmallDataCard label="NP Medis" value={travelComputed.medicalText} />
+                                <SmallDataCard label="Rate" value={travelComputed.medicalRateText} />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="rounded-[24px] border border-[#C5D5E7] bg-[#E9EFF6] px-6 py-5 shadow-sm">
+                              <div className="text-[18px] font-semibold tracking-tight text-slate-900">Tambahan Perlindungan (Opsional)</div>
+                              <div className="mt-1 text-[13px] leading-6 text-slate-600">Tingkatkan perlindungan Anda dengan layanan ekstra.</div>
+                              <button
+                                type="button"
+                                onClick={() => (canEdit ? patchTravelSafeMaster({ assistanceEnabled: !master.assistanceEnabled }) : null)}
+                                className="mt-5 flex w-full items-start justify-between gap-4 rounded-[20px] border border-[#B7C9DD] bg-[#DDE7F1] px-5 py-5 text-left transition hover:bg-[#D6E3EF]"
+                              >
+                                <div className="flex items-start gap-4">
+                                  <span className={cls("mt-1 flex h-6 w-6 items-center justify-center rounded-md border", master.assistanceEnabled ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300 bg-white text-transparent")}>
+                                    {master.assistanceEnabled ? <Check className="h-4 w-4" /> : null}
+                                  </span>
+                                  <div>
+                                    <div className="text-[17px] font-semibold text-[#0A4D82]">{TRAVEL_SAFE_ASSISTANCE_INFO.title}</div>
+                                    <div className="mt-3 max-w-4xl text-[13px] leading-7 text-[#0A4D82]">
+                                      {TRAVEL_SAFE_ASSISTANCE_INFO.description}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="shrink-0 pt-1 text-[18px] font-semibold text-[#F59E0B]">{getTravelSafeAssistanceFeeText(master)}</div>
+                              </button>
+                            </div>
+
+                            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#004d7a]">Perluasan Manfaat Tambahan</div>
+                            {TRAVEL_SAFE_EXTENSION_LIBRARY.map((category) => {
+                              const Icon = category.icon || Route;
+                              const expanded = travelSafeExpandedCategory === category.id;
+                              return (
+                                <div key={category.id} className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+                                  <button
+                                    type="button"
+                                    onClick={() => setTravelSafeExpandedCategory((current) => (current === category.id ? "" : category.id))}
+                                    className="flex w-full items-center justify-between px-5 py-4 text-left transition hover:bg-slate-50"
+                                  >
+                                    <div className="flex items-center gap-4">
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0A4D82] text-white">
+                                        <Icon className="h-5 w-5" />
+                                      </div>
+                                      <div>
+                                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Kategori</div>
+                                        <div className="mt-1 text-[15px] font-semibold text-slate-900">{category.title}</div>
+                                      </div>
+                                    </div>
+                                    <ChevronDown className={cls("h-5 w-5 text-slate-400 transition", expanded && "rotate-180")} />
+                                  </button>
+                                  {expanded ? (
+                                    <div className="space-y-4 border-t border-slate-100 bg-[#F8FBFE] px-5 py-5">
+                                      {category.items.map((item) => {
+                                        const selection = master.perluasanSelections?.[item.id] || { checked: false, hpMin: "", hpMax: "", rate: "", premiMin: "", premiMax: "" };
+                                        return (
+                                          <div key={item.id} className="rounded-[22px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                              <button
+                                                type="button"
+                                                onClick={() => (canEdit ? updateTravelSafeBenefit(item.id, { checked: !selection.checked }) : null)}
+                                                className={cls(
+                                                  "flex h-5 w-5 items-center justify-center rounded border",
+                                                  selection.checked ? "border-[#0A4D82] bg-[#EAF3FF] text-[#0A4D82]" : "border-slate-300 bg-white text-transparent"
+                                                )}
+                                              >
+                                                {selection.checked ? <Check className="h-3.5 w-3.5" /> : null}
+                                              </button>
+                                              <div className="text-[13px] font-semibold text-slate-800">{item.label}</div>
+                                              {item.isCheckOnly ? <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Check Only</span> : null}
+                                            </div>
+                                            {selection.checked && !item.isCheckOnly ? (
+                                              <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                                                <div>
+                                                  <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">HP (Limit / LoL)</div>
+                                                  <div className="flex items-center gap-2">
+                                                    <input type="text" value={selection.hpMin || ""} onChange={(event) => updateTravelSafeBenefit(item.id, { hpMin: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "text-right font-bold", !canEdit && formInputDisabledClass)} />
+                                                    {master.npCriteria === "antara" ? <span className="font-bold text-slate-400">-</span> : null}
+                                                    {master.npCriteria === "antara" ? <input type="text" value={selection.hpMax || ""} onChange={(event) => updateTravelSafeBenefit(item.id, { hpMax: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "text-right font-bold", !canEdit && formInputDisabledClass)} /> : null}
+                                                  </div>
+                                                </div>
+                                                <div>
+                                                  <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Rate (%)</div>
+                                                  <input type="text" value={selection.rate || ""} onChange={(event) => updateTravelSafeBenefit(item.id, { rate: event.target.value })} disabled={!canEdit} className={cls(formInputClass, "text-center font-bold text-blue-700", !canEdit && formInputDisabledClass)} />
+                                                </div>
+                                                <div>
+                                                  <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Premi</div>
+                                                  <div className="rounded-[18px] border border-blue-100 bg-blue-50 px-4 py-3 text-[14px] font-bold text-blue-900">
+                                                    {selection.premiMin || "0"}
+                                                    {master.npCriteria === "antara" && selection.premiMax ? ` - ${selection.premiMax}` : ""}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ) : null}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="rounded-[24px] border border-[#D7E3EF] bg-[#F7FAFD] p-6">
+                            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#004d7a]">
+                              <TriangleAlert className="h-4 w-4" />
+                              Risiko Sendiri (Deductible)
+                            </div>
+                            <textarea
+                              rows={3}
+                              value={master.deductible || ""}
+                              onChange={(event) => patchTravelSafeMaster({ deductible: event.target.value })}
+                              disabled={!canEdit}
+                              className={cls("mt-4 min-h-[96px] resize-none font-medium", formInputClass, !canEdit && formInputDisabledClass)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {stepIndex === 2 ? (
+                    <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      <div className="p-8 text-slate-700">
+                        <div className="space-y-8">
+                          <div>
+                            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#004d7a]">Wording Polis</div>
+                            <div className="mt-4 rounded-[24px] border border-[#D7E3EF] bg-[#F7FAFD] p-6 shadow-sm">
+                              <div className="flex items-start gap-4">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#0A4D82] text-white">
+                                  <FileSpreadsheet className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-[18px] font-semibold tracking-tight text-slate-900">{TRAVEL_SAFE_WORDING_LABEL}</div>
+                                  <div className="mt-2 text-[13px] leading-6 text-slate-600">{TRAVEL_SAFE_WORDING_NOTE}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <PartnerClauseNoteCard title="Ringkasan Wording Travel Safe">
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <SmallDataCard label="Wording Aktif" value={master.wordingType || TRAVEL_SAFE_WORDING_LABEL} />
+                              <SmallDataCard label="Coverage" value={travelComputed.coverageText} />
+                              <SmallDataCard label="Perluasan Aktif" value={`${travelComputed.activeBenefitCount} manfaat`} />
+                              <SmallDataCard label="Tambahan Perlindungan" value={travelComputed.assistanceFeeText} />
+                            </div>
+                            <div className="mt-4 rounded-[18px] border border-slate-200 bg-white px-4 py-4 text-[13px] leading-6 text-slate-600">
+                              Travel Safe tidak menggunakan pilihan ikhtisar / sertifikat maupun konfigurasi klausula tambahan. Semua penerbitan mengikuti wording standar Travel Jasindo.
+                            </div>
+                          </PartnerClauseNoteCard>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {stepIndex === 3 ? (
+                    <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      <div className="p-8">
+                        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                          <div className="space-y-6">
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <FormField label="Biaya Polis" required>
+                                <TextInput value={master.adminFee || ""} onChange={(value) => patchTravelSafeMaster({ adminFee: formatNumber(value) })} disabled={!canEdit} />
+                              </FormField>
+                              <FormField label="Biaya Meterai (Sesuai STAR)">
+                                <TextInput value={master.stampDuty || "Sesuai STAR"} onChange={(value) => patchTravelSafeMaster({ stampDuty: value })} disabled />
+                              </FormField>
+                              <FormField label="Diskon (%)">
+                                <TextInput value={master.discountPercent || "0"} onChange={(value) => patchTravelSafeMaster({ discountPercent: onlyDigits(value) })} disabled={!canEdit} />
+                              </FormField>
+                              <FormField label="Brokerage / Komisi (%)">
+                                <TextInput value={master.commissionPercent || "15"} onChange={(value) => patchTravelSafeMaster({ commissionPercent: onlyDigits(value) })} disabled={!canEdit} />
+                              </FormField>
+                            </div>
+
+                            <LifeGuardConfigurationSnapshotCard items={detailItems} />
+                            <TravelSafeBenefitSummaryCard rows={travelComputed.activeBenefitRows} />
+                            <LifeGuardConfigurationReviewCard
+                              readiness={readiness}
+                              statusLabel={statusMeta.label}
+                              roleLabel={roleMeta.shortLabel}
+                              referenceCode={referenceCode}
+                              periodLabel={periodLabel}
+                              checklistItems={checklistItems}
+                              activeNoteLabel={getLifeGuardNoteLabel(role)}
+                              activeNoteValue={noteValue}
+                              onToggleChecklist={toggleChecklist}
+                              canToggleChecklist={!showSuccess}
+                            />
+                          </div>
+
+                          <div className="xl:sticky xl:top-28 xl:self-start">
+                            <LifeGuardSidebarSummaryCard
+                              beneficiary={beneficiary}
+                              infoRows={summaryRows}
+                              premiumRows={feeRows}
+                              premiumValue={travelComputed.totalPremiumText}
+                              pendingItems={pendingItems}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {showReviewSummary ? (
+                <div className="mb-6 animate-fade-in text-slate-800">
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-100 bg-[#1e293b] px-8 py-6">
+                      <div className="flex items-center gap-3 text-white">
+                        <FileSpreadsheet className="h-5 w-5 text-blue-400" />
+                        <span>Tinjauan Konfigurasi Travel Safe</span>
+                      </div>
+                      <span className="rounded border border-blue-500/30 bg-blue-500/20 px-3 py-1 text-[10px] uppercase tracking-widest text-blue-400 shadow-sm">Review Mode</span>
+                    </div>
+                    <div className="space-y-10 bg-white p-10 text-[11px] text-slate-800">
+                      <LifeGuardConfigurationSnapshotCard items={detailItems} />
+                      <TravelSafeBenefitSummaryCard rows={travelComputed.activeBenefitRows} emptyText="Belum ada perluasan aktif pada konfigurasi Travel Safe ini." />
+
+                        <div className="space-y-6 rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
+                          <h4 className="border-b pb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Wording dan Struktur Biaya</h4>
+                          <div className="grid gap-6 md:grid-cols-2">
+                            <SmallDataCard label="Wording" value={master.wordingType || "-"} />
+                            <SmallDataCard label="Mode Dokumen" value="Mengikuti wording standar Travel Jasindo" />
+                            <SmallDataCard label="Premi Manfaat Dasar" value={travelComputed.accidentPremiumText} />
+                            <SmallDataCard label="Premi Manfaat Medis" value={travelComputed.medicalPremiumText} />
+                            <SmallDataCard label="Tambahan Perlindungan" value={travelComputed.assistanceFeeText} />
+                            <SmallDataCard label="Mata Uang Terkunci" value={travelComputed.lockedCurrency} />
+                          </div>
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-5 text-[13px] leading-6 text-slate-600">
+                            Travel Safe tidak memakai package klausula tambahan. Dokumen polis mengikuti <span className="font-semibold text-slate-900">{TRAVEL_SAFE_WORDING_LABEL}</span>.
+                          </div>
+                          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+                          <div className="rounded-xl border border-yellow-100 bg-yellow-50 p-4 text-center">
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-yellow-700">Rate Kecelakaan</p>
+                            <p className="mt-2 text-lg font-black text-yellow-800">{travelComputed.accidentRateText}</p>
+                          </div>
+                          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-center">
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-blue-700">Rate Medis</p>
+                            <p className="mt-2 text-lg font-black text-blue-800">{travelComputed.medicalRateText}</p>
+                          </div>
+                          <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-center">
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-indigo-700">Biaya Polis</p>
+                            <p className="mt-2 text-lg font-black text-indigo-800">{`${travelComputed.currencyCode} ${master.adminFee || "0"}`}</p>
+                          </div>
+                          <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-center">
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-emerald-700">Estimasi Premi</p>
+                            <p className="mt-2 text-lg font-black text-emerald-800">{travelComputed.totalPremiumText}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-6 pt-4 text-center md:grid-cols-4">
+                          <div>
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Biaya Materai</p>
+                            <p className="text-[13px] font-bold text-slate-800">{master.stampDuty || "Sesuai STAR"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Tambahan Perlindungan</p>
+                            <p className="text-[13px] font-bold text-blue-700">{travelComputed.assistanceFeeText}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Diskon</p>
+                            <p className="text-[13px] font-bold text-orange-600">{`${master.discountPercent || "0"}%`}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-slate-400">Brokerage / Komisi</p>
+                            <p className="text-[13px] font-bold text-green-600">{`${master.commissionPercent || "0"}%`}</p>
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+                          <p className="text-[10px] font-extrabold uppercase tracking-[0.05em] text-red-500">Risiko Sendiri</p>
+                          <p className="mt-2 text-[13px] font-bold text-red-600">{master.deductible || "-"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {!showSuccess ? (
+                <>
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4 text-[10px] font-black uppercase tracking-widest">
+                      <h3>Log Aktivitas Alur Kerja</h3>
+                      <ClipboardList className="h-5 w-5 text-slate-400" />
+                    </div>
+                    <div className="max-h-[300px] space-y-4 overflow-y-auto bg-slate-50/30 p-6 text-xs">
+                      {(selectedConfig.audit || []).map((item, index) => {
+                        const itemRole = String(item.actor || "");
+                        const itemTone = itemRole.includes("HO") ? "bg-emerald-600" : itemRole.includes("UDW") ? "bg-orange-500" : "bg-blue-600";
+                        const itemAvatar = itemRole.includes("HO") ? "HO" : itemRole.includes("UDW") ? "UW" : itemRole.includes("SYSTEM") ? "SY" : "RM";
+                        return (
+                          <div key={`${item.at}-${index}`} className="group relative flex gap-4 pb-4 text-xs text-slate-700">
+                            <div className="absolute bottom-0 left-[11px] top-6 w-px bg-slate-200 last:hidden" />
+                            <div className={cls("z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[8px] font-bold uppercase text-white shadow-sm", itemTone)}>
+                              {itemAvatar}
+                            </div>
+                            <div className="flex-1 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                              <div className="mb-1 flex items-center justify-between gap-3">
+                                <span className="text-[10px] font-black uppercase tracking-tight text-slate-800">{item.action}</span>
+                                <span className="text-[9px] font-bold text-slate-400">{item.at}</span>
+                              </div>
+                              <p className="text-[11px] italic leading-relaxed text-slate-500">"{item.note || "Aktivitas workflow tercatat pada simulator."}"</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="mt-8 animate-fade-in rounded-2xl border border-slate-200 bg-white p-6 text-slate-800 shadow-md">
+                    <div className="mb-4 flex items-center gap-2 text-[#004d7a]">
+                      <NotebookPen className="h-5 w-5" />
+                      <h4 className="text-[10px] font-black uppercase tracking-widest">{getLifeGuardNoteLabel(role)}</h4>
+                    </div>
+                    <div className="relative">
+                      <textarea
+                        rows={4}
+                        maxLength={500}
+                        value={noteValue}
+                        onChange={(event) => setLifeGuardReviewNote(event.target.value)}
+                        placeholder="Wajib diisi sebagai pertimbangan alur kerja..."
+                        className={cls("min-h-[120px] resize-none border-slate-200 text-[13px] font-medium text-slate-800 shadow-sm", formInputClass)}
+                      />
+                      <div className="absolute bottom-3 right-4 text-[8px] font-black uppercase tracking-widest text-slate-300">
+                        {noteValue.length} / 500 Chars
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+
+          {!showSuccess ? (
+            <footer className="shrink-0 border-t border-slate-200 bg-white px-6 py-4 shadow-md md:px-10">
+              <div className="mx-auto flex max-w-6xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-8 text-xs font-bold text-slate-500">
+                  <div>
+                    <span className="mb-0.5 block text-[9px] font-black uppercase tracking-widest">Status Konfigurasi</span>
+                    <span className={cls("rounded-lg border px-3 py-1 text-[10px] font-black uppercase shadow-sm", statusMeta.badge)}>
+                      {statusMeta.label}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">{renderActionButtons()}</div>
+              </div>
+            </footer>
+          ) : null}
+        </main>
+
+        {lifeGuardPendingAction && modalMeta ? (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-[420px] overflow-hidden rounded-2xl bg-white text-center text-slate-800 shadow-2xl ring-1 ring-white/10">
+              <div className="flex items-center justify-between border-b bg-slate-50 px-8 py-5 text-[10px] font-black uppercase tracking-widest">
+                <span>Konfirmasi Sesi</span>
+                <button type="button" onClick={closeLifeGuardAction} className="text-gray-400 transition hover:text-slate-600">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-8 text-center font-medium text-slate-800">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                  {modalMeta.icon}
+                </div>
+                <p className="mb-2 text-sm leading-relaxed text-gray-600">{modalMeta.title}</p>
+              </div>
+              <div className="flex justify-end gap-3 border-t bg-gray-50 px-8 py-5">
+                <button type="button" onClick={closeLifeGuardAction} className="rounded-xl border border-gray-300 px-6 py-2.5 text-[10px] font-black uppercase text-slate-700 transition">
+                  Batal
+                </button>
+                <button type="button" onClick={() => applyLifeGuardAction(lifeGuardPendingAction)} className="rounded-xl bg-[#004d7a] px-8 py-2.5 text-[10px] font-black uppercase text-white shadow-lg transition hover:bg-[#003a5c]">
+                  Ya, Proses
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   const primaryLabel =
     stepIndex < STEP_LIST.length - 1
       ? "Lanjut"
@@ -3858,6 +6526,14 @@ function PartnerConfigStudio({
         ) : null}
       </div>
     );
+  }
+
+  if (selectedConfig?.family === "group-pa") {
+    return renderLifeGuardStudio();
+  }
+
+  if (selectedConfig?.family === "travel-group") {
+    return renderTravelSafeStudio();
   }
 
   return (
@@ -4403,6 +7079,246 @@ function ReviewSummaryCard({ infoRows = [], premiumRows = [], totalLabel = "Esti
   );
 }
 
+function LifeGuardSidebarSummaryCard({ beneficiary = "-", infoRows = [], premiumRows = [], premiumValue = "-", pendingItems = [] }) {
+  const hasPending = pendingItems.length > 0;
+
+  return (
+    <div className="overflow-hidden rounded-[30px] bg-[#0A4D82] px-5 py-6 text-white shadow-[0_22px_48px_rgba(10,77,130,0.28)]">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">
+          <FileSpreadsheet className="h-5 w-5" />
+        </div>
+        <div className="text-[18px] font-semibold tracking-tight">Ringkasan</div>
+      </div>
+
+      <div className="mt-5 space-y-3.5 border-t border-white/15 pt-5">
+        <div className="flex items-start justify-between gap-4 text-[15px] leading-6">
+          <div className="text-white/85">Penerima Manfaat</div>
+          <div className="max-w-[210px] text-right font-semibold uppercase">{fixDisplayText(beneficiary)}</div>
+        </div>
+        {infoRows.map((item) => (
+          <div key={item.label} className="flex items-start justify-between gap-4 text-[15px] leading-6">
+            <div className="text-white/85">{item.label}</div>
+            <div className="max-w-[210px] text-right font-semibold">{fixDisplayText(item.value)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 space-y-3 border-t border-white/15 pt-5">
+        {premiumRows.map((item) => (
+          <div key={item.label} className="flex items-start justify-between gap-4 text-[15px] leading-6">
+            <div className="text-white/85">{item.label}</div>
+            <div className="max-w-[210px] text-right font-semibold">{fixDisplayText(item.value)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 rounded-[24px] bg-white/10 px-6 py-5">
+        <div className="text-[13px] text-white/75">Estimasi Premi</div>
+        <div className="mt-3 text-right text-[26px] font-bold leading-[1.05] sm:text-[32px]">{fixDisplayText(premiumValue)}</div>
+      </div>
+
+      <div className={cls("mt-5 rounded-[24px] px-5 py-5", hasPending ? "bg-[#FFF4E1] text-[#A35E00]" : "bg-emerald-50 text-emerald-700")}>
+        <div className="text-[15px] font-medium">{hasPending ? "Yang masih perlu dilengkapi" : "Konfigurasi sudah siap"}</div>
+        <div className="mt-3 space-y-2.5">
+          {hasPending ? (
+            pendingItems.slice(0, 4).map((item) => (
+              <div key={item} className="flex items-start gap-2 text-[13px] leading-5">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>{fixDisplayText(item)}</div>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-start gap-2 text-[13px] leading-5">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>Semua komponen utama sudah lengkap dan bisa diteruskan ke tahap berikutnya.</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LifeGuardConfigurationSnapshotCard({ items = [] }) {
+  return (
+    <div className="overflow-hidden rounded-[28px] border border-[#D7E3EF] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.08)]">
+      <div className="px-6 py-6">
+        <h3 className="text-[18px] font-semibold tracking-tight text-slate-900">Tinjauan Konfigurasi</h3>
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+          {items.map((item) => (
+            <div key={item.label} className="rounded-[24px] border border-[#C9D7E8] bg-[#F6F9FD] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#90A4C2]">{item.label}</p>
+              <p className="mt-3 text-[17px] font-semibold leading-7 text-slate-950">{fixDisplayText(item.value)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LifeGuardConfigurationReviewCard({
+  readiness = 0,
+  statusLabel = "-",
+  roleLabel = "-",
+  referenceCode = "-",
+  periodLabel = "-",
+  checklistItems = [],
+  activeNoteLabel = "Analisa Aktif",
+  activeNoteValue = "",
+  onToggleChecklist,
+  canToggleChecklist = false,
+}) {
+  return (
+    <div className="overflow-hidden rounded-[28px] border border-[#D7E3EF] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.08)]">
+      <div className="border-b border-slate-100 px-5 py-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#EAF4FF] text-[#0A4D82]">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-[18px] font-semibold tracking-tight text-slate-900">Tinjauan Proses</div>
+            <p className="mt-1 text-[13px] leading-5 text-slate-500">Progress readiness, checklist review, dan catatan aktif untuk alur maker, checker, dan approval.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-5 px-5 py-5">
+        <div className="rounded-[20px] bg-slate-50 px-4 py-4">
+          <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+            <span>Readiness</span>
+            <span className="text-slate-700">{readiness}%</span>
+          </div>
+          <div className="mt-3 h-2.5 rounded-full bg-slate-200">
+            <div className="h-2.5 rounded-full bg-[#0A4D82] transition-all duration-300" style={{ width: `${Math.max(8, readiness)}%` }} />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 text-[12px] leading-5 text-slate-600">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Status</div>
+              <div className="mt-1 font-semibold text-slate-900">{fixDisplayText(statusLabel)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Peran Aktif</div>
+              <div className="mt-1 font-semibold text-slate-900">{fixDisplayText(roleLabel)}</div>
+            </div>
+            <div className="col-span-2">
+              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Referensi</div>
+              <div className="mt-1 font-semibold text-slate-900">{fixDisplayText(referenceCode)}</div>
+            </div>
+            <div className="col-span-2">
+              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Periode</div>
+              <div className="mt-1 font-semibold text-slate-900">{fixDisplayText(periodLabel)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Checklist Review</div>
+          <div className="space-y-2.5">
+            {checklistItems.map((item) => {
+              const body = (
+                <>
+                  <div
+                    className={cls(
+                      "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2",
+                      item.checked ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300 bg-white text-transparent"
+                    )}
+                  >
+                    {item.checked ? <Check className="h-3.5 w-3.5" /> : null}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[13px] font-semibold text-slate-900">{item.title}</div>
+                    <div className="mt-1 text-[12px] leading-5 text-slate-500">{item.detail}</div>
+                    <div className={cls("mt-1.5 text-[10px] font-black uppercase tracking-[0.14em]", item.checked ? "text-emerald-600" : "text-amber-600")}>
+                      {item.checked ? "Sudah dicek" : "Masih pending"}
+                    </div>
+                  </div>
+                </>
+              );
+
+              return canToggleChecklist ? (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => onToggleChecklist?.(item.key, !item.checked)}
+                  className={cls(
+                    "flex w-full items-start gap-3 rounded-[20px] border px-4 py-3 text-left transition",
+                    item.checked ? "border-[#BFD8EE] bg-[#F4F9FE]" : "border-slate-200 bg-white hover:border-[#BFD8EE]"
+                  )}
+                >
+                  {body}
+                </button>
+              ) : (
+                <div key={item.key} className={cls("flex items-start gap-3 rounded-[20px] border px-4 py-3", item.checked ? "border-[#BFD8EE] bg-[#F4F9FE]" : "border-slate-200 bg-white")}>
+                  {body}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#0A4D82]">
+            <NotebookPen className="h-4 w-4" />
+            {activeNoteLabel}
+          </div>
+          <p className="mt-3 text-[13px] leading-6 text-slate-600">
+            {activeNoteValue ? fixDisplayText(activeNoteValue) : "Catatan untuk peran aktif belum diisi."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TravelSafeBenefitSummaryCard({ rows = [], emptyText = "Belum ada perluasan aktif untuk ditampilkan." }) {
+  return (
+    <div className="overflow-hidden rounded-[28px] border border-[#D7E3EF] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.08)]">
+      <div className="border-b border-slate-100 px-6 py-6">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#EAF4FF] text-[#0A4D82]">
+            <Route className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-[18px] font-semibold tracking-tight text-slate-900">Tinjauan Manfaat Tambahan</div>
+            <p className="mt-1 text-[13px] leading-5 text-slate-500">Ringkasan perluasan aktif berikut limit, rate, dan estimasi premi per manfaat Travel Safe.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-5">
+        {rows.length === 0 ? (
+          <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center text-[13px] text-slate-500">
+            {emptyText}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {rows.map((item) => (
+              <div key={item.id} className="rounded-[22px] border border-slate-200 bg-[#F7FAFD] px-5 py-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#90A4C2]">{item.category}</div>
+                    <div className="mt-2 text-[15px] font-semibold text-slate-900">{fixDisplayText(item.label)}</div>
+                  </div>
+                  <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#0A4D82] shadow-sm">
+                    {item.isCheckOnly ? "Check Only" : "Perluasan Aktif"}
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <SmallDataCard label="Limit / HP" value={item.limitText} />
+                  <SmallDataCard label="Rate" value={item.rateText} />
+                  <SmallDataCard label="Premi" value={item.premiumText} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AppProductHeader({
   sessionName,
   sessionRoleLabel,
@@ -4943,6 +7859,53 @@ function StudioStepNode({ title, subtitle, active, icon }) {
   );
 }
 
+function StudioJourneySteps({ stepIndex = 0, stepState = [], maxUnlockedStep = 0, onSelect, embedded = false }) {
+  const content = (
+    <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-row md:gap-5 md:overflow-visible md:px-0 md:pb-0">
+      {STEP_LIST.map((step, index) => {
+        const Icon = step.icon;
+        const active = stepIndex === index;
+        const done = stepIndex > index || Boolean(stepState[index]?.done && !active);
+        const canOpen = index <= maxUnlockedStep;
+        const subtitle = active ? "Dalam proses" : done ? "Selesai" : canOpen ? "Bisa dibuka" : "Menunggu";
+
+        return (
+          <React.Fragment key={step.id}>
+            {index > 0 ? <div className="pointer-events-none hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
+            <button
+              type="button"
+              onClick={() => {
+                if (canOpen) onSelect?.(index);
+              }}
+              className={cls(
+                "relative z-10 block w-[140px] shrink-0 snap-start rounded-xl px-1 py-1 md:w-auto md:flex-1 md:shrink md:snap-none",
+                canOpen ? "cursor-pointer" : "cursor-not-allowed opacity-70"
+              )}
+            >
+              <StudioStepNode
+                title={step.label}
+                subtitle={subtitle}
+                active={active}
+                icon={<Icon className="h-4 w-4" />}
+              />
+            </button>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <div className="mx-auto mt-5 max-w-[1120px] rounded-[30px] bg-white p-5 shadow-2xl shadow-black/15 md:mt-6 md:p-6">
+      <div className="rounded-[24px] border border-[#D8E1EA] bg-[#F4F7FA] px-6 py-7 md:px-7 md:py-7">{content}</div>
+    </div>
+  );
+}
+
 function StudioConfigRail({ configs, selectedId, onOpen, onCreate }) {
   return (
     <div className="rounded-[20px] border border-[#D9E1EA] bg-white p-4 shadow-sm">
@@ -4990,3 +7953,4 @@ function StudioConfigRail({ configs, selectedId, onOpen, onCreate }) {
 }
 
 export default PartnerConfigStudio;
+
