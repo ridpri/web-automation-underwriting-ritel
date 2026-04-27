@@ -369,11 +369,16 @@ function calculateCoverageEnd(startDate) {
   return formatDateInput(date);
 }
 
-function SectionCard({ title, subtitle, children, action }) {
+function SectionCard({ title, subtitle, children, action, headerAlign = "left" }) {
   return (
     <section className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div
+        className={cls(
+          "flex items-start gap-4",
+          action ? "justify-between" : headerAlign === "center" ? "justify-center" : "justify-start"
+        )}
+      >
+        <div className={headerAlign === "center" ? "text-center" : ""}>
           <div className="text-[18px] font-bold text-slate-900">{title}</div>
           {subtitle ? <div className="mt-1 text-sm text-slate-500">{subtitle}</div> : null}
         </div>
@@ -528,6 +533,61 @@ function ProposalRow({ label, value, strong = false }) {
     <div className="flex flex-col gap-1.5 border-b border-slate-100 py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="text-sm text-slate-500">{label}</div>
       <div className={cls("max-w-full break-words text-left text-sm text-slate-900 sm:max-w-[60%] sm:text-right", strong && "font-semibold")}>{value || "-"}</div>
+    </div>
+  );
+}
+
+function OfferSummarySection({ title, action, children }) {
+  return (
+    <div className="rounded-[22px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFDFF_100%)] px-4 py-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition-shadow duration-200 hover:shadow-[0_16px_34px_rgba(15,23,42,0.07)] md:px-5">
+      <div className="flex items-center justify-between gap-3 border-b border-[#EEF3F8] pb-3">
+        <div className="text-[15px] font-semibold tracking-tight text-slate-900">{title}</div>
+        {action ? action : null}
+      </div>
+      <div className="mt-3.5">{children}</div>
+    </div>
+  );
+}
+
+function SummaryEditButton({ onClick }) {
+  if (!onClick) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-sm font-medium text-[#0A4D82] shadow-sm transition hover:border-[#BFD4E8] hover:bg-[#F8FBFE] hover:shadow-[0_8px_18px_rgba(10,77,130,0.08)]"
+    >
+      Edit
+    </button>
+  );
+}
+
+function SummaryGuaranteeItem({ title, icon, compact = false }) {
+  const IconComponent = icon || Shield;
+  return (
+    <div className={cls("flex items-start", compact ? "gap-2" : "gap-2.5")}>
+      <div className={cls("mt-0.5 flex shrink-0 items-center justify-center border border-[#D6E0EA] bg-[#F8FBFE] text-[#0A4D82]", compact ? "h-6 w-6 rounded-md" : "h-7 w-7 rounded-lg")}>
+        {React.createElement(IconComponent, { className: compact ? "h-3.5 w-3.5" : "h-4 w-4" })}
+      </div>
+      <div className={cls("min-w-0 text-slate-900", compact ? "text-[14px] leading-[1.35]" : "text-[15px] leading-[1.45]")}>{title}</div>
+    </div>
+  );
+}
+
+function OfferSummaryKeyValue({ label, value, emphasize = false }) {
+  const normalizedLabel = String(label || "").replace(/:\s*$/, "");
+  const isEmptyString = typeof value === "string" && (!value.trim() || value.trim() === "-" || value.trim().toLowerCase() === "belum dipilih");
+  if (value === null || value === undefined || isEmptyString) return null;
+  return (
+    <div className={cls("border-t border-slate-100 first:border-t-0 first:pt-0 last:pb-0", emphasize ? "py-2.5" : "py-2")}>
+      <div className="space-y-1 md:grid md:grid-cols-[170px_10px_minmax(0,1fr)] md:gap-x-1.5 md:space-y-0">
+        <div className="text-[12px] font-normal leading-[1.4] text-slate-500">
+          {normalizedLabel}
+          <span className="md:hidden">:</span>
+        </div>
+        <div className="hidden text-[12px] font-normal leading-[1.4] tracking-[0.08em] text-slate-400 md:block">:</div>
+        <div className={cls("text-[14px] font-normal leading-[1.45] text-slate-900", emphasize && "leading-[1.75]")}>{value}</div>
+      </div>
     </div>
   );
 }
@@ -1131,136 +1191,87 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
       <div className="mx-auto max-w-[860px] px-4 py-6 md:px-6">
         <div className="space-y-3">
           <SectionCard
-            title="Ringkasan Penawaran"
-            subtitle="Informasi utama penawaran yang sedang Anda terima."
-            action={
-              !isInternalPreview ? (
-                <button
-                  type="button"
-                  disabled={!canProceed || (!isIndicative && offerMeta.isExpired)}
-                  onClick={onPrimary}
-                  className={cls(
-                    "inline-flex h-10 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-white shadow-sm",
-                    canProceed && (isIndicative || !offerMeta.isExpired)
-                      ? "bg-[#F5A623] hover:brightness-105"
-                      : "cursor-not-allowed bg-slate-400"
-                  )}
-                >
-                  {primaryLabel}
-                </button>
-              ) : null
-            }
+            title="Ringkasan Penawaran Anda"
+            subtitle="Rangkuman utama penawaran yang sedang Anda tinjau."
+            headerAlign="center"
           >
-            <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4">
+            <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
               <div className="space-y-3">
-                <div className="rounded-2xl border border-[#D8E1EA] bg-white px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-[15px] font-semibold text-slate-900">Ringkasan Nasabah</div>
-                    {!isInternalPreview ? (
-                      <button
-                        type="button"
-                        onClick={onEditInsured}
-                        className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]"
-                      >
-                        Edit
-                      </button>
-                    ) : null}
+                <OfferSummarySection
+                  title="Ringkasan Informasi Calon Tertanggung"
+                  action={!isInternalPreview ? <SummaryEditButton onClick={onEditInsured} /> : null}
+                >
+                  <div className="space-y-2.5">
+                    <OfferSummaryKeyValue label="Nama Tertanggung" value={customerDisplay} />
+                    <OfferSummaryKeyValue label="Alamat Email" value={emailDisplay} />
+                    <OfferSummaryKeyValue label="Nomor Handphone" value={phoneDisplay} />
+                    <OfferSummaryKeyValue label="Status Penawaran" value={canProceed ? "Siap ditinjau" : "Masih perlu dilengkapi"} />
                   </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <div className="text-[14px] font-medium text-slate-500">Nama Tertanggung</div>
-                      <div className="mt-1 text-[15px] font-semibold leading-[1.35] text-slate-900">{customerDisplay}</div>
-                    </div>
-                    <div>
-                      <div className="text-[14px] font-medium text-slate-500">Status Penawaran</div>
-                      <div className="mt-1 text-[15px] font-semibold leading-[1.35] text-slate-900">
-                        {canProceed ? "Siap ditinjau" : "Masih perlu dilengkapi"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                </OfferSummarySection>
 
-                <div className="rounded-2xl border border-[#D8E1EA] bg-white px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-[15px] font-semibold text-slate-900">Ringkasan Properti</div>
-                    {!isInternalPreview ? (
-                      <button
-                        type="button"
-                        onClick={onEditObject}
-                        className="inline-flex h-9 items-center rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]"
-                      >
-                        Edit
-                      </button>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 space-y-3">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-3">
-                        <div>
-                          <div className="text-[14px] font-medium text-slate-500">Properti</div>
-                          <div className="mt-1 text-[15px] font-semibold leading-[1.35] text-slate-900">{objectSummaryLabel}</div>
-                        </div>
-
-                        <div>
-                          <div className="text-[14px] font-medium text-slate-500">Harga Pertanggungan</div>
-                          <div className="mt-1 text-[15px] font-semibold leading-[1.35] text-slate-900">{coverageValue}</div>
-                        </div>
-
-                        <div>
-                          <div className="text-[14px] font-medium text-slate-500">Kelas Konstruksi</div>
-                          <div className="mt-1 text-[15px] font-semibold leading-[1.35] text-slate-900">{constructionSummaryLabel}</div>
-                          {constructionInfo ? (
-                            <div className="mt-1 text-[14px] leading-[1.35] text-slate-600">
-                              {constructionInfo.desc}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-[14px] font-medium text-slate-500">Objek yang Dijamin</div>
-                        <div className="mt-1 space-y-1.5">
-                          {objectRows.length ? (
-                            objectRows.map((row) => (
-                              <div key={row.id} className="text-[15px] leading-[1.35] text-slate-900">
+                <OfferSummarySection
+                  title="Ringkasan Informasi Properti"
+                  action={!isInternalPreview ? <SummaryEditButton onClick={onEditObject} /> : null}
+                >
+                  <div className="space-y-2.5">
+                    <OfferSummaryKeyValue label="Properti" value={objectSummaryLabel} emphasize />
+                    <OfferSummaryKeyValue
+                      label="Objek yang Dijamin"
+                      emphasize
+                      value={
+                        objectRows.length ? (
+                          <div className="space-y-0.5">
+                            {objectRows.map((row) => (
+                              <div key={row.id}>
                                 <span className="font-semibold">{row.type || "Objek"}</span>
                                 <span>: Rp {formatRupiah(parseNumber(row.amount))}</span>
                                 {row.note ? <span className="text-slate-600">, {row.note}</span> : null}
                               </div>
-                            ))
-                          ) : (
-                            <div className="text-[15px] font-semibold leading-[1.35] text-slate-900">{objectTypeSummary}</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-[#E3E9F0] pt-3">
-                      <div className="text-[14px] font-medium text-slate-500">Cakupan Polis</div>
-                      <div className="mt-1 space-y-1.5 text-[15px] leading-[1.3] text-slate-900">
-                        <div className="font-semibold">{activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}</div>
-                        <div className="pt-1 text-[14px] font-medium text-slate-500">Perluasan Jaminan</div>
-                        {guaranteeSummaryVisualItems.length ? (
-                          guaranteeSummaryVisualItems.map((item) => {
-                            const Icon = item.icon || Shield;
-                            return (
-                              <div key={item.title} className="flex items-center gap-2">
-                                <Icon className="h-4 w-4 shrink-0 text-[#0A4D82]" />
-                                <span className="font-semibold">{item.title}</span>
-                              </div>
-                            );
-                          })
+                            ))}
+                          </div>
                         ) : (
-                          <div className="font-semibold">Belum ada perluasan yang dipilih</div>
-                        )}
+                          objectTypeSummary
+                        )
+                      }
+                    />
+                    <OfferSummaryKeyValue label="Harga Pertanggungan" value={coverageValue} />
+                    <OfferSummaryKeyValue
+                      label="Kelas Konstruksi"
+                      value={constructionInfo ? `${constructionSummaryLabel}: ${constructionInfo.desc}` : constructionSummaryLabel}
+                      emphasize
+                    />
+                    <OfferSummaryKeyValue label="Cakupan Polis" value={activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle} />
+                  </div>
+                </OfferSummarySection>
+
+                <OfferSummarySection title="Ringkasan Jaminan">
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F7FAFD_100%)] px-4 py-3">
+                      <SummaryGuaranteeItem title={activeVariant.primaryCoverageTitle} icon={Flame} />
+                      <div className="mt-2 text-[13px] leading-5 text-slate-600">{activeVariant.primaryCoverageDescription}</div>
+                      <div className="mt-2 text-[12px] font-semibold text-[#0A4D82]">Premi: Rp {formatRupiah(basePremium)}</div>
+                      <div className="mt-1 text-[12px] leading-5 text-slate-500">
+                        Risiko sendiri saat klaim: {constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther}
                       </div>
                     </div>
+                    {guaranteeSummaryVisualItems.length ? (
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {selectedExtensions.map((item) => (
+                          <div key={item.key} className="rounded-xl border border-[#D8E1EA] bg-white px-4 py-3">
+                            <SummaryGuaranteeItem title={item.title} icon={item.icon || Shield} compact />
+                            {item.detail ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{item.detail}</div> : null}
+                            <div className="mt-2 text-[12px] font-semibold text-[#0A4D82]">Premi: Rp {formatRupiah(Math.round(totalValue * item.rate))}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-[#CAD6E3] bg-white px-4 py-3 text-[13px] text-slate-500">Belum ada perluasan jaminan yang dipilih.</div>
+                    )}
                   </div>
-                </div>
+                </OfferSummarySection>
 
-                <div className="rounded-2xl border border-[#D8E1EA] bg-white px-4 py-3">
-                  <div className="text-[15px] font-semibold text-slate-900">Ringkasan Biaya</div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                <OfferSummarySection title="Ringkasan Biaya">
+                  <div className="grid gap-3 sm:grid-cols-4">
                     <div className="rounded-xl border border-[#E3E9F0] bg-[#F8FBFE] px-4 py-3">
                       <div className="text-[13px] font-medium text-slate-500">Premi Dasar</div>
                       <div className="mt-1 text-[16px] font-semibold text-slate-900">{"Rp " + formatRupiah(basePremium)}</div>
@@ -1282,16 +1293,34 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                     </div>
                   </div>
 
-                  {!isInternalPreview && !isIndicative ? (
-                    <button
-                      type="button"
-                      onClick={onSecondary}
-                      className="mt-3 flex h-[42px] w-full items-center justify-center rounded-[12px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
-                    >
-                      Kembali
-                    </button>
+                  {!isInternalPreview ? (
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {!isIndicative ? (
+                        <button
+                          type="button"
+                          onClick={onSecondary}
+                          className="flex h-[42px] w-full items-center justify-center rounded-[12px] border border-[#D5DDE6] bg-white px-4 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+                        >
+                          Kembali
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={!canProceed || (!isIndicative && offerMeta.isExpired)}
+                        onClick={onPrimary}
+                        className={cls(
+                          "flex h-[42px] w-full items-center justify-center rounded-[12px] px-4 text-sm font-semibold text-white shadow-sm",
+                          !isIndicative && "sm:col-start-2",
+                          canProceed && (isIndicative || !offerMeta.isExpired)
+                            ? "bg-[#F5A623] hover:brightness-105"
+                            : "cursor-not-allowed bg-slate-400"
+                        )}
+                      >
+                        {primaryLabel}
+                      </button>
+                    </div>
                   ) : null}
-                </div>
+                </OfferSummarySection>
               </div>
             </div>
           </SectionCard>
@@ -1872,7 +1901,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
   if (!hasCompleteUploads) underwritingPendingItems.push("Unggah tiga foto properti: depan, samping kanan, dan samping kiri.");
   const shouldShowQuotedPricing = quoted && hasQuoteBasis;
   const shouldShowSidebarPricing = (quoted || internalStep > 1 || externalView === "offer-indicative" || externalView === "offer-final" || externalView === "payment") && hasQuoteBasis;
-  const showStepOneSummarySidebar = quoted;
+  const showStepOneSummarySidebar = false;
   const pricingSummaryValue = shouldShowSidebarPricing ? "Rp " + formatRupiah(basePremiumNumber) : "-";
   const extensionPremiumSummaryValue = shouldShowSidebarPricing && additionalPremiumNumber > 0 ? "Rp " + formatRupiah(additionalPremiumNumber) : null;
   const stampDutySummaryValue = shouldShowSidebarPricing ? "Rp " + formatRupiah(stampDutyNumber) : "-";
@@ -2279,34 +2308,74 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                       <div><FieldLabel label="Alamat / Lokasi Properti" required /><TextInput value={form.locationSearch} onChange={(value) => setField("locationSearch", value)} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} /><div className="mt-2 flex flex-wrap gap-2.5"><button type="button" onClick={() => { setField("locationSearch", "Lokasi GPS tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Jl. Sudirman Kav. 44, Jakarta Selatan", source: "gps" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Ambil Lokasi Sekarang</button><button type="button" onClick={() => { setField("locationSearch", "Pin peta tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading", source: "map" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Pilih di Peta</button></div></div>
                     </div>
                     <div className="mt-4 rounded-xl border border-[#D5DDE6] bg-[#FAFBFC] p-4"><div className="flex items-center justify-between gap-3"><div className="text-[15px] font-bold text-slate-900">Rincian Properti</div><button type="button" onClick={() => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }))} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-4 w-4" />Tambah Objek</button></div><div className="mt-3 space-y-2.5">{objectRows.map((row) => <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3"><div className="grid gap-2.5 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-center"><SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" /><CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" /><TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} /><button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek"><Trash2 className="h-4 w-4" /></button></div></div>)}</div><div className="mt-3 rounded-[10px] bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200"><div className="flex flex-col gap-1.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><span>Total Nilai yang Dilindungi</span><span className="break-words text-left text-[18px] font-bold text-[#E8A436] sm:text-right">Rp {formatRupiah(totalValue)}</span></div></div></div>
-                </SectionCard>
-                  <div className={cls("flex justify-stretch gap-3", quoted ? "justify-stretch sm:justify-end" : "sm:justify-end sm:gap-3")}>
-                    {!quoted ? <button type="button" disabled={!canAdvanceInternalStepOne} onClick={() => setQuoted(true)} className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Cek Premi</button> : null}
-                    {isInternalMode ? (
+                  </SectionCard>
+
+                  {!quoted ? (
+                    <div className="flex justify-stretch gap-3 sm:justify-end sm:gap-3">
+                      <button type="button" disabled={!canAdvanceInternalStepOne} onClick={() => setQuoted(true)} className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Simulasi</button>
+                    </div>
+                  ) : null}
+
+                  {quoted ? (
+                    <div ref={resultsRef} className="space-y-5">
+                      <SectionCard title="Rincian Jaminan" subtitle="Klik setiap baris untuk melihat penjelasan detailnya.">
+                        <div className="space-y-5">
+                          <div>
+                            <div className="text-[15px] font-semibold tracking-tight text-slate-900">{activeVariant.insuredRisksSectionTitle}</div>
+                            <div className="mt-3">
+                              <AccordionRiskRow title={activeVariant.primaryCoverageTitle} icon={Flame} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(basePremiumNumber) : "-"} detail={activeVariant.primaryCoverageDescription} deductible={form.constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther} alwaysIncluded={true} expanded={expandedRows.fire} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, fire: !prev.fire }))} />
+                            </div>
+                          </div>
+                          {activeVariant.importantExclusions.length ? (
+                            <div>
+                              <div className="text-[15px] font-semibold tracking-tight text-slate-900">{activeVariant.exclusionsSectionTitle}</div>
+                              <div className="mt-1 text-sm leading-6 text-slate-500">{activeVariant.exclusionsSectionSubtitle}</div>
+                              <div className="mt-3 rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
+                                <button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, exclusions: !prev.exclusions }))} className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left">
+                                  <div className="text-[15px] font-semibold text-[#0A4D82]">Ringkasan pengecualian utama</div>
+                                  <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expandedRows.exclusions && "rotate-180")} />
+                                </button>
+                                {expandedRows.exclusions ? (
+                                  <div className="border-t border-[#D6E0EA] px-3.5 py-3">
+                                    <div className="space-y-2">{activeVariant.importantExclusions.map((item) => <div key={item} className="flex items-start gap-2 text-[13px] leading-5 text-slate-700"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" /><span>{item}</span></div>)}</div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : null}
+                          <div>
+                            <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
+                            <div className="mt-3 space-y-2.5">{activeGuarantees.map((item) => { const checked = selectedGuarantees[item.key]; const premiumValue = Math.round(totalValue * item.rate); const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible; return <AccordionRiskRow key={item.key} title={item.title} icon={item.icon} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(premiumValue) : "-"} detail={item.detail} deductible={deductibleValue} checked={checked} onToggleChecked={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} expanded={expandedRows[item.key]} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} extra={item.key === "earthquake" && checked && isFloorRelevant(form.propertyType, form.occupancy) ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Diisi hanya bila objek bertingkat dan gempa bumi dipilih." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null} />; })}</div>
+                          </div>
+                        </div>
+                      </SectionCard>
+                    </div>
+                  ) : null}
+
+                  {quoted ? (
+                    <div className="flex justify-stretch gap-3 sm:justify-end">
+                      {isInternalMode ? (
+                        <button
+                          type="button"
+                          disabled={!canAdvanceInternalStepOne}
+                          onClick={() => {
+                            setShowIndicationModal(true);
+                          }}
+                          className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+                        >
+                          Kirim Indikasi
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         disabled={!canAdvanceInternalStepOne}
-                        onClick={() => {
-                          setQuoted(true);
-                          setShowIndicationModal(true);
-                        }}
-                        className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
-                      >
-                        Kirim Indikasi
-                      </button>
-                    ) : null}
-                    {(quoted || canAdvanceInternalStepOne) ? (
-                      <button
-                        type="button"
-                        disabled={!canAdvanceInternalStepOne}
-                        onClick={() => { setQuoted(true); setInternalStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                        onClick={() => { setInternalStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                         className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                       >
                         Isi Data
                       </button>
-                    ) : null}
-                  </div>
-                  {quoted ? <div ref={resultsRef} className="space-y-5"><SectionCard title="Rincian Jaminan" subtitle="Klik setiap baris untuk melihat penjelasan detailnya."><div className="space-y-5"><div><div className="text-[15px] font-semibold tracking-tight text-slate-900">{activeVariant.insuredRisksSectionTitle}</div><div className="mt-3"><AccordionRiskRow title={activeVariant.primaryCoverageTitle} icon={Flame} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(basePremiumNumber) : "-"} detail={activeVariant.primaryCoverageDescription} deductible={form.constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther} alwaysIncluded={true} expanded={expandedRows.fire} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, fire: !prev.fire }))} /></div></div>{activeVariant.importantExclusions.length ? <div><div className="text-[15px] font-semibold tracking-tight text-slate-900">{activeVariant.exclusionsSectionTitle}</div><div className="mt-1 text-sm leading-6 text-slate-500">{activeVariant.exclusionsSectionSubtitle}</div><div className="mt-3 rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, exclusions: !prev.exclusions }))} className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left"><div className="text-[15px] font-semibold text-[#0A4D82]">Ringkasan pengecualian utama</div><ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expandedRows.exclusions && "rotate-180")} /></button>{expandedRows.exclusions ? <div className="border-t border-[#D6E0EA] px-3.5 py-3"><div className="space-y-2">{activeVariant.importantExclusions.map((item) => <div key={item} className="flex items-start gap-2 text-[13px] leading-5 text-slate-700"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" /><span>{item}</span></div>)}</div></div> : null}</div></div> : null}<div><div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div><div className="mt-3 space-y-2.5">{activeGuarantees.map((item) => { const checked = selectedGuarantees[item.key]; const premiumValue = Math.round(totalValue * item.rate); const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible; return <AccordionRiskRow key={item.key} title={item.title} icon={item.icon} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(premiumValue) : "-"} detail={item.detail} deductible={deductibleValue} checked={checked} onToggleChecked={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} expanded={expandedRows[item.key]} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} extra={item.key === "earthquake" && checked && isFloorRelevant(form.propertyType, form.occupancy) ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Diisi hanya bila objek bertingkat dan gempa bumi dipilih." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null} />; })}</div></div></div></SectionCard></div> : null}
+                    </div>
+                  ) : null}
                 </div>
                 {showStepOneSummarySidebar ? <SummarySidebarShell title="Ringkasan">
                   <div className="border-t border-white/15 pt-3">
@@ -2352,26 +2421,41 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
               </div>
             </div>
           ) : (
-                <div className="mx-auto mt-6 max-w-[1280px] px-4 md:px-6"><div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]"><div className="space-y-5"><UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} uwForm={uwForm} setUwField={setUwField} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} expandedRows={expandedRows} setExpandedRows={setExpandedRows} /></div><SummarySidebarShell title="Ringkasan">
-              <div className="border-t border-white/15 pt-3">
-                <SummaryRow label="Nasabah" value={customerName || "-"} />
-                <SummaryRow label="Jenis Bangunan" value={form.propertyType} />
-                <SummaryRow label="Penggunaan bangunan" value={form.occupancy} />
-                <SummaryRow label="Nilai yang Dilindungi" value={"Rp " + formatRupiah(totalValue)} />
+            <div className="mx-auto mt-6 max-w-4xl px-4 md:px-6">
+              <div className="space-y-5">
+                <UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} uwForm={uwForm} setUwField={setUwField} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} expandedRows={expandedRows} setExpandedRows={setExpandedRows} />
+                <SectionCard title="Ringkasan">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-3">
+                      <div className="text-[13px] font-semibold uppercase tracking-[0.14em] text-slate-400">Data Properti</div>
+                      <div className="mt-2">
+                        <ProposalRow label="Nasabah" value={customerName || "-"} />
+                        <ProposalRow label="Jenis Bangunan" value={form.propertyType} />
+                        <ProposalRow label="Penggunaan bangunan" value={form.occupancy} />
+                        <ProposalRow label="Nilai yang Dilindungi" value={"Rp " + formatRupiah(totalValue)} strong />
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-3">
+                      <div className="text-[13px] font-semibold uppercase tracking-[0.14em] text-slate-400">Data Lanjutan</div>
+                      <div className="mt-2">
+                        <ProposalRow label={form.customerType === "Badan Usaha" ? "NPWP" : "NIK"} value={uwForm.idNumber || "-"} />
+                        <ProposalRow label="Kontak di Lokasi" value={uwForm.picName || "-"} />
+                        <ProposalRow label="Jangka Waktu Pertanggungan (Mulai)" value={uwForm.coverageStartDate || "-"} />
+                        <ProposalRow label="Jangka Waktu Pertanggungan (Akhir)" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <SummarySidebarAlert items={underwritingPendingItems} />
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    {isInternalMode ? <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setShowIndicationModal(true)} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Kirim Indikasi</button> : null}
+                    <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setExternalView("offer-final")} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>{isInternalMode ? "Pembayaran" : "Tinjau Penawaran"}</button>
+                    <button type="button" onClick={() => setInternalStep(1)} className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"><ArrowLeft className="h-4 w-4" />Kembali</button>
+                  </div>
+                </SectionCard>
               </div>
-              <div className="border-t border-white/15 pt-3">
-                <SummaryRow label={form.customerType === "Badan Usaha" ? "NPWP" : "NIK"} value={uwForm.idNumber || "-"} />
-                <SummaryRow label="Kontak di Lokasi" value={uwForm.picName || "-"} />
-                <SummaryRow label="Jangka Waktu Pertanggungan (Mulai)" value={uwForm.coverageStartDate || "-"} />
-                <SummaryRow label="Jangka Waktu Pertanggungan (Akhir)" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
-              </div>
-              <SummarySidebarAlert items={underwritingPendingItems} />
-              <div className="space-y-2">
-                {isInternalMode ? <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setShowIndicationModal(true)} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Kirim Indikasi</button> : null}
-                <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setExternalView("offer-final")} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] border border-white/20 text-sm font-bold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20", canAdvanceUnderwriting ? "bg-[#0A4D82] hover:brightness-110" : "cursor-not-allowed bg-slate-500/70")}>{isInternalMode ? "Pembayaran" : "Tinjau Penawaran"}</button>
-                <button type="button" onClick={() => setInternalStep(1)} className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-white/20 bg-[#0A4D82] text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali</button>
-              </div>
-            </SummarySidebarShell></div></div>
+            </div>
           )}
         </div>
       )}
