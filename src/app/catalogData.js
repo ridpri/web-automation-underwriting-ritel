@@ -84,10 +84,10 @@ export const VEHICLE_PRODUCTS = [
   },
   {
     key: "mobil-comp",
-    title: "Comprehensive Kendaraan - Mobil",
+    title: "Asuransi Mobil Komprehensif",
     category: "Kendaraan Bermotor",
-    subtitle: "Perlindungan mobil terhadap kerusakan dan kehilangan akibat risiko yang dijamin polis.",
-    description: "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran.",
+    subtitle: "Menjamin kerugian atau kerusakan pada Kendaraan Bermotor akibat tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran.",
+    description: "Menjamin kerugian atau kerusakan pada Kendaraan Bermotor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran sesuai ketentuan polis.",
     image: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=80",
     active: true,
   },

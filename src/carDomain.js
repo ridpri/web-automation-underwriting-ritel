@@ -182,7 +182,7 @@ export const CAR_TLO_EXTENSIONS = [
     title: "Jaminan Tanggung Jawab Hukum terhadap Pihak Ketiga",
     detail:
       "Menjamin tanggung jawab hukum Tertanggung atas kematian, cidera badan, biaya perawatan/pengobatan, serta kerugian atau kerusakan harta benda milik penumpang atau pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis.",
-    deductible: "Jaminan ini tidak dikenakan risiko sendiri",
+    deductible: "Tanpa risiko sendiri saat klaim.",
     type: "amount",
   },
   {
@@ -220,7 +220,7 @@ export const CAR_TLO_EXTENSIONS = [
     title: "Kecelakaan Diri Pengemudi",
     detail:
       "Menjamin cidera badan, kematian, dan atau biaya pengobatan pengemudi yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
-    deductible: "Jaminan ini tidak dikenakan risiko sendiri",
+    deductible: "Tanpa risiko sendiri saat klaim.",
     type: "amount",
   },
   {
@@ -228,7 +228,7 @@ export const CAR_TLO_EXTENSIONS = [
     title: "Kecelakaan Diri Penumpang",
     detail:
       "Menjamin cidera badan, kematian, dan atau biaya pengobatan penumpang yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
-    deductible: "Jaminan ini tidak dikenakan risiko sendiri",
+    deductible: "Tanpa risiko sendiri saat klaim.",
     type: "amount-seat",
   },
 ];
@@ -238,7 +238,7 @@ const TLO_RATES_CAR = {
   2: { 1: { min: 0.0065 }, 2: { min: 0.0044 }, 3: { min: 0.0038 }, 4: { min: 0.0025 }, 5: { min: 0.002 } },
   3: { 1: { min: 0.0051 }, 2: { min: 0.0044 }, 3: { min: 0.0029 }, 4: { min: 0.0023 }, 5: { min: 0.002 } },
 };
-const FLOOD_RATES = { 1: { min: 0.0005 }, 2: { min: 0.001 }, 3: { min: 0.0005 } };
+const FLOOD_RATES = { 1: { min: 0.0005 }, 2: { min: 0.00075 }, 3: { min: 0.0005 } };
 const QUAKE_RATES = { 1: { min: 0.00085 }, 2: { min: 0.00075 }, 3: { min: 0.0005 } };
 const SRCC_RATE = 0.00035;
 const TS_RATE = 0.00035;
@@ -252,8 +252,6 @@ const QUAKE_RATES_COMP = { 1: { min: 0.0012 }, 2: { min: 0.001 }, 3: { min: 0.00
 const SRCC_RATE_COMP = 0.0005;
 const TS_RATE_COMP = 0.0005;
 const AUTH_WORKSHOP_RATE = 0.0025;
-const THEFT_BY_OWN_DRIVER_RATE = 0.001;
-const AMBULANCE_PREMIUM = 50000;
 
 export function getCarVehicleCategory(vehicleType) {
   const value = String(vehicleType || "").toLowerCase();
@@ -284,7 +282,7 @@ function progressiveTPL(amount, vehicleType) {
   const vehicleCategory = getCarVehicleCategory(vehicleType);
   const r1 = vehicleCategory === "Angkutan Penumpang" ? 0.01 : 0.015;
   const r2 = vehicleCategory === "Angkutan Penumpang" ? 0.005 : 0.0075;
-  const r3 = vehicleCategory === "Angkutan Penumpang" ? 0.0025 : 0.00325;
+  const r3 = vehicleCategory === "Angkutan Penumpang" ? 0.0025 : 0.00375;
   const a = Math.min(remaining, 25000000);
   total += a * r1;
   remaining -= a;
@@ -297,17 +295,15 @@ function progressiveTPL(amount, vehicleType) {
   return Math.round(total);
 }
 
-function computeCarTplFee(limitAmount, marketValue, vehicleType) {
+function computeCarTplFee(limitAmount, vehicleType) {
   const amount = Math.max(0, Number(limitAmount) || 0);
-  const hp = Math.max(0, Number(marketValue) || 0);
-  const vehicleCategory = getCarVehicleCategory(vehicleType);
-  if (!hp) return 0;
-  if (vehicleCategory === "Angkutan Penumpang") {
-    if (amount <= 25000000) return Math.round(hp * 0.01);
-    if (amount <= 50000000) return Math.round(hp * 0.005);
-    return Math.round(hp * 0.0025);
-  }
   return progressiveTPL(Math.min(100000000, amount), vehicleType);
+}
+
+function getCarTplCoverageAmount(quote, marketValue, fallbackAmount = 0) {
+  const requested = Math.max(0, Number(quote.extensions.tpl?.amount || fallbackAmount) || fallbackAmount);
+  const maxCoverage = marketValue ? Math.min(100000000, Math.max(0, Number(marketValue) || 0)) : 100000000;
+  return Math.min(maxCoverage, requested);
 }
 
 function previewCarExtensionFee(quote, key) {
@@ -319,7 +315,7 @@ function previewCarExtensionFee(quote, key) {
   const insuredValue = marketValue + equipmentAmount;
   const region = getRegion(quote.plateRegion);
   const vehicleType = quote.vehicleType || "Mobil Penumpang";
-  if (key === "tpl") return computeCarTplFee(Math.min(100000000, Number(quote.extensions.tpl.amount || 25000000)), marketValue, vehicleType);
+  if (key === "tpl") return computeCarTplFee(getCarTplCoverageAmount(quote, marketValue, 25000000), vehicleType);
   if (!marketValue) return 0;
   if (key === "srcc") return Math.round(insuredValue * SRCC_RATE);
   if (key === "ts") return Math.round(insuredValue * TS_RATE);
@@ -443,9 +439,7 @@ export function createCarCompInternalState() {
       ...base.quote,
       extensions: {
         ...base.quote.extensions,
-        ambulance: { enabled: false },
         authorizedWorkshop: { enabled: false },
-        theftByOwnDriver: { enabled: false },
       },
     },
   };
@@ -475,7 +469,7 @@ export function calcCarTloPremium(quote) {
   }
   const baseRate = marketValue ? mainPremium / marketValue : 0;
   const details = {
-    tplFee: quote.extensions.tpl.enabled ? computeCarTplFee(Math.min(100000000, Number(quote.extensions.tpl.amount || 0)), marketValue, vehicleType) : 0,
+    tplFee: quote.extensions.tpl.enabled ? computeCarTplFee(getCarTplCoverageAmount(quote, marketValue), vehicleType) : 0,
     srccFee: quote.extensions.srcc.enabled ? Math.round(insuredValue * SRCC_RATE) : 0,
     tsFee: quote.extensions.ts.enabled ? Math.round(insuredValue * TS_RATE) : 0,
     floodFee: quote.extensions.flood.enabled ? Math.round(insuredValue * FLOOD_RATES[region].min) : 0,
@@ -532,7 +526,7 @@ export function calcCarCompPremium(quote) {
   const passengerSeats = Math.min(7, Math.max(1, Number(quote.extensions.passengerPa.seats || 4)));
   const equipmentRate = marketValue ? (baseMainPremium + ageLoadingAmount) / marketValue : 0;
   const details = {
-    tplFee: quote.extensions.tpl.enabled ? computeCarTplFee(Math.min(100000000, Number(quote.extensions.tpl.amount || 0)), marketValue, vehicleType) : 0,
+    tplFee: quote.extensions.tpl.enabled ? computeCarTplFee(getCarTplCoverageAmount(quote, marketValue), vehicleType) : 0,
     srccFee: quote.extensions.srcc.enabled ? Math.round(insuredValue * SRCC_RATE_COMP) : 0,
     tsFee: quote.extensions.ts.enabled ? Math.round(insuredValue * TS_RATE_COMP) : 0,
     floodFee: quote.extensions.flood.enabled ? Math.round(insuredValue * FLOOD_RATES_COMP[region].min) : 0,
@@ -540,9 +534,7 @@ export function calcCarCompPremium(quote) {
     driverPaFee: quote.extensions.driverPa.enabled ? Math.round(driverPaAmount * 0.005) : 0,
     passengerPaFee: quote.extensions.passengerPa.enabled ? Math.round(passengerPaAmount * 0.001 * passengerSeats) : 0,
     equipmentFee: quote.extensions.equipment?.enabled ? Math.round(equipmentAmount * equipmentRate) : 0,
-    ambulanceFee: quote.extensions.ambulance?.enabled ? AMBULANCE_PREMIUM : 0,
     authWorkshopFee: quote.extensions.authorizedWorkshop?.enabled ? Math.round((marketValue + equipmentAmount) * AUTH_WORKSHOP_RATE) : 0,
-    theftByOwnDriverFee: quote.extensions.theftByOwnDriver?.enabled ? Math.round((marketValue + equipmentAmount) * THEFT_BY_OWN_DRIVER_RATE) : 0,
     equipmentCap,
     insuredValue,
     baseMainPremium,

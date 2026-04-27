@@ -56,6 +56,26 @@ function resolveUrlSessionRole(value) {
   return PUBLIC_URL_SESSION_ROLES.has(value) ? value : null;
 }
 
+function decodeUrlShareToken(value) {
+  if (!value) return null;
+  try {
+    const normalized = String(value).replace(/-/g, "+").replace(/_/g, "/");
+    const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+    const binary = atob(normalized + padding);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+}
+
+function inferJourneyFromShareData(shareData) {
+  if (shareData?.flowType === "carComp") return "mobil-comp";
+  if (shareData?.flowType === "carTlo") return "car-tlo-external";
+  if (shareData?.flowType === "motor") return "motor-external";
+  return "";
+}
+
 function inferSessionRoleFromJourney(journey) {
   if (!journey) return "guest";
   if (INTERNAL_ONLY_JOURNEYS.has(journey)) return "internal";
@@ -76,7 +96,8 @@ function resolveInitialNavigationState() {
   }
 
   const params = new URLSearchParams(window.location.search);
-  const requestedJourney = params.get("journey") || "";
+  const shareJourney = inferJourneyFromShareData(decodeUrlShareToken(params.get("share") || ""));
+  const requestedJourney = params.get("journey") || shareJourney || "";
   const sessionRole =
     resolveUrlSessionRole(params.get("role"))
     || readStoredSessionRole()
@@ -572,7 +593,6 @@ export default function App() {
       </Suspense>
     );
   }
-
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <header className="sticky top-0 z-30 bg-[#0A4D82] shadow-sm">

@@ -130,7 +130,7 @@ export function PaymentInfoPanel({ title, children }: any) {
 }
 
 export function AccordionRiskRow({ title, premium, summary, detail, deductible, checked, onToggleChecked, expanded, onToggleExpand, alwaysIncluded = false, extra, itemIcon }: any) {
-  const deductibleIsDirect = ["tanpa biaya sendiri", "tanpa risiko sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) =>
+  const deductibleIsDirect = ["tanpa risiko sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) =>
     String(deductible || "").trim().toLowerCase().startsWith(token)
   );
   return (
@@ -155,7 +155,7 @@ export function AccordionRiskRow({ title, premium, summary, detail, deductible, 
       {expanded ? (
         <div className="border-t border-[#D6E0EA] px-3.5 py-3">
           <div className="whitespace-pre-line text-[13px] leading-5 text-slate-700">{summary}</div>
-      {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{deductibleIsDirect ? deductible.replace(/biaya sendiri/gi, "risiko sendiri") : <><span className="font-semibold text-slate-700">Risiko sendiri saat klaim:</span> {deductible.replace(/biaya sendiri/gi, "risiko sendiri")}</>}</div> : null}
+      {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{deductibleIsDirect ? deductible : <><span className="font-semibold text-slate-700">Risiko sendiri saat klaim:</span> {deductible}</>}</div> : null}
           {detail ? <div className="mt-2 whitespace-pre-line text-[12px] leading-5 text-slate-500">{detail}</div> : null}
           {extra ? <div className="mt-3">{extra}</div> : null}
         </div>

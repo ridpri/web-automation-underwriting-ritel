@@ -1,5 +1,149 @@
-import React from "react";
-import MotorLatestExact from "./MotorLatestExact.tsx";
+import React, { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowLeft, Bell, Camera, CameraOff, CheckCircle2, ChevronDown, FileText, Home, Mail, MapPin, Package, Phone, Search, Shield, User, Wallet } from "lucide-react";
+import { PLATES, MOTOR_USAGES, MOTOR_EXTENSIONS, MIN_YEAR_TLO, CURRENT_YEAR, addOneYear, calcMotorPremium, createMotorInternalState, getExtensionFee, isMotorYearEligible, motorSumInsuredLimitText, motorYearLimitText, validateMotorSumInsured } from "./motorDomain.js";
+import { canProceedToPaymentFromOperating, paymentBlockMessage } from "./operatingLayer.js";
+import { CustomerDataJourneyShell } from "./components/CustomerDataJourneyShell.jsx";
+import { OfferShareModal } from "./components/OfferShareModal.jsx";
+import { SentOffersHistoryModal, UserPillMenu } from "./components/UserPillMenu.jsx";
+import { VehicleYearPicker } from "./components/VehicleYearPicker.jsx";
+import { createEmptyDocumentCheck, createPhotoEvidence, createTransactionAuthority, evaluateDocumentRead, summarizeFraudSignals } from "./platform/securityControls.js";
+
+const CUSTOMER_TYPES = ["Pribadi", "Perusahaan / Badan Usaha"];
+const PAYMENT_OPTIONS = ["Virtual Account", "E-Wallet", "QRIS"];
+const MOCK_CIF = [
+  { name: "Sony Laksono", cif: "64YU5", type: "Pribadi", phone: "081298765432", email: "sony.laksono@email.com" },
+  { name: "Siti Rahma", cif: "84PL2", type: "Pribadi", phone: "081355667788", email: "siti.rahma@email.com" },
+  { name: "PT Maju Sentosa", cif: "55BX9", type: "Perusahaan / Badan Usaha", phone: "02150990088", email: "admin@majusentosa.co.id" },
+];
+
+function cls(...args) { return args.filter(Boolean).join(" "); }
+function digits(value) { return String(value || "").replace(/\D/g, ""); }
+function rp(value) { return new Intl.NumberFormat("id-ID").format(Number(value || 0)); }
+function formatCurrencyInput(value) { const clean = digits(value); return clean ? rp(clean) : ""; }
+function parseCurrency(value) { return Number(digits(value) || "0"); }
+function validEmail(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim()); }
+function validPhone(value) { const clean = digits(value); return clean.length >= 10 && clean.length <= 15; }
+function customerName(state) { return state.insured.fullName || state.insured.displayName || "-"; }
+function getShareUrl(view) { if (typeof window === "undefined") return "about:blank"; const url = new URL(window.location.href); url.searchParams.set("view", view || "motor-offer-indicative"); return url.toString(); }
+function addDaysToDate(date, days) { const next = new Date(date); next.setDate(next.getDate() + days); return next; }
+function formatDisplayDate(date) { return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric" }).format(date); }
+function formatDisplayDateTime(date) { return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date); }
+function endOfDay(date) { const next = new Date(date); next.setHours(23, 59, 0, 0); return next; }
+function resolveOfferValidity(isIndicative, coverageStart) {
+  const now = new Date();
+  if (isIndicative) return { expiresAt: endOfDay(addDaysToDate(now, 14)), expired: false };
+  const sevenDaysLimit = endOfDay(addDaysToDate(now, 7));
+  if (!coverageStart) return { expiresAt: sevenDaysLimit, expired: false };
+  const startDate = new Date(`${coverageStart}T00:00:00`);
+  if (Number.isNaN(startDate.getTime())) return { expiresAt: sevenDaysLimit, expired: false };
+  const coverageLimit = endOfDay(startDate);
+  const expiresAt = coverageLimit.getTime() < sevenDaysLimit.getTime() ? coverageLimit : sevenDaysLimit;
+  return { expiresAt, expired: expiresAt.getTime() < now.getTime() };
+}
+function StepNode({ step, title, subtitle, active, done, icon, onClick }) {
+  const content = <><div className={cls("flex h-9 w-9 items-center justify-center rounded-full border-2 bg-white md:h-10 md:w-10", done ? "border-green-600 text-green-600" : active ? "border-[#0A4D82] text-[#0A4D82]" : "border-slate-300 text-slate-300")}>{done ? <CheckCircle2 className="h-4 w-4" /> : icon}</div><div className="mt-2 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400 md:text-[10px] md:tracking-[0.16em]">{step}</div><div className={cls("mt-0.5 text-[13px] font-bold md:text-[14px]", active || done ? "text-slate-900" : "text-slate-500")}>{title}</div><div className={cls("mt-0.5 text-[11px] md:text-[12px]", active ? "text-[#E8A436]" : done ? "text-green-600" : "text-slate-400")}>{subtitle}</div></>;
+  if (onClick) return <button type="button" onClick={onClick} className="relative flex flex-1 flex-col items-center text-center">{content}</button>;
+  return <div className="relative flex flex-1 flex-col items-center text-center">{content}</div>;
+}
+function SectionCard({ title, subtitle, action, children }) {
+  return <section className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5"><div className="flex items-start justify-between gap-4"><div><div className="text-[18px] font-bold text-slate-900">{title}</div>{subtitle ? <div className="mt-1 text-sm text-slate-500">{subtitle}</div> : null}</div>{action ? <div>{action}</div> : null}</div><div className="mt-4">{children}</div></section>;
+}
+function FieldLabel({ label, required, helpText }) {
+  const tooltipOnly = String(helpText || "").startsWith("tooltip:");
+  const tooltipText = tooltipOnly ? String(helpText).slice(8).trim() : "";
+  return <div className="mb-1.5 flex flex-wrap items-start gap-x-2 gap-y-1"><label className="text-[13px] font-semibold text-slate-800">{label}{required ? <span className="text-[#E66A1E]"> *</span> : null}</label>{tooltipOnly ? <span title={tooltipText} className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[#BFD0E0] text-[10px] font-semibold text-[#5E7BA6]">!</span> : null}{helpText && !tooltipOnly ? <span className="text-[11px] font-medium leading-4 text-slate-500">{helpText}</span> : null}</div>;
+}
+function TextInput({ value, onChange, placeholder, icon, type = "text", readOnly = false }) {
+  return <div className="relative">{icon ? <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div> : null}<input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} readOnly={readOnly} className={cls("h-[44px] w-full rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-[14px] text-slate-800 outline-none transition placeholder:text-slate-500", "focus:border-[#0A4D82] focus:ring-4 focus:ring-[#0A4D82]/10", readOnly && "cursor-not-allowed bg-slate-50 text-slate-500", icon && "pl-10")} /></div>;
+}
+function SelectInput({ value, onChange, options, includeBlank = false, placeholder = "Pilih opsi yang sesuai" }) {
+  return <div className="relative"><select value={value} onChange={(event) => onChange(event.target.value)} className={cls("h-[44px] w-full appearance-none rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 pr-10 text-[14px] outline-none transition focus:border-[#0A4D82] focus:ring-4 focus:ring-[#0A4D82]/10", value ? "text-slate-800" : "text-slate-500")}>{includeBlank ? <option value="" disabled hidden>{placeholder}</option> : null}{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /></div>;
+}
+function SummaryRow({ label, value }) {
+  return <div className="flex flex-col gap-1.5 py-1.5 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-3"><div className="min-w-0 flex-1 text-white/75">{label}</div><div className="max-w-full break-words text-left font-semibold text-white sm:max-w-[60%] sm:text-right">{value}</div></div>;
+}
+function RiskRow({ title, premium, detail, deductible, checked, onToggleChecked, expanded, onToggleExpand, extra }) {
+  const deductibleIsDirect = ["tanpa risiko sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) =>
+    String(deductible || "").trim().toLowerCase().startsWith(token)
+  );
+  return <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]"><div className="flex items-center gap-3 px-3.5 py-3">{onToggleChecked ? <input type="checkbox" checked={checked} onChange={() => onToggleChecked(!checked)} className="h-5 w-5 rounded border-slate-300 text-[#0A4D82]" /> : <div className="flex h-5 w-5 items-center justify-center rounded border border-[#0A4D82] bg-[#0A4D82]/10 text-[#0A4D82]"><Shield className="h-3.5 w-3.5" /></div>}<button type="button" onClick={onToggleExpand} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"><div className="min-w-0"><div className="truncate text-[15px] font-semibold text-[#0A4D82]">{title}</div><div className="mt-0.5 text-[12px] text-slate-500">Premi: Rp {rp(premium)}</div></div><ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} /></button></div>{expanded ? <div className="border-t border-[#D6E0EA] px-3.5 py-3"><div className="text-[13px] leading-5 text-slate-700">{detail}</div><div className="mt-2 text-[12px] leading-5 text-slate-600">{deductibleIsDirect ? deductible : <><span className="font-semibold text-slate-700">Risiko sendiri saat klaim:</span> {deductible}</>}</div>{extra ? <div className="mt-3">{extra}</div> : null}</div> : null}</div>;
+}
+function UploadCard({ title, description = "Wajib diisi.", done, onCapture, allowGalleryFallback = false }) {
+  const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
+  return (
+    <div className="flex min-h-full flex-col rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[15px] font-semibold text-slate-900">{title}</div>
+          <div className="mt-1 text-sm text-slate-500">{description}</div>
+        </div>
+        <Camera className="h-5 w-5 text-slate-400" />
+      </div>
+
+      {done ? (
+        <div className="mt-3 flex h-40 w-full items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 px-4 text-center text-sm text-emerald-700">
+          Foto sudah tersedia dan siap ditinjau.
+        </div>
+      ) : cameraEnabled ? (
+        <div className="mt-3 flex h-40 w-full items-center justify-center rounded-xl border border-[#BFD0E0] bg-[#F8FBFE] px-4 text-center text-sm text-[#5E7BA6]">
+          Kamera aktif. Ambil foto kendaraan dari sudut ini.
+        </div>
+      ) : (
+        <div className="mt-3 flex h-40 w-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-center text-sm text-slate-400">
+          {showFallback
+            ? "Belum ada foto. Kamera tidak bisa dipakai, gunakan upload cadangan."
+            : "Belum ada foto. Aktifkan kamera untuk mengambil foto."}
+        </div>
+      )}
+
+      {showFallback ? (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+          {allowGalleryFallback
+            ? "Jika kamera tidak bisa dibuka, petugas masih dapat menggunakan upload dari galeri sebagai fallback review internal."
+            : "Jika kamera tidak bisa dibuka, izinkan akses kamera di browser atau lanjutkan dari perangkat lain."}
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {!cameraEnabled ? (
+          <button type="button" onClick={() => setCameraEnabled(true)} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <Camera className="h-4 w-4" />
+            Aktifkan Kamera
+          </button>
+        ) : (
+          <>
+            <button type="button" onClick={() => { onCapture(); setCameraEnabled(false); setShowFallback(false); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-medium text-white hover:brightness-105">
+              <Camera className="h-4 w-4" />
+              Ambil Foto
+            </button>
+            <button type="button" onClick={() => setCameraEnabled(false)} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <CameraOff className="h-4 w-4" />
+              Tutup Kamera
+            </button>
+          </>
+        )}
+        <button type="button" onClick={() => setShowFallback((prev) => !prev)} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          Kamera Tidak Bisa Dipakai?
+        </button>
+        {allowGalleryFallback && showFallback ? (
+            <button type="button" onClick={() => { onCapture(); setShowFallback(false); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <Camera className="h-4 w-4" />
+              Upload dari Galeri
+            </button>
+          ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ProposalRow({ label, value }) {
+  return <div className="grid gap-2 py-2 sm:grid-cols-[200px_minmax(0,1fr)]"><div className="text-sm text-slate-500">{label}</div><div className="text-sm font-semibold text-slate-900">{value || "-"}</div></div>;
+}
+
+function ProposalAccordion({ title, subtitle, open, onToggle, children }) {
+  return <div className="rounded-2xl border border-[#D8E1EA] bg-white shadow-sm"><button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"><div><div className="text-[15px] font-semibold text-slate-900">{title}</div>{subtitle ? <div className="mt-1 text-sm text-slate-500">{subtitle}</div> : null}</div><ChevronDown className={cls("h-4 w-4 text-slate-500 transition", open && "rotate-180")} /></button>{open ? <div className="border-t border-slate-200 px-4 py-4">{children}</div> : null}</div>;
+}
 
 export default function MotorInternalPrototype({
   onExit,
@@ -10,29 +154,551 @@ export default function MotorInternalPrototype({
   onOpenQueue = () => {},
   onOpenPartnerConfig = () => {},
 }) {
-  return (
-    <MotorLatestExact
-      entryMode="internal"
-      initialFlow="motor"
-      sessionName={sessionName}
-      onExit={onExit}
-      operatingRecord={operatingRecord}
-      onOperatingSignal={onOperatingSignal}
-      accountMenuItems={[
-        {
-          label: "Ruang Kerja Saya",
-          primary: true,
-          onClick: onOpenWorkspace,
-        },
-        {
-          label: "Antrean Internal",
-          onClick: onOpenQueue,
-        },
-        {
-          label: "Konfigurasi Partner",
-          onClick: onOpenPartnerConfig,
-        },
-      ]}
-    />
+  const [internalStep, setInternalStep] = useState(1);
+  const [externalView, setExternalView] = useState("");
+  const [state, setState] = useState(createMotorInternalState);
+  const [quoted, setQuoted] = useState(false);
+  const [expandedRows, setExpandedRows] = useState({ main: false, tpl: false, srcc: false, ts: false, flood: false, quake: false });
+  const [showIndicationModal, setShowIndicationModal] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showSentOffers, setShowSentOffers] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState("");
+  const [helpRequestSent, setHelpRequestSent] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("");
+  const [documentChecks, setDocumentChecks] = useState({ ktp: createEmptyDocumentCheck("KTP"), stnk: createEmptyDocumentCheck("STNK") });
+  const [evidence, setEvidence] = useState({ photos: { frontView: null, backView: null } });
+
+  const premium = useMemo(() => calcMotorPremium({ ...state.quote, marketValue: parseCurrency(state.quote.marketValue) }), [state.quote]);
+  const customerSuggestions = useMemo(() => {
+    const keyword = String(state.insured.displayName || "").trim().toLowerCase();
+    if (!keyword) return [];
+    return MOCK_CIF.filter((item) => item.name.toLowerCase().includes(keyword) || item.cif.toLowerCase().includes(keyword)).slice(0, 4);
+  }, [state.insured.displayName]);
+  const shareUrl = getShareUrl(externalView || (internalStep === 2 ? "motor-offer-final" : "motor-offer-indicative"));
+  const hasValidContact = validPhone(state.insured.phone) && validEmail(state.insured.email);
+  const hasEnteredMarketValue = String(state.quote.marketValue || "").trim().length > 0;
+  const hasValidSumInsured = validateMotorSumInsured(parseCurrency(state.quote.marketValue));
+  const fraudAlerts = useMemo(() => summarizeFraudSignals({ documentChecks: [documentChecks.ktp, documentChecks.stnk], evidenceChecks: [evidence.photos.frontView, evidence.photos.backView] }), [documentChecks, evidence]);
+  const transactionAuthority = useMemo(
+    () =>
+      createTransactionAuthority({
+        productCode: "MTR",
+        primaryValue: state.vehicle.plateNumber || state.quote.plateRegion || state.insured.fullName || state.insured.displayName,
+        versionLabel: operatingRecord?.version || (internalStep === 1 ? "Rev 1" : "Rev 2"),
+        preparedBy: operatingRecord?.owner || sessionName || "Tim Jasindo",
+        transactionId: operatingRecord?.id,
+        validUntil: operatingRecord?.validUntil || "",
+      }),
+    [internalStep, operatingRecord, sessionName, state.insured.displayName, state.insured.fullName, state.quote.plateRegion, state.vehicle.plateNumber],
   );
+
+  useEffect(() => {
+    if (!fraudAlerts.length) return;
+    onOperatingSignal({ status: "Pending Review Internal", reason: fraudAlerts[0], notes: "Transaksi perlu review internal berdasarkan hasil verifikasi dokumen atau evidence.", flags: fraudAlerts });
+  }, [fraudAlerts, onOperatingSignal]);
+
+  useEffect(() => {
+    onOperatingSignal({ authority: transactionAuthority });
+  }, [onOperatingSignal, transactionAuthority]);
+
+  const step1Missing = [];
+  if (!String(state.insured.displayName || "").trim()) step1Missing.push("Lengkapi nama nasabah atau CIF.");
+  if (!hasValidContact) step1Missing.push("Lengkapi nomor handphone dan alamat email yang valid.");
+  if (!state.quote.plateRegion) step1Missing.push("Pilih kode wilayah kendaraan.");
+  if (!state.quote.year) step1Missing.push("Lengkapi tahun pembuatan kendaraan.");
+  if (state.quote.year && !isMotorYearEligible(state.quote.year)) step1Missing.push(motorYearLimitText());
+  if (!String(state.quote.marketValue || "").trim()) step1Missing.push("Lengkapi nilai yang ingin dilindungi.");
+  if (!state.quote.usage) step1Missing.push("Pilih penggunaan kendaraan.");
+  if (!quoted) step1Missing.push("Klik Cek Premi untuk melihat rincian jaminan.");
+  const canQuoteStep1 = Boolean(String(state.insured.displayName || "").trim()) && hasValidContact && Boolean(state.quote.plateRegion) && Boolean(state.quote.year) && isMotorYearEligible(state.quote.year) && Boolean(String(state.quote.marketValue || "").trim()) && Boolean(state.quote.usage);
+
+  const step2Missing = [];
+  if (!state.insured.customerType) step2Missing.push("Pilih jenis nasabah.");
+  if (!String(state.insured.fullName || "").trim()) step2Missing.push("Lengkapi nama nasabah.");
+  if (!String(state.insured.address || "").trim()) step2Missing.push("Lengkapi alamat nasabah.");
+  if (!hasValidContact) step2Missing.push("Lengkapi nomor handphone dan alamat email yang valid.");
+  if (!state.quote.coverageStart) step2Missing.push("Lengkapi jangka waktu pertanggungan.");
+  if (!String(state.vehicle.plateNumber || "").trim()) step2Missing.push("Lengkapi nomor polisi / TNKB.");
+  if (!String(state.vehicle.chassisNumber || "").trim()) step2Missing.push("Lengkapi nomor rangka.");
+  if (!String(state.vehicle.engineNumber || "").trim()) step2Missing.push("Lengkapi nomor mesin.");
+  if (!String(state.quote.vehicleName || "").trim()) step2Missing.push("Lengkapi merek / tipe motor.");
+  if (state.insured.customerType === "Perusahaan / Badan Usaha" && !String(state.vehicle.contactOnLocation || "").trim()) step2Missing.push("Lengkapi kontak di lokasi.");
+  if (!state.uploads.frontView || !state.uploads.backView) step2Missing.push("Ambil dua foto kendaraan.");
+
+  const canAdvanceStep1 = !step1Missing.length;
+  const canAdvanceStep2 = !step2Missing.length;
+
+  async function handleCopyLink() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareFeedback("Link penawaran berhasil disalin.");
+      } else {
+        setShareFeedback("Link belum bisa disalin otomatis.");
+      }
+    } catch {
+      setShareFeedback("Link belum bisa disalin otomatis.");
+    }
+  }
+
+  function IndicationModal() {
+    if (!showIndicationModal) return null;
+    const recipientName = customerName(state) || "calon nasabah";
+    const shareMessage = encodeURIComponent(`Halo ${recipientName}, berikut tautan simulasi Total Loss Kendaraan - Motor: ${shareUrl}`);
+    return (
+      <OfferShareModal
+        open={showIndicationModal}
+        onClose={() => {
+          setShowIndicationModal(false);
+          setShareFeedback("");
+        }}
+        recipientName={recipientName}
+        shareLabel="Penawaran Total Loss Kendaraan - Motor"
+        shareUrl={shareUrl}
+        onOpenIndicativeOffer={() => {
+          setShowIndicationModal(false);
+          setExternalView("offer-indicative");
+        }}
+        onOpenFinalOffer={
+          internalStep === 2 && canAdvanceStep2
+            ? () => {
+                setShowIndicationModal(false);
+                setExternalView("offer-final");
+              }
+            : null
+        }
+        onOpenWhatsApp={() => window.open(`https://wa.me/?text=${shareMessage}`, "_blank", "noopener,noreferrer")}
+        onOpenEmail={() =>
+          window.open(
+            `mailto:?subject=${encodeURIComponent("Penawaran Total Loss Kendaraan - Motor")}&body=${shareMessage}`,
+            "_blank",
+            "noopener,noreferrer",
+          )
+        }
+        onCopyLink={handleCopyLink}
+        onShowQrInfo={() => setShareFeedback("QR Code belum digenerate otomatis. Tautan siap diencode oleh tim IT.")}
+        feedback={shareFeedback}
+      />
+    );
+  }
+
+  function HelpRequestToast() {
+    if (!helpRequestSent) return null;
+    return <div className="fixed bottom-6 right-6 z-40 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg">Permintaan bantuan sudah diteruskan dan akan ditindaklanjuti oleh petugas internal.</div>;
+  }
+
+  function CustomerProposalPage({ mode }) {
+    const isIndicative = mode === "indicative";
+    const operatingStatusValue = operatingRecord?.status;
+    const selectedExtensions = MOTOR_EXTENSIONS.filter((item) => state.quote.extensions[item.key].enabled);
+    const [mainOpen, setMainOpen] = useState(true);
+    const [extOpen, setExtOpen] = useState(true);
+    const [insuredOpen, setInsuredOpen] = useState(true);
+    const [advancedOpen, setAdvancedOpen] = useState(!isIndicative);
+    const [photoOpen, setPhotoOpen] = useState(false);
+    const now = new Date();
+    const validity = resolveOfferValidity(isIndicative, state.quote.coverageStart);
+    const offerMeta = {
+      reference: transactionAuthority.transactionId,
+      authority: transactionAuthority,
+      version: isIndicative ? "Rev 1" : "Rev 2",
+      lastUpdated: formatDisplayDateTime(now),
+      validUntil: isIndicative ? formatDisplayDate(validity.expiresAt) : formatDisplayDateTime(validity.expiresAt),
+      preparedBy: sessionName || "Tim Jasindo",
+      statusLabel: isIndicative ? "Menunggu Data Lanjutan" : (operatingStatusValue || (validity.expired ? "Expired" : "Siap Bayar")),
+      isExpired: validity.expired || operatingStatusValue === "Expired",
+    };
+    const customerDisplay = customerName(state) || "-";
+    const objectSummaryLabel = [state.quote.vehicleName, state.quote.usage].filter(Boolean).join(" - ") || "Data kendaraan belum lengkap";
+    const coverageValue = `Rp ${rp(parseCurrency(state.quote.marketValue))}`;
+    const premiumValue = `Rp ${rp(premium.total)}`;
+ return <div className="min-h-screen bg-[#F3F5F7] text-slate-900"><div className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-4 md:px-6"><div className="flex items-center gap-3"><div className="text-[18px] font-black leading-tight text-[#0A4D82]">Danantara<div className="-mt-1">Indonesia</div></div><div className="text-[16px] font-semibold text-slate-700">asuransi jasindo</div></div><button type="button" onClick={() => setExternalView(isIndicative ? "" : "external-data")} className="inline-flex items-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Kembali</button></div></div><div className="bg-[linear-gradient(135deg,#0A4D82_0%,#0F5F9C_60%,#1B78B6_100%)] pb-8"><div className="mx-auto max-w-[1280px] px-4 pt-8 md:px-6"><div className="mx-auto max-w-[960px] rounded-[28px] border border-white/15 bg-white/10 p-5 text-white shadow-2xl shadow-[#08355A]/30 backdrop-blur md:p-6"><div><div className="flex flex-wrap items-center gap-3"><div className="inline-flex rounded-full bg-white/15 px-4 py-1.5 text-sm font-medium text-white/90">{isIndicative ? "Penawaran Awal" : "Penawaran Lanjutan"}</div><div className="inline-flex rounded-full bg-white/15 px-4 py-1.5 text-sm font-medium text-white/90">Versi {offerMeta.version}</div><div className={cls("inline-flex rounded-full px-4 py-1.5 text-sm font-medium", isIndicative ? "bg-white/15 text-white/90" : offerMeta.isExpired ? "bg-[#F5A623] text-white" : "bg-emerald-500/25 text-white")}>{isIndicative ? "Siap dilengkapi" : offerMeta.isExpired ? "Perlu diperbarui" : "Siap dibayar"}</div></div><h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">Total Loss Kendaraan - Motor</h1><p className="mt-3 max-w-3xl text-[15px] leading-7 text-white/90 md:text-[17px]">Ringkasan perlindungan motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.</p><div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><div className="rounded-2xl bg-white/10 px-4 py-4 ring-1 ring-white/15"><div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">Nasabah</div><div className="mt-2 text-[15px] font-semibold text-white">{customerDisplay}</div></div><div className="rounded-2xl bg-white/10 px-4 py-4 ring-1 ring-white/15"><div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">Kendaraan</div><div className="mt-2 text-[15px] font-semibold text-white">{objectSummaryLabel}</div></div><div className="rounded-2xl bg-white/10 px-4 py-4 ring-1 ring-white/15"><div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">Harga Pertanggungan</div><div className="mt-2 text-[15px] font-semibold text-white">{coverageValue}</div></div><div className="rounded-2xl bg-white/10 px-4 py-4 ring-1 ring-white/15"><div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">{isIndicative ? "Estimasi Premi 1 Tahun" : "Premi 1 Tahun"}</div><div className="mt-2 text-[15px] font-semibold text-white">{premiumValue}</div></div></div></div></div></div></div><div className="mx-auto max-w-[1280px] px-4 py-6 md:px-6"><div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]"><div className="space-y-5"><SectionCard title="Informasi Kendaraan" subtitle="Ringkasan kendaraan yang dilindungi dan perlindungan yang dipilih." action={<button type="button" onClick={() => setExternalView("")} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]">Ubah Kendaraan</button>}><div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4"><div className="grid gap-3 sm:grid-cols-2"><ProposalRow label="Produk" value="Total Loss Kendaraan - Motor" /><ProposalRow label="Kode Wilayah" value={state.quote.plateRegion || "-"} /><ProposalRow label="Penggunaan" value={state.quote.usage || "-"} /><ProposalRow label="Tahun Pembuatan" value={state.quote.year || "-"} /><ProposalRow label="Merek / Tipe Motor" value={state.quote.vehicleName || "-"} /><ProposalRow label="Harga Pertanggungan" value={coverageValue} /></div></div><div className="mt-5 space-y-3"><ProposalAccordion title="Jaminan Utama" subtitle="Jaminan utama yang selalu melekat pada produk TLO." open={mainOpen} onToggle={() => setMainOpen((prev) => !prev)}><div className="text-sm leading-7 text-slate-700">Menjamin kerugian total pada sepeda motor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan, penggantian, atau pemulihan mencapai sekurang-kurangnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila sepeda motor tidak ditemukan dalam waktu 60 hari sejak terjadinya pencurian.</div></ProposalAccordion><ProposalAccordion title="Perluasan Jaminan" subtitle="Perluasan yang dipilih pada penawaran ini." open={extOpen} onToggle={() => setExtOpen((prev) => !prev)}>{selectedExtensions.length ? <div className="space-y-2">{selectedExtensions.map((item) => <ProposalRow key={item.key} label={item.title} value={`Rp ${rp(getExtensionFee({ ...state.quote, marketValue: parseCurrency(state.quote.marketValue) }, item.key))}`} />)}</div> : <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">Belum ada perluasan jaminan yang dipilih pada penawaran ini.</div>}</ProposalAccordion></div></SectionCard>{(customerDisplay !== "-" || state.insured.phone || state.insured.email || state.insured.address || state.insured.identityNumber) ? <SectionCard title="Informasi Nasabah" subtitle="Ringkasan data nasabah pada penawaran ini." action={<button type="button" onClick={() => setExternalView("external-data")} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-[#0A4D82] hover:bg-[#F8FBFE]">{isIndicative ? "Isi Data" : "Ubah Data"}</button>}><div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] p-4"><div className="grid gap-3 sm:grid-cols-2"><ProposalRow label="Nasabah" value={customerDisplay} /><ProposalRow label="Tipe Nasabah" value={state.insured.customerType || "-"} /><ProposalRow label="Nomor Handphone" value={state.insured.phone || "-"} /><ProposalRow label="Alamat Email" value={state.insured.email || "-"} /></div></div><div className="mt-5 space-y-3"><ProposalAccordion title="Informasi Nasabah Lanjutan" subtitle={isIndicative ? "Bagian ini akan dilengkapi setelah data lanjutan diisi." : "Rincian identitas dan kontak nasabah."} open={insuredOpen} onToggle={() => setInsuredOpen((prev) => !prev)}>{isIndicative ? <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">Data lanjutan nasabah belum diisi pada tahap ini. Anda dapat melengkapinya sebelum penawaran dilanjutkan ke pembayaran.</div> : <div className="space-y-1"><ProposalRow label="Alamat" value={state.insured.address || "-"} /><ProposalRow label={state.insured.customerType === "Perusahaan / Badan Usaha" ? "NPWP" : "NIK"} value={state.insured.identityNumber || "-"} /></div>}</ProposalAccordion><ProposalAccordion title="Informasi Kendaraan Lanjutan" subtitle={isIndicative ? "Bagian ini akan dilengkapi setelah data lanjutan diisi." : "Rincian data kendaraan dan masa perlindungan."} open={advancedOpen} onToggle={() => setAdvancedOpen((prev) => !prev)}>{!state.vehicle.plateNumber && !state.quote.coverageStart ? <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">Belum ada informasi kendaraan lanjutan yang ditambahkan pada versi penawaran ini.</div> : <div className="space-y-1"><ProposalRow label="Jangka Waktu Pertanggungan (Mulai)" value={state.quote.coverageStart || "-"} /><ProposalRow label="Jangka Waktu Pertanggungan (Akhir)" value={state.quote.coverageEnd || "-"} /><ProposalRow label="Nomor Polisi / TNKB" value={state.vehicle.plateNumber || "-"} /><ProposalRow label="Nomor Rangka" value={state.vehicle.chassisNumber || "-"} /><ProposalRow label="Nomor Mesin" value={state.vehicle.engineNumber || "-"} /><ProposalRow label="Warna" value={state.vehicle.color || "-"} />{state.insured.customerType === "Perusahaan / Badan Usaha" ? <ProposalRow label="Kontak di Lokasi" value={state.vehicle.contactOnLocation || "-"} /> : null}</div>}</ProposalAccordion><ProposalAccordion title="Foto Kendaraan" subtitle="Status foto yang sudah dilampirkan pada penawaran." open={photoOpen} onToggle={() => setPhotoOpen((prev) => !prev)}><div className="grid gap-3 md:grid-cols-2">{[{ label: "Tampak Depan", value: state.uploads.frontView }, { label: "Tampak Belakang", value: state.uploads.backView }].map((item) => <div key={item.label} className={cls("rounded-xl border p-4", item.value ? "border-green-200 bg-green-50" : "border-slate-200 bg-slate-50")}><div className="text-sm font-semibold text-slate-900">{item.label}</div><div className={cls("mt-2 text-sm", item.value ? "text-green-700" : "text-slate-500")}>{item.value ? "Sudah terlampir" : "Belum dilampirkan"}</div></div>)}</div></ProposalAccordion></div></SectionCard> : null}</div><aside className="h-fit self-start rounded-[28px] bg-[#0A4D82] p-5 text-white shadow-[0_24px_60px_rgba(10,77,130,0.32)] lg:sticky lg:top-24"><div className="text-[20px] font-bold">Ringkasan Penawaran</div><div className="mt-4 rounded-2xl bg-white/10 p-4"><div className="text-sm font-semibold text-white">Detail Penawaran</div><div className="mt-3 space-y-2 text-sm"><div className="flex items-start justify-between gap-3"><span className="text-white/70">Nomor</span><span className="text-right font-semibold text-white">{offerMeta.reference}</span></div><div className="flex items-start justify-between gap-3"><span className="text-white/70">Versi</span><span className="text-right font-semibold text-white">{offerMeta.version}</span></div><div className="flex items-start justify-between gap-3"><span className="text-white/70">Berlaku sampai</span><span className="text-right font-semibold text-white">{offerMeta.validUntil}</span></div><div className="flex items-start justify-between gap-3"><span className="text-white/70">Status</span><span className="text-right font-semibold text-white">{offerMeta.statusLabel}</span></div></div></div><div className="mt-4 rounded-2xl bg-white/10 p-4"><SummaryRow label="Premi" value={`Rp ${rp(premium.mainPremium)}`} />{premium.extensionTotal > 0 ? <SummaryRow label="Premi Perluasan" value={`Rp ${rp(premium.extensionTotal)}`} /> : null}<SummaryRow label="Biaya Meterai" value={`Rp ${rp(premium.stamp)}`} /></div><div className="mt-4 rounded-2xl bg-white/10 p-4"><div className="text-sm text-white/75">{isIndicative ? "Estimasi Premi 1 Tahun" : "Premi 1 Tahun"}</div><div className="mt-2 text-[32px] font-bold leading-none">Rp {rp(premium.total)}</div></div><div className="mt-4 rounded-2xl bg-white/10 p-4 text-sm leading-6 text-white/85">{isIndicative ? "Lengkapi data nasabah dan kendaraan bila penawaran ini ingin dilanjutkan." : "Pembayaran hanya berlaku untuk penawaran aktif yang tampil pada halaman ini."}</div>{!isIndicative && offerMeta.isExpired ? <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Masa berlaku penawaran ini sudah berakhir. Silakan minta versi penawaran terbaru sebelum melanjutkan pembayaran.</div> : null}{helpRequestSent ? <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">Permintaan bantuan sudah diteruskan ke petugas internal.</div> : null}<div className="mt-4 space-y-2.5"><button type="button" onClick={() => isIndicative ? setExternalView("external-data") : !offerMeta.isExpired && setExternalView("payment")} disabled={!isIndicative && offerMeta.isExpired} className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", !isIndicative && offerMeta.isExpired ? "cursor-not-allowed bg-slate-400" : "bg-[#F5A623] hover:brightness-105")}>{isIndicative ? "Isi Data" : "Pembayaran"}</button><button type="button" onClick={() => isIndicative ? setHelpRequestSent(true) : setExternalView("offer-indicative")} className="flex h-[48px] w-full items-center justify-center rounded-[12px] bg-white/10 px-4 text-sm font-semibold text-white hover:bg-white/15">{isIndicative ? "Minta Bantuan" : "Kembali"}</button></div></aside></div></div></div>;
+  }
+
+  function CustomerDataPage() {
+    const customerDataValidity = resolveOfferValidity(true, state.quote.coverageStart);
+    const customerDataOfferMeta = {
+      reference: transactionAuthority.transactionId,
+      version: "Rev 1",
+      validUntil: formatDisplayDate(customerDataValidity.expiresAt),
+      statusLabel: step2Missing.length ? "Menunggu data tambahan" : "Siap ditinjau",
+    };
+    const objectSummaryLabel =
+      [state.quote.vehicleName, state.quote.usage].filter(Boolean).join(" - ") || "Data kendaraan belum lengkap";
+
+    return (
+      <CustomerDataJourneyShell
+        productName="Total Loss Kendaraan - Motor"
+        heroDescription="Lengkapi data singkat berikut agar penawaran ini siap diperbarui menjadi penawaran final yang ringkas dan siap dibayar."
+        customerName={customerName(state)}
+        objectLabel={objectSummaryLabel}
+        sumInsuredLabel="Harga Pertanggungan"
+        sumInsuredValue={`Rp ${rp(parseCurrency(state.quote.marketValue))}`}
+        premiumLabel="Estimasi Premi 1 Tahun"
+        premiumValue={`Rp ${rp(premium.total)}`}
+        offerReference={customerDataOfferMeta.reference}
+        version={customerDataOfferMeta.version}
+        validUntil={customerDataOfferMeta.validUntil}
+        statusLabel={customerDataOfferMeta.statusLabel}
+        guidanceText="Informasi yang Anda isi di halaman ini akan dipakai untuk menyiapkan penawaran final dan tahap pembayaran."
+        summaryRows={[
+          { label: "Premi", value: `Rp ${rp(premium.mainPremium)}` },
+          ...(premium.extensionTotal > 0 ? [{ label: "Premi Perluasan", value: `Rp ${rp(premium.extensionTotal)}` }] : []),
+          { label: "Biaya Meterai", value: `Rp ${rp(premium.stamp)}` },
+        ]}
+        pendingItems={step2Missing}
+        canContinue={step2Missing.length === 0}
+        continueLabel="Tinjau Penawaran Final"
+        onContinue={() => setExternalView("offer-final")}
+        onBack={() => setExternalView("offer-indicative")}
+      >
+        <SectionCard title="Lengkapi Informasi Nasabah" subtitle="Lengkapi identitas dan kontak utama calon tertanggung.">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[15px] font-bold text-slate-900">Upload Foto KTP</div>
+                <div className="mt-1 text-sm text-slate-500">Gunakan foto KTP untuk membantu mengisi nama lengkap dan NIK secara otomatis.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const extractedData = {
+                    fullName: "Taqwim Pratama",
+                    address: "Jl. Pahlawan No. 18, Palmerah, Jakarta Barat",
+                    identityNumber: "3174********0012",
+                  };
+                  setState((prev) => ({
+                    ...prev,
+                    insured: {
+                      ...prev.insured,
+                      fullName: prev.insured.fullName || extractedData.fullName,
+                      address: prev.insured.address || extractedData.address,
+                      identityNumber: prev.insured.identityNumber || extractedData.identityNumber,
+                    },
+                    readStatus: { ...prev.readStatus, ktp: true },
+                  }));
+                  setDocumentChecks((prev) => ({
+                    ...prev,
+                    ktp: evaluateDocumentRead({
+                      docType: "KTP",
+                      extractedData,
+                      expectedData: {
+                        fullName: state.insured.fullName,
+                        identityNumber: state.insured.identityNumber,
+                      },
+                    }),
+                  }));
+                }}
+                className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Camera className="h-4 w-4" />
+                Upload Foto KTP
+              </button>
+            </div>
+            {state.readStatus.ktp ? (
+              <div className="mt-3 rounded-xl border border-[#CFE0F0] bg-white px-3 py-3 text-sm text-slate-700">
+                Foto KTP sudah ditambahkan. Mohon periksa kembali nama dan nomor identitas sebelum melanjutkan.
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <FieldLabel label="Siapa yang akan menjadi nasabah?" required />
+              <SelectInput
+                value={state.insured.customerType}
+                onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, customerType: value } }))}
+                options={CUSTOMER_TYPES}
+                placeholder="Nasabah ini perorangan atau badan usaha?"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <FieldLabel label={state.insured.customerType === "Perusahaan / Badan Usaha" ? "Nama perusahaan / badan usaha" : "Nama lengkap"} required />
+              <TextInput
+                value={state.insured.fullName}
+                onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, fullName: value } }))}
+                placeholder={state.insured.customerType === "Perusahaan / Badan Usaha" ? "Masukkan nama perusahaan / badan usaha" : "Masukkan nama lengkap"}
+                icon={<User className="h-4 w-4" />}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <FieldLabel label="Alamat" required />
+              <TextInput
+                value={state.insured.address}
+                onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, address: value } }))}
+                placeholder="Masukkan alamat lengkap"
+                icon={<MapPin className="h-4 w-4" />}
+              />
+            </div>
+            <div>
+              <FieldLabel label="Nomor Handphone" required />
+              <TextInput
+                value={state.insured.phone}
+                onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, phone: value } }))}
+                placeholder="08xxxxxxxxxx"
+                icon={<Phone className="h-4 w-4" />}
+              />
+            </div>
+            <div>
+              <FieldLabel label="Alamat Email" required />
+              <TextInput
+                value={state.insured.email}
+                onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, email: value } }))}
+                placeholder="nama@email.com"
+                icon={<Mail className="h-4 w-4" />}
+                type="email"
+              />
+            </div>
+            <div>
+              <FieldLabel label={state.insured.customerType === "Perusahaan / Badan Usaha" ? "NPWP perusahaan" : "NIK"} />
+              <TextInput
+                value={state.insured.identityNumber}
+                onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, identityNumber: digits(value) } }))}
+                placeholder={state.insured.customerType === "Perusahaan / Badan Usaha" ? "Masukkan NPWP perusahaan" : "Masukkan NIK"}
+                icon={<User className="h-4 w-4" />}
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Lengkapi Informasi Kendaraan" subtitle="Pastikan data kendaraan dan masa perlindungannya sudah benar.">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[15px] font-bold text-slate-900">Upload Foto STNK</div>
+                <div className="mt-1 text-sm text-slate-500">Gunakan foto STNK untuk membantu mengisi data kendaraan secara otomatis.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const extractedData = {
+                    plateNumber: "B 4123 UYT",
+                    chassisNumber: "MH1JM8112PK123456",
+                    engineNumber: "JM81E1234567",
+                    color: "Hitam",
+                  };
+                  setState((prev) => ({
+                    ...prev,
+                    vehicle: {
+                      ...prev.vehicle,
+                      plateNumber: prev.vehicle.plateNumber || extractedData.plateNumber,
+                      chassisNumber: prev.vehicle.chassisNumber || extractedData.chassisNumber,
+                      engineNumber: prev.vehicle.engineNumber || extractedData.engineNumber,
+                      color: prev.vehicle.color || extractedData.color,
+                    },
+                    readStatus: { ...prev.readStatus, stnk: true },
+                  }));
+                  setDocumentChecks((prev) => ({
+                    ...prev,
+                    stnk: evaluateDocumentRead({
+                      docType: "STNK",
+                      extractedData,
+                      expectedData: {
+                        plateNumber: state.vehicle.plateNumber,
+                        chassisNumber: state.vehicle.chassisNumber,
+                      },
+                    }),
+                  }));
+                }}
+                className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Camera className="h-4 w-4" />
+                Upload Foto STNK
+              </button>
+            </div>
+            {state.readStatus.stnk ? (
+              <div className="mt-3 rounded-xl border border-[#CFE0F0] bg-white px-3 py-3 text-sm text-slate-700">
+                Foto STNK sudah ditambahkan. Mohon periksa kembali nomor kendaraan dan data pendukungnya sebelum melanjutkan.
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            {state.insured.customerType === "Perusahaan / Badan Usaha" ? (
+              <div>
+                <FieldLabel label="Kontak di Lokasi" required />
+                <TextInput
+                  value={state.vehicle.contactOnLocation}
+                  onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, contactOnLocation: value } }))}
+                  placeholder="Nama kontak yang bisa dihubungi di lokasi"
+                  icon={<User className="h-4 w-4" />}
+                />
+              </div>
+            ) : null}
+            <div>
+              <FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" required />
+              <TextInput
+                value={state.quote.coverageStart}
+                onChange={(value) => setState((prev) => ({ ...prev, quote: { ...prev.quote, coverageStart: value, coverageEnd: addOneYear(value) } }))}
+                type="date"
+              />
+            </div>
+            <div>
+              <FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" />
+              <TextInput value={state.quote.coverageEnd} onChange={() => {}} type="date" readOnly />
+            </div>
+            <div>
+              <FieldLabel label="Nomor Polisi / TNKB" required />
+              <TextInput
+                value={state.vehicle.plateNumber}
+                onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, plateNumber: value } }))}
+                placeholder="Masukkan nomor polisi / TNKB"
+                icon={<MapPin className="h-4 w-4" />}
+              />
+            </div>
+            <div>
+              <FieldLabel label="Nomor Rangka" required />
+              <TextInput
+                value={state.vehicle.chassisNumber}
+                onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, chassisNumber: value } }))}
+                placeholder="Masukkan nomor rangka kendaraan"
+              />
+            </div>
+            <div>
+              <FieldLabel label="Nomor Mesin" required />
+              <TextInput
+                value={state.vehicle.engineNumber}
+                onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, engineNumber: value } }))}
+                placeholder="Masukkan nomor mesin kendaraan"
+              />
+            </div>
+            <div>
+              <FieldLabel label="Warna" />
+              <TextInput
+                value={state.vehicle.color}
+                onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, color: value } }))}
+                placeholder="Masukkan warna kendaraan"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <FieldLabel label="Merek / Tipe Motor" required />
+              <TextInput
+                value={state.quote.vehicleName}
+                onChange={(value) => setState((prev) => ({ ...prev, quote: { ...prev.quote, vehicleName: value } }))}
+                placeholder="Masukkan merek dan tipe motor"
+                icon={<Search className="h-4 w-4" />}
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Lampiran Foto Kendaraan" subtitle="Tambahkan foto kendaraan agar penawaran dapat dilanjutkan ke versi final.">
+          <div className="grid gap-4 md:grid-cols-2">
+            <UploadCard
+              title="Foto Tampak Depan"
+              done={state.uploads.frontView}
+              onCapture={() => {
+                setState((prev) => ({ ...prev, uploads: { ...prev.uploads, frontView: true } }));
+                setEvidence((prev) => ({
+                  ...prev,
+                  photos: {
+                    ...prev.photos,
+                    frontView: createPhotoEvidence({ label: "Foto Kendaraan Tampak Depan", declaredAddress: state.insured.address }),
+                  },
+                }));
+              }}
+            />
+            <UploadCard
+              title="Foto Tampak Belakang"
+              done={state.uploads.backView}
+              onCapture={() => {
+                setState((prev) => ({ ...prev, uploads: { ...prev.uploads, backView: true } }));
+                setEvidence((prev) => ({
+                  ...prev,
+                  photos: {
+                    ...prev.photos,
+                    backView: createPhotoEvidence({ label: "Foto Kendaraan Tampak Belakang", declaredAddress: state.insured.address }),
+                  },
+                }));
+              }}
+            />
+          </div>
+        </SectionCard>
+      </CustomerDataJourneyShell>
+    );
+  }
+
+  function PaymentPage() {
+    const operatingBlockedMessage = paymentBlockMessage(operatingRecord);
+    const canProceedPayment = canProceedToPaymentFromOperating(operatingRecord);
+    return <div className="min-h-screen bg-[#F3F5F7] text-slate-900"><div className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-4 md:px-6"><div className="flex items-center gap-3"><div className="text-[18px] font-black leading-tight text-[#0A4D82]">Danantara<div className="-mt-1">Indonesia</div></div><div className="text-[16px] font-semibold text-slate-700">asuransi jasindo</div></div><button type="button" onClick={() => setExternalView("offer-final")} className="inline-flex items-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Kembali</button></div></div><div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6"><div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"><SectionCard title="Pembayaran" subtitle="Halaman ini muncul untuk calon nasabah yang menerima penawaran final."><div className="space-y-3">{PAYMENT_OPTIONS.map((item) => <button key={item} type="button" onClick={() => setPaymentMethod(item)} className={cls("flex w-full items-center justify-between rounded-xl border px-4 py-4 text-left", paymentMethod === item ? "border-[#0A4D82] bg-[#F8FBFE]" : "border-slate-200 bg-white")}><span className="font-semibold text-slate-900">{item}</span>{paymentMethod === item ? <CheckCircle2 className="h-5 w-5 text-[#0A4D82]" /> : null}</button>)}</div>{operatingBlockedMessage ? <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{operatingBlockedMessage}</div> : null}{paymentStatus ? <div className="mt-4 rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{paymentStatus}</div> : null}</SectionCard><aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg lg:sticky lg:top-24"><div className="text-[18px] font-bold">Ringkasan Pembayaran</div><div className="mt-4 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Nasabah</div><div className="mt-1 font-semibold">{customerName(state)}</div></div><div className="mt-3 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Total yang Dibayar</div><div className="mt-2 text-[30px] font-bold leading-none">Rp {rp(premium.total)}</div></div><div className="mt-3 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Metode Pembayaran</div><div className="mt-1 font-semibold">{paymentMethod || "Pilih metode pembayaran"}</div></div><button type="button" disabled={!paymentMethod || !canProceedPayment} onClick={() => setPaymentStatus("Pembayaran berhasil disimulasikan. Integrasi gateway pembayaran akan dikerjakan tim IT pada fase berikutnya.")} className={cls("mt-4 flex h-[48px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", paymentMethod && canProceedPayment ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Pembayaran</button></aside></div></div></div>;
+  }
+
+  if (externalView === "offer-indicative") return <CustomerProposalPage mode="indicative" />;
+  if (externalView === "external-data") return <CustomerDataPage />;
+  if (externalView === "offer-final") return <CustomerProposalPage mode="final" />;
+  if (externalView === "payment") return <PaymentPage />;
+
+  return <div className="min-h-screen bg-[#F3F5F7] text-slate-900" style={{ overflowX: "clip" }}>
+    <IndicationModal />
+    <SentOffersHistoryModal open={showSentOffers} onClose={() => setShowSentOffers(false)} />
+    <HelpRequestToast />
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
+      <div className="mx-auto flex max-w-[1800px] items-center justify-between px-4 py-3 md:px-6">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 text-white">
+            <div className="text-[15px] font-black leading-tight md:text-[18px]">Danantara<div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div></div>
+            <div className="hidden text-[15px] font-semibold text-white/95 sm:block">asuransi jasindo</div>
+          </div>
+          <div className="hidden items-center gap-3 md:flex">
+            <button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button>
+            <button type="button" onClick={onExit} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button>
+          </div>
+        </div>
+        <div className="relative flex items-center gap-4 text-white">
+          <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>
+            {sessionName}
+            {helpRequestSent ? <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" /> : null}
+          </button>
+          <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
+            <Bell className="h-4 w-4" />
+          </button>
+          <UserPillMenu
+            open={showUserMenu}
+            items={[
+              {
+                label: "Ruang Kerja Saya",
+                primary: true,
+                onClick: () => {
+                  setShowUserMenu(false);
+                  onOpenWorkspace();
+                },
+              },
+              {
+                label: "Antrean Internal",
+                onClick: () => {
+                  setShowUserMenu(false);
+                  onOpenQueue();
+                },
+              },
+              {
+                label: "Konfigurasi Partner",
+                onClick: () => {
+                  setShowUserMenu(false);
+                  onOpenPartnerConfig();
+                },
+              },
+            ]}
+          />
+        </div>
+      </div>
+    </header>
+
+    <div className="pb-12">
+      <div className="bg-[#0A4D82] pb-10">
+        <div className="mx-auto max-w-[1280px] px-4 pt-6 md:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <button type="button" onClick={onExit} className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
+            <button type="button" tabIndex={-1} aria-hidden="true" className="pointer-events-none invisible inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
+          </div>
+          <div className="mt-6 text-center text-white"><div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Selamat datang kembali, {sessionName}</div><h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">Total Loss Kendaraan - Motor</h1><p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">Perlindungan sepeda motor untuk kerugian total akibat risiko yang dijamin polis, termasuk pencurian dan kebakaran.</p></div>
+          <div className="mx-auto mt-6 max-w-3xl rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-4xl md:p-5"><div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5"><div className="flex flex-col gap-5 md:flex-row md:gap-5"><StepNode step="Langkah 1" title="Simulasi Premi" subtitle={internalStep === 1 ? "Sedang diisi" : "Selesai"} active={internalStep === 1} done={internalStep > 1} icon={<Wallet className="h-4 w-4" />} onClick={() => { if (internalStep !== 1) setInternalStep(1); }} /><div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /><StepNode step="Langkah 2" title="Isi Data" subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={false} icon={<FileText className="h-4 w-4" />} onClick={quoted ? () => setInternalStep(2) : undefined} /></div></div></div>
+        </div>
+      </div>
+
+      {internalStep === 1 ? <div className={cls("mx-auto px-4 md:px-6", quoted ? "max-w-[1280px]" : "max-w-4xl")}><div className={cls("mt-6 grid items-start gap-5", quoted ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}><div className="space-y-5"><SectionCard title="Informasi Nasabah"><div className="grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><FieldLabel label="Nama / CIF" required helpText="Ketik nama untuk mencari data CIF, atau lanjutkan sebagai nasabah baru." /><div className="relative"><TextInput value={state.insured.displayName} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, displayName: value, cifMatched: false } }))} placeholder="Masukkan nama tertanggung atau kode CIF" icon={<User className="h-4 w-4" />} />{state.insured.displayName && customerSuggestions.length > 0 && !state.insured.cifMatched ? <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">{customerSuggestions.map((item) => <button key={item.cif} type="button" onClick={() => setState((prev) => ({ ...prev, insured: { ...prev.insured, displayName: `${item.name} - ${item.cif}`, fullName: item.name, customerType: item.type, phone: item.phone || prev.insured.phone, email: item.email || prev.insured.email, cifMatched: true } }))} className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"><div><div className="font-semibold text-slate-900">{item.name}</div><div className="text-xs text-slate-500">{item.type}</div></div><div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div></button>)}</div> : null}</div>{state.insured.cifMatched ? <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div> : state.insured.displayName ? <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div> : null}</div>{String(state.insured.displayName || "").trim() && !state.insured.cifMatched ? <div><FieldLabel label="Tipe Nasabah" required /><SelectInput value={state.insured.customerType} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, customerType: value } }))} options={CUSTOMER_TYPES} placeholder="Nasabah ini perorangan atau badan usaha?" /></div> : null}<div><FieldLabel label="Nomor Handphone" required /><TextInput value={state.insured.phone} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, phone: value } }))} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} /></div><div><FieldLabel label="Alamat Email" required /><TextInput value={state.insured.email} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, email: value } }))} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" /></div></div></SectionCard><SectionCard title="Informasi Kendaraan"><div className="grid gap-4 md:grid-cols-2"><div><FieldLabel label="Kode Wilayah / Nomor Polisi" required /><SelectInput value={state.quote.plateRegion} onChange={(value) => setState((prev) => ({ ...prev, quote: { ...prev.quote, plateRegion: value } }))} options={PLATES} includeBlank={true} placeholder="Nomor polisi kendaraan diawali huruf apa?" /></div><div><FieldLabel label="Tahun Pembuatan Kendaraan" required helpText="tooltip:Mengikuti tahun pembuatan pada STNK." /><VehicleYearPicker value={state.quote.year} onChange={(value) => setState((prev) => ({ ...prev, quote: { ...prev.quote, year: value } }))} minYear={MIN_YEAR_TLO} maxYear={CURRENT_YEAR} placeholder="Pilih tahun kendaraan" /></div><div><FieldLabel label="Harga Pertanggungan" required /><TextInput value={state.quote.marketValue} onChange={(value) => setState((prev) => ({ ...prev, quote: { ...prev.quote, marketValue: formatCurrencyInput(value) } }))} placeholder="Contoh: 180.000.000" />{hasEnteredMarketValue && !hasValidSumInsured ? <div className="mt-2 text-xs font-medium text-[#E8A436]">{motorSumInsuredLimitText()}</div> : null}</div><div><FieldLabel label="Penggunaan" required helpText="tooltip:Pilih penggunaan sesuai cara kendaraan dipakai sehari-hari." /><SelectInput value={state.quote.usage} onChange={(value) => setState((prev) => ({ ...prev, quote: { ...prev.quote, usage: value } }))} options={MOTOR_USAGES} includeBlank={true} placeholder="Motor ini digunakan untuk apa?" /></div>{state.quote.usage === "Pribadi" ? <div className="md:col-span-2 rounded-xl border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-3 text-sm text-slate-600"><span className="font-semibold text-slate-800">Penggunaan Pribadi</span> adalah penggunaan kendaraan untuk kepentingan pribadi pengguna kendaraan. Contoh: kendaraan harian, ke kantor, dan aktivitas keluarga.</div> : state.quote.usage === "Komersial" ? <div className="md:col-span-2 rounded-xl border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-3 text-sm text-slate-600"><span className="font-semibold text-slate-800">Penggunaan Komersial</span> adalah penggunaan kendaraan untuk disewakan atau digunakan untuk menerima balas jasa. Contoh: ojek, rental, antar barang, dan kendaraan operasional usaha.</div> : null}</div></SectionCard>{!quoted ? <div className="flex justify-stretch sm:justify-end"><button type="button" disabled={!canQuoteStep1} onClick={() => setQuoted(true)} className={cls("inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition sm:w-auto", canQuoteStep1 ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}><Wallet className="h-4 w-4" />Cek Premi</button></div> : null}{quoted ? <SectionCard title="Rincian Jaminan" subtitle="Klik setiap baris untuk melihat penjelasan detailnya."><div className="space-y-5"><div><div className="text-[18px] font-bold tracking-tight text-slate-900">Jaminan Utama</div><div className="mt-3"><RiskRow title="Jaminan Utama - Total Loss Only (TLO)" premium={premium.mainPremium} detail="Menjamin kerugian total pada sepeda motor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan, penggantian, atau pemulihan mencapai sekurang-kurangnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila sepeda motor tidak ditemukan dalam waktu 60 hari sejak terjadinya pencurian." deductible="Kerugian total: Rp150.000. Kehilangan karena pencurian: 5% dari harga pertanggungan." expanded={expandedRows.main} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, main: !prev.main }))} /></div></div><div><div className="text-[18px] font-bold tracking-tight text-slate-900">Perluasan Jaminan</div><div className="mt-3 space-y-2.5">{MOTOR_EXTENSIONS.map((item) => <RiskRow key={item.key} title={item.title} premium={getExtensionFee({ ...state.quote, marketValue: parseCurrency(state.quote.marketValue) }, item.key)} detail={item.detail} deductible={item.deductible} checked={state.quote.extensions[item.key].enabled} onToggleChecked={(next) => setState((prev) => ({ ...prev, quote: { ...prev.quote, extensions: { ...prev.quote.extensions, [item.key]: item.type === "amount" ? { ...prev.quote.extensions[item.key], enabled: next } : { enabled: next } } } }))} expanded={expandedRows[item.key]} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} extra={item.type === "amount" && state.quote.extensions[item.key].enabled ? <div className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Nilai pertanggungan pihak ketiga" required /><TextInput value={formatCurrencyInput(state.quote.extensions.tpl.amount)} onChange={(value) => setState((prev) => ({ ...prev, quote: { ...prev.quote, extensions: { ...prev.quote.extensions, tpl: { ...prev.quote.extensions.tpl, amount: Math.min(1000000, Number(digits(value) || 0)) } } } }))} placeholder="Maksimum Rp1.000.000" /></div> : null} />)}</div></div></div></SectionCard> : null}{quoted ? <div className="flex justify-stretch sm:justify-end"><button type="button" disabled={!canAdvanceStep1} onClick={() => setInternalStep(2)} className={cls("inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition sm:w-auto", canAdvanceStep1 ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Isi Data</button></div> : null}</div>{quoted ? <aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg lg:sticky lg:top-24"><div className="flex items-center justify-between"><div className="flex items-center gap-2 text-[18px] font-bold"><FileText className="h-5 w-5" />Ringkasan</div><ChevronDown className="h-5 w-5 text-white/80" /></div><div className="mt-4 border-t border-white/15 pt-3.5"><SummaryRow label="Nama / CIF" value={state.insured.displayName || "-"} /><SummaryRow label="Kode Wilayah" value={state.quote.plateRegion || "-"} /><SummaryRow label="Penggunaan" value={state.quote.usage || "-"} /><SummaryRow label="Tahun Kendaraan" value={state.quote.year || "-"} /></div><div className="mt-3 border-t border-white/15 pt-3.5"><SummaryRow label="Premi" value={`Rp ${rp(premium.mainPremium)}`} /><SummaryRow label="Premi Perluasan" value={`Rp ${rp(premium.extensionTotal)}`} /><SummaryRow label="Biaya Meterai" value={`Rp ${rp(premium.stamp)}`} /></div><div className="mt-4 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Estimasi Premi 1 Tahun</div><div className="mt-2 text-right text-[30px] font-bold leading-none">Rp {rp(premium.total)}</div></div>{step1Missing.length ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="font-semibold">Yang masih perlu dilengkapi</div><div className="mt-2 space-y-2">{step1Missing.map((item) => <div key={item} className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{item}</span></div>)}</div></div> : null}<div className="mt-4 space-y-2.5"><button type="button" disabled={!canAdvanceStep1} onClick={() => setInternalStep(2)} className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceStep1 ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Isi Data</button><button type="button" onClick={() => setShowIndicationModal(true)} className="flex h-[48px] w-full items-center justify-center rounded-[12px] bg-[#0A4D82] text-sm font-bold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20 hover:brightness-110">Kirim Indikasi</button></div></aside> : null}</div></div> : <div className="mx-auto mt-6 max-w-[1280px] px-4 md:px-6"><div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]"><div className="space-y-5"><SectionCard title="Informasi Nasabah Lanjutan"><div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[15px] font-bold text-slate-900">Upload Foto KTP</div><div className="mt-1 text-sm text-slate-500">Gunakan foto KTP untuk membantu mengisi nama lengkap dan NIK secara otomatis.</div></div><button type="button" onClick={() => { const extractedData = { fullName: "Taqwim Pratama", address: "Jl. Pahlawan No. 18, Palmerah, Jakarta Barat", identityNumber: "3174********0012" }; setState((prev) => ({ ...prev, insured: { ...prev.insured, fullName: prev.insured.fullName || extractedData.fullName, address: prev.insured.address || extractedData.address, identityNumber: prev.insured.identityNumber || extractedData.identityNumber }, readStatus: { ...prev.readStatus, ktp: true } })); setDocumentChecks((prev) => ({ ...prev, ktp: evaluateDocumentRead({ docType: "KTP", extractedData, expectedData: { fullName: state.insured.fullName, identityNumber: state.insured.identityNumber } }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><Camera className="h-4 w-4" />Upload Foto KTP</button></div>{state.readStatus.ktp ? <div className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-3 text-sm text-green-700">Foto KTP berhasil dibaca. Data nasabah sudah terisi dan perlu diverifikasi singkat sebelum dipakai sebagai acuan final.<div className="mt-1 text-xs text-green-800">Confidence OCR: {documentChecks.ktp.confidence ? `${Math.round(documentChecks.ktp.confidence * 100)}%` : "-"}</div>{documentChecks.ktp.manualReviewReason ? <div className="mt-1 text-xs text-amber-700">{documentChecks.ktp.manualReviewReason}</div> : null}</div> : null}</div><div className="mt-5 grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><FieldLabel label="Siapa yang akan menjadi nasabah?" required /><SelectInput value={state.insured.customerType} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, customerType: value } }))} options={CUSTOMER_TYPES} placeholder="Nasabah ini perorangan atau badan usaha?" /></div><div className="md:col-span-2"><FieldLabel label={state.insured.customerType === "Perusahaan / Badan Usaha" ? "Nama perusahaan / badan usaha" : "Nama lengkap"} required /><TextInput value={state.insured.fullName} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, fullName: value } }))} placeholder={state.insured.customerType === "Perusahaan / Badan Usaha" ? "Masukkan nama perusahaan / badan usaha" : "Masukkan nama lengkap"} icon={<User className="h-4 w-4" />} /></div><div className="md:col-span-2"><FieldLabel label="Alamat" required /><TextInput value={state.insured.address} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, address: value } }))} placeholder="Masukkan alamat lengkap" icon={<MapPin className="h-4 w-4" />} /></div><div><FieldLabel label="Nomor Handphone" required /><TextInput value={state.insured.phone} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, phone: value } }))} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} /></div><div><FieldLabel label="Alamat Email" required /><TextInput value={state.insured.email} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, email: value } }))} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" /></div><div><FieldLabel label={state.insured.customerType === "Perusahaan / Badan Usaha" ? "NPWP perusahaan" : "NIK"} /><TextInput value={state.insured.identityNumber} onChange={(value) => setState((prev) => ({ ...prev, insured: { ...prev.insured, identityNumber: digits(value) } }))} placeholder={state.insured.customerType === "Perusahaan / Badan Usaha" ? "Masukkan NPWP perusahaan" : "Masukkan NIK"} icon={<User className="h-4 w-4" />} /></div></div></SectionCard><SectionCard title="Informasi Kendaraan Lanjutan"><div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[15px] font-bold text-slate-900">Upload Foto STNK</div><div className="mt-1 text-sm text-slate-500">Gunakan foto STNK untuk membantu mengisi data kendaraan secara otomatis.</div></div><button type="button" onClick={() => { const extractedData = { plateNumber: "B 4123 UYT", chassisNumber: "MH1JM8112PK123456", engineNumber: "JM81E1234567", color: "Hitam" }; setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, plateNumber: prev.vehicle.plateNumber || extractedData.plateNumber, chassisNumber: prev.vehicle.chassisNumber || extractedData.chassisNumber, engineNumber: prev.vehicle.engineNumber || extractedData.engineNumber, color: prev.vehicle.color || extractedData.color }, readStatus: { ...prev.readStatus, stnk: true } })); setDocumentChecks((prev) => ({ ...prev, stnk: evaluateDocumentRead({ docType: "STNK", extractedData, expectedData: { plateNumber: state.vehicle.plateNumber, chassisNumber: state.vehicle.chassisNumber } }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><Camera className="h-4 w-4" />Upload Foto STNK</button></div>{state.readStatus.stnk ? <div className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-3 text-sm text-green-700">Foto STNK berhasil dibaca. Data kendaraan sudah terisi dan perlu diverifikasi singkat sebelum dipakai sebagai acuan final.<div className="mt-1 text-xs text-green-800">Confidence OCR: {documentChecks.stnk.confidence ? `${Math.round(documentChecks.stnk.confidence * 100)}%` : "-"}</div>{documentChecks.stnk.manualReviewReason ? <div className="mt-1 text-xs text-amber-700">{documentChecks.stnk.manualReviewReason}</div> : null}</div> : null}</div><div className="mt-5 grid gap-4 md:grid-cols-2">{state.insured.customerType === "Perusahaan / Badan Usaha" ? <div><FieldLabel label="Kontak di Lokasi" required /><TextInput value={state.vehicle.contactOnLocation} onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, contactOnLocation: value } }))} placeholder="Nama kontak yang bisa dihubungi di lokasi" icon={<User className="h-4 w-4" />} /></div> : null}<div><FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" required /><TextInput value={state.quote.coverageStart} onChange={(value) => setState((prev) => ({ ...prev, quote: { ...prev.quote, coverageStart: value, coverageEnd: addOneYear(value) } }))} type="date" /></div><div><FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" /><TextInput value={state.quote.coverageEnd} onChange={() => {}} type="date" readOnly /></div><div><FieldLabel label="Nomor Polisi / TNKB" required /><TextInput value={state.vehicle.plateNumber} onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, plateNumber: value } }))} placeholder="Masukkan nomor polisi / TNKB" icon={<MapPin className="h-4 w-4" />} /></div><div><FieldLabel label="Nomor Rangka" required /><TextInput value={state.vehicle.chassisNumber} onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, chassisNumber: value } }))} placeholder="Masukkan nomor rangka kendaraan" /></div><div><FieldLabel label="Nomor Mesin" required /><TextInput value={state.vehicle.engineNumber} onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, engineNumber: value } }))} placeholder="Masukkan nomor mesin kendaraan" /></div><div><FieldLabel label="Warna" /><TextInput value={state.vehicle.color} onChange={(value) => setState((prev) => ({ ...prev, vehicle: { ...prev.vehicle, color: value } }))} placeholder="Masukkan warna kendaraan" /></div><div className="md:col-span-2"><FieldLabel label="Merek / Tipe Motor" required /><TextInput value={state.quote.vehicleName} onChange={(value) => setState((prev) => ({ ...prev, quote: { ...prev.quote, vehicleName: value } }))} placeholder="Masukkan merek dan tipe motor" icon={<Search className="h-4 w-4" />} /></div></div></SectionCard><SectionCard title="Foto Kendaraan" subtitle="Wajib diisi oleh petugas internal."><div className="grid gap-4 md:grid-cols-2"><UploadCard title="Foto Tampak Depan" done={state.uploads.frontView} onCapture={() => { setState((prev) => ({ ...prev, uploads: { ...prev.uploads, frontView: true } })); setEvidence((prev) => ({ ...prev, photos: { ...prev.photos, frontView: createPhotoEvidence({ label: "Foto Kendaraan Tampak Depan", declaredAddress: state.insured.address }) } })); }} allowGalleryFallback={true} /><UploadCard title="Foto Tampak Belakang" done={state.uploads.backView} onCapture={() => { setState((prev) => ({ ...prev, uploads: { ...prev.uploads, backView: true } })); setEvidence((prev) => ({ ...prev, photos: { ...prev.photos, backView: createPhotoEvidence({ label: "Foto Kendaraan Tampak Belakang", declaredAddress: state.insured.address }) } })); }} allowGalleryFallback={true} /></div></SectionCard></div><aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg lg:sticky lg:top-24"><div className="flex items-center justify-between"><div className="flex items-center gap-2 text-[18px] font-bold"><FileText className="h-5 w-5" />Ringkasan Underwriting</div><ChevronDown className="h-5 w-5 text-white/80" /></div><div className="mt-4 border-t border-white/15 pt-3.5"><SummaryRow label="Nasabah" value={customerName(state)} /><SummaryRow label="Kode Wilayah" value={state.quote.plateRegion || "-"} /><SummaryRow label="Penggunaan" value={state.quote.usage || "-"} /><SummaryRow label="Harga Pertanggungan" value={`Rp ${rp(parseCurrency(state.quote.marketValue))}`} /></div><div className="mt-3 border-t border-white/15 pt-3.5"><SummaryRow label={state.insured.customerType === "Perusahaan / Badan Usaha" ? "NPWP" : "NIK"} value={state.insured.identityNumber || "-"} /><SummaryRow label="Kontak di Lokasi" value={state.vehicle.contactOnLocation || "-"} /><SummaryRow label="Jangka Waktu Pertanggungan (Mulai)" value={state.quote.coverageStart || "-"} /><SummaryRow label="Jangka Waktu Pertanggungan (Akhir)" value={state.quote.coverageEnd || "-"} /></div>{step2Missing.length ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="font-semibold">Yang masih perlu dilengkapi</div><div className="mt-2 space-y-2">{step2Missing.map((item) => <div key={item} className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{item}</span></div>)}</div></div> : null}<div className="mt-4 space-y-2.5"><button type="button" disabled={!canAdvanceStep2} onClick={() => setShowIndicationModal(true)} className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceStep2 ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Kirim Penawaran</button><button type="button" disabled={!canAdvanceStep2} onClick={() => setExternalView("offer-final")} className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20", canAdvanceStep2 ? "bg-[#0A4D82] hover:brightness-110" : "cursor-not-allowed bg-slate-500/70")}>Pembayaran</button><button type="button" onClick={() => setInternalStep(1)} className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-white/20 bg-white/10 text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali</button></div></aside></div></div>}
+    </div>
+  </div>;
 }

@@ -1,4 +1,4 @@
-import { AlertTriangle, Building2, MapPin, Phone, Shield, User } from "lucide-react";
+import { AlertTriangle, Building2, MapPin, Shield, User } from "lucide-react";
 
 export const CURRENT_YEAR = 2026;
 export const MIN_YEAR_TLO = CURRENT_YEAR - 20;
@@ -15,9 +15,9 @@ export const PRODUCTS = [
   },
   {
     id: "carComp",
-    title: "Comprehensive Kendaraan - Mobil",
+    title: "Asuransi Mobil Komprehensif",
     category: "Kendaraan",
-    subtitle: "Perlindungan mobil terhadap kerusakan atau kehilangan akibat tabrakan, perbuatan jahat, pencurian, dan kebakaran.",
+    subtitle: "Menjamin kerugian atau kerusakan pada Kendaraan Bermotor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran sesuai ketentuan polis.",
     gradient: "from-sky-800 via-sky-700 to-sky-600",
   },
   {
@@ -120,15 +120,13 @@ export const MOTOR_EXTS = [
 
 export const CAR_EXTS = [
   { id: "tpl", label: "Jaminan Tanggung Jawab Hukum terhadap Pihak Ketiga", type: "amount", icon: Shield },
+  { id: "driverPa", label: "Jaminan Kecelakaan Diri Pengemudi", type: "amount", icon: User },
+  { id: "passengerPa", label: "Jaminan Kecelakaan Diri Penumpang", type: "amount-seat", icon: User },
   { id: "srcc", label: "Risiko Kerusuhan dan Huru-hara", type: "toggle", icon: AlertTriangle },
   { id: "ts", label: "Risiko Terorisme", type: "toggle", icon: AlertTriangle },
   { id: "flood", label: "Risiko Banjir", type: "toggle", icon: MapPin },
   { id: "quake", label: "Risiko Gempa Bumi", type: "toggle", icon: AlertTriangle },
-  { id: "driverPa", label: "Kecelakaan Diri Pengemudi", type: "amount", icon: User },
-  { id: "passengerPa", label: "Kecelakaan Diri Penumpang", type: "amount-seat", icon: User },
-  { id: "ambulance", label: "Biaya ambulan", type: "toggle", icon: Phone },
-  { id: "authorizedWorkshop", label: "Bengkel authorized", type: "toggle", icon: Building2 },
-  { id: "theftByOwnDriver", label: "Risiko pencurian oleh pengemudi sendiri", type: "toggle", icon: AlertTriangle },
+  { id: "authorizedWorkshop", label: "Perbaikan di Bengkel Authorized", type: "toggle", icon: Building2 },
 ] as const;
 
 export const TLO_RATES_MOTOR = {
@@ -160,21 +158,17 @@ export const TS_RATE_COMP = 0.0005;
 export const DRIVER_PA_RATE = 0.005;
 export const PASSENGER_PA_RATE = 0.001;
 export const AUTH_WORKSHOP_RATE = 0.0025;
-export const THEFT_BY_OWN_DRIVER_RATE = 0.001;
-export const AMBULANCE_PREMIUM = 50000;
 
 export const EXT_INFO: Record<string, string> = {
-  tpl: "Menjamin tanggung jawab hukum Tertanggung terhadap kerusakan harta benda, biaya pengobatan, cedera badan, atau kematian pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis, dengan nilai pertanggungan maksimum Rp1.000.000 untuk setiap kejadian.",
-  srcc: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa senjata api, revolusi tanpa senjata api, serta penjarahan yang terjadi dalam peristiwa tersebut.",
-  ts: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, atau sabotase.",
-  flood: "Menjamin kerugian atau kerusakan yang secara langsung disebabkan oleh banjir, angin topan, badai, hujan es, genangan air, atau tanah longsor yang mengenai kendaraan.",
+  tpl: "Menjamin tanggung jawab hukum Tertanggung atas kerugian pihak ketiga yang secara langsung disebabkan oleh Kendaraan Bermotor yang dipertanggungkan akibat risiko yang dijamin polis, termasuk kerusakan harta benda, biaya pengobatan, cedera badan, dan/atau kematian.",
+  srcc: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa penggunaan senjata api, revolusi tanpa penggunaan senjata api, pencegahan terkait risiko tersebut, serta penjarahan yang terjadi selama kerusuhan atau huru-hara.",
+  ts: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, sabotase, atau tindakan pencegahan yang berkaitan dengan risiko tersebut.",
+  flood: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh angin topan, badai, hujan es, banjir, genangan air, dan/atau tanah longsor.",
   quake: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh gempa bumi, tsunami, dan/atau letusan gunung berapi.",
-  driverPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan pengemudi yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
-  passengerPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan penumpang yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
-  equipment: "Perlengkapan tambahan adalah aksesori atau perangkat non-standar yang bukan bawaan pabrik dan ingin ikut dijamin bersama kendaraan.",
-  ambulance: "Menjamin biaya ambulans per kejadian akibat kecelakaan dari risiko yang dijamin polis, sampai batas maksimum sesuai Ikhtisar Pertanggungan.",
-  authorizedWorkshop: "Memberikan fasilitas perbaikan di bengkel resmi sesuai merek kendaraan atau bengkel setara dengan persetujuan Penanggung.",
-  theftByOwnDriver: "Menjamin risiko pencurian yang dilakukan oleh pengemudi yang dipekerjakan Tertanggung, sepanjang memenuhi syarat masa kerja minimum sesuai ketentuan polis.",
+  driverPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan terhadap pengemudi di dalam kendaraan yang secara langsung disebabkan oleh kecelakaan Kendaraan Bermotor akibat risiko yang dijamin polis.",
+  passengerPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan terhadap penumpang di dalam kendaraan yang secara langsung disebabkan oleh kecelakaan Kendaraan Bermotor akibat risiko yang dijamin polis.",
+  equipment: "Menjamin peralatan atau perlengkapan non-standar yang dirinci jenis, jumlah, dan harga pertanggungannya dalam polis sebagai bagian dari kendaraan yang dipertanggungkan.",
+  authorizedWorkshop: "Memberikan fasilitas perbaikan kendaraan di bengkel resmi sesuai merek kendaraan. Jika bengkel resmi merek tersebut tidak tersedia di wilayah Tertanggung, perbaikan dapat dilakukan di bengkel resmi merek lain yang setara dengan persetujuan Penanggung.",
 };
 
 export const CONSENT_SECTIONS = [

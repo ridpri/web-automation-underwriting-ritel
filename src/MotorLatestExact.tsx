@@ -89,9 +89,9 @@ const PRODUCTS = [
   },
   {
     id: "carComp",
-    title: "Comprehensive Kendaraan - Mobil",
+    title: "Asuransi Mobil Komprehensif",
     category: "Kendaraan",
-    subtitle: "Perlindungan mobil untuk kerusakan sebagian atau total akibat tabrakan, pencurian, kebakaran, dan risiko lain yang dijamin polis.",
+    subtitle: "Menjamin kerugian atau kerusakan pada Kendaraan Bermotor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran sesuai ketentuan polis.",
     gradient: "from-sky-800 via-sky-700 to-sky-600",
   },
   {
@@ -214,16 +214,20 @@ const MOTOR_EXTS = [
 
 const CAR_EXTS = [
   { id: "tpl", label: "Jaminan Tanggung Jawab Hukum terhadap Pihak Ketiga", type: "amount", icon: Shield },
+  { id: "driverPa", label: "Jaminan Kecelakaan Diri Pengemudi", type: "amount", icon: User },
+  { id: "passengerPa", label: "Jaminan Kecelakaan Diri Penumpang", type: "amount-seat", icon: User },
   { id: "srcc", label: "Jaminan Kerusuhan & Huru-hara", type: "toggle", icon: Shield },
   { id: "ts", label: "Jaminan Terorisme", type: "toggle", icon: AlertTriangle },
   { id: "flood", label: "Jaminan Banjir", type: "toggle", icon: Waves },
   { id: "quake", label: "Jaminan Gempa Bumi", type: "toggle", icon: Sparkles },
-  { id: "driverPa", label: "Kecelakaan Diri Pengemudi", type: "amount", icon: User },
-  { id: "passengerPa", label: "Kecelakaan Diri Penumpang", type: "amount-seat", icon: User },
-  { id: "ambulance", label: "Biaya ambulan", type: "toggle", icon: Phone },
-  { id: "authorizedWorkshop", label: "Bengkel authorized", type: "toggle", icon: Building2 },
-  { id: "theftByOwnDriver", label: "Risiko pencurian oleh pengemudi sendiri", type: "toggle", icon: AlertTriangle },
+  { id: "authorizedWorkshop", label: "Perbaikan di Bengkel Authorized", type: "toggle", icon: Building2 },
 ] as const;
+
+function getVisibleExtensionItems(flowType: FlowType) {
+  if (flowType === "motor") return MOTOR_EXTS;
+  if (flowType === "carTlo") return CAR_EXTS.filter((item) => item.id !== "authorizedWorkshop");
+  return CAR_EXTS;
+}
 
 const TLO_RATES_MOTOR = {
   1: { min: 0.0176 },
@@ -254,8 +258,9 @@ const TS_RATE_COMP = 0.0005;
 const DRIVER_PA_RATE = 0.005;
 const PASSENGER_PA_RATE = 0.001;
 const AUTH_WORKSHOP_RATE = 0.0025;
-const THEFT_BY_OWN_DRIVER_RATE = 0.001;
-const AMBULANCE_PREMIUM = 50000;
+const DEFAULT_CAR_TPL_AMOUNT = 25000000;
+const DEFAULT_CAR_PA_AMOUNT = 10000000;
+const DEFAULT_CAR_PASSENGER_SEATS = "4";
 const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
 const DEMO_MODEL_LABELS: Record<FlowType, string> = {
@@ -265,17 +270,15 @@ const DEMO_MODEL_LABELS: Record<FlowType, string> = {
 };
 
 const EXT_INFO: Record<string, string> = {
-  tpl: "Menjamin tanggung jawab hukum Tertanggung terhadap kerusakan harta benda, biaya pengobatan, cedera badan, atau kematian pihak ketiga yang timbul langsung akibat kecelakaan kendaraan yang dijamin polis, dengan nilai pertanggungan maksimum Rp1.000.000 untuk setiap kejadian.",
-  srcc: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa senjata api, revolusi tanpa senjata api, serta penjarahan yang terjadi dalam peristiwa tersebut.",
-  ts: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, atau sabotase.",
-  flood: "Menjamin kerugian atau kerusakan yang secara langsung disebabkan oleh banjir, angin topan, badai, hujan es, genangan air, atau tanah longsor yang mengenai kendaraan.",
+  tpl: "Menjamin tanggung jawab hukum Tertanggung atas kerugian pihak ketiga yang secara langsung disebabkan oleh Kendaraan Bermotor yang dipertanggungkan akibat risiko yang dijamin polis, termasuk kerusakan harta benda, biaya pengobatan, cedera badan, dan/atau kematian.",
+  srcc: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa penggunaan senjata api, revolusi tanpa penggunaan senjata api, pencegahan terkait risiko tersebut, serta penjarahan yang terjadi selama kerusuhan atau huru-hara.",
+  ts: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, sabotase, atau tindakan pencegahan yang berkaitan dengan risiko tersebut.",
+  flood: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh angin topan, badai, hujan es, banjir, genangan air, dan/atau tanah longsor.",
   quake: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh gempa bumi, tsunami, dan/atau letusan gunung berapi.",
-  driverPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan pengemudi yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
-  passengerPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan penumpang yang secara langsung disebabkan oleh kecelakaan kendaraan yang dijamin polis.",
-  equipment: "Perlengkapan tambahan adalah aksesori atau perangkat non-standar yang bukan bawaan pabrik dan ingin ikut dijamin bersama kendaraan.",
-  ambulance: "Menjamin biaya ambulans per kejadian akibat kecelakaan dari risiko yang dijamin polis, sampai batas maksimum sesuai Ikhtisar Pertanggungan.",
-  authorizedWorkshop: "Memberikan fasilitas perbaikan di bengkel resmi sesuai merek kendaraan atau bengkel setara dengan persetujuan Penanggung.",
-  theftByOwnDriver: "Menjamin risiko pencurian yang dilakukan oleh pengemudi yang dipekerjakan Tertanggung, sepanjang memenuhi syarat masa kerja minimum sesuai ketentuan polis.",
+  driverPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan terhadap pengemudi di dalam kendaraan yang secara langsung disebabkan oleh kecelakaan Kendaraan Bermotor akibat risiko yang dijamin polis.",
+  passengerPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan terhadap penumpang di dalam kendaraan yang secara langsung disebabkan oleh kecelakaan Kendaraan Bermotor akibat risiko yang dijamin polis.",
+  equipment: "Menjamin peralatan atau perlengkapan non-standar yang dirinci jenis, jumlah, dan harga pertanggungannya dalam polis sebagai bagian dari kendaraan yang dipertanggungkan.",
+  authorizedWorkshop: "Memberikan fasilitas perbaikan kendaraan di bengkel resmi sesuai merek kendaraan. Jika bengkel resmi merek tersebut tidak tersedia di wilayah Tertanggung, perbaikan dapat dilakukan di bengkel resmi merek lain yang setara dengan persetujuan Penanggung.",
 };
 const CONSENT_SECTIONS = [
   {
@@ -345,17 +348,15 @@ function createFlowState(type: FlowType): FlowState {
       extensions: isMotor
         ? { tpl: { enabled: false, amount: "" }, srcc: { enabled: false }, ts: { enabled: false }, flood: { enabled: false }, quake: { enabled: false } }
         : {
-            tpl: { enabled: false, amount: "" },
+            tpl: { enabled: false, amount: DEFAULT_CAR_TPL_AMOUNT },
             srcc: { enabled: false },
             ts: { enabled: false },
             flood: { enabled: false },
             quake: { enabled: false },
-            driverPa: { enabled: false, amount: "" },
-            passengerPa: { enabled: false, amount: "", seats: "" },
+            driverPa: { enabled: false, amount: DEFAULT_CAR_PA_AMOUNT },
+            passengerPa: { enabled: false, amount: DEFAULT_CAR_PA_AMOUNT, seats: DEFAULT_CAR_PASSENGER_SEATS },
             equipment: { enabled: false, amount: "" },
-            ambulance: { enabled: false },
             authorizedWorkshop: { enabled: false },
-            theftByOwnDriver: { enabled: false },
           },
     },
     insured: { customerType: "", nik: "", fullName: "", lookup: "", address: "", email: "", phone: "" },
@@ -453,10 +454,11 @@ function replaceVehicleShareContextInUrl({ view = "", viewer = "", shareData = n
 function getJourneyShareUrl(journeyKey: string, params: any = {}) {
   if (typeof window === "undefined") return `?journey=${journeyKey}`;
   const url = new URL(window.location.href);
-  ["journey", "view", "viewer", "share", "referral", "sender", "customer", "offer"].forEach((key) => {
+  ["journey", "role", "view", "viewer", "share", "referral", "sender", "customer", "offer"].forEach((key) => {
     url.searchParams.delete(key);
   });
   url.searchParams.set("journey", journeyKey);
+  if (params.role) url.searchParams.set("role", params.role);
   if (params.view) url.searchParams.set("view", params.view);
   if (params.viewer) url.searchParams.set("viewer", params.viewer);
   if (params.shareData) {
@@ -464,6 +466,10 @@ function getJourneyShareUrl(journeyKey: string, params: any = {}) {
     if (encoded) url.searchParams.set("share", encoded);
   }
   return `${url.origin}${url.pathname}?${url.searchParams.toString()}`;
+}
+function openOfferPreview(targetUrl: string) {
+  if (typeof window === "undefined" || !targetUrl) return;
+  window.location.assign(targetUrl);
 }
 function openShareWindow(targetUrl: string) {
   if (typeof window === "undefined" || !targetUrl) return;
@@ -690,17 +696,55 @@ function progressiveTPL(amount: number, vehicleType: string) {
   return Math.round(total);
 }
 
-function computeCarTplFee(limitAmount: number, marketValue: number, vehicleType: string) {
+function computeCarTplFee(limitAmount: number, vehicleType: string) {
   const amount = Math.max(0, Number(limitAmount) || 0);
-  const hp = Math.max(0, Number(marketValue) || 0);
-  const vehicleCategory = getCarCategory(vehicleType);
-  if (!hp) return 0;
-  if (vehicleCategory === "Angkutan Penumpang") {
-    if (amount <= 25000000) return Math.round(hp * 0.01);
-    if (amount <= 50000000) return Math.round(hp * 0.005);
-    return Math.round(hp * 0.0025);
-  }
   return progressiveTPL(Math.min(100000000, amount), vehicleType);
+}
+function getCarEquipmentCap(marketValue: number) {
+  return Math.min(25000000, Math.round(Math.max(0, Number(marketValue) || 0) * 0.1));
+}
+function getCarEquipmentAmount(q: any, marketValue: number, requireEnabled = true) {
+  const isEnabled = Boolean(q.extensions.equipment?.enabled);
+  if (requireEnabled && !isEnabled) return 0;
+  return Math.min(getCarEquipmentCap(marketValue), Math.max(0, Number(q.extensions.equipment?.amount || 0) || 0));
+}
+function getCarTplCoverageAmount(q: any, marketValue: number, fallbackAmount = 0) {
+  const requested = Math.max(0, Number(q.extensions.tpl?.amount || fallbackAmount) || fallbackAmount);
+  const maxCoverage = marketValue ? Math.min(100000000, Math.max(0, Number(marketValue) || 0)) : 100000000;
+  return Math.min(maxCoverage, requested);
+}
+function getCarPaCoverageAmount(q: any, itemId: "driverPa" | "passengerPa", marketValue: number, fallbackAmount = 0) {
+  const requested = Math.max(0, Number(q.extensions[itemId]?.amount || fallbackAmount) || fallbackAmount);
+  const maxCoverage = marketValue ? Math.min(100000000, Math.max(0, Number(marketValue) || 0)) : 100000000;
+  return Math.min(maxCoverage, requested);
+}
+function getVehicleExtensionCoverageAmount(flowType: FlowType, q: any, itemId: string) {
+  const mv = Math.max(0, Number(q.marketValue) || 0);
+  const isMotor = flowType === "motor";
+  if (itemId === "tpl") {
+    if (isMotor) return Math.min(1000000, Math.max(0, Number(q.extensions.tpl?.amount || 1000000) || 1000000));
+    return getCarTplCoverageAmount(q, mv, DEFAULT_CAR_TPL_AMOUNT);
+  }
+  if (itemId === "driverPa") return isMotor ? 0 : getCarPaCoverageAmount(q, "driverPa", mv, DEFAULT_CAR_PA_AMOUNT);
+  if (itemId === "passengerPa") return isMotor ? 0 : getCarPaCoverageAmount(q, "passengerPa", mv, DEFAULT_CAR_PA_AMOUNT);
+  if (itemId === "equipment") return isMotor ? 0 : getCarEquipmentAmount(q, mv, false);
+  if (itemId === "authorizedWorkshop") return flowType === "carComp" ? mv + getCarEquipmentAmount(q, mv) : 0;
+  if (itemId === "srcc" || itemId === "ts" || itemId === "flood" || itemId === "quake") {
+    return isMotor ? mv : mv + getCarEquipmentAmount(q, mv);
+  }
+  return 0;
+}
+function getVehicleExtensionCoverageText(flowType: FlowType, q: any, itemId: string) {
+  if (!["tpl", "driverPa", "passengerPa"].includes(itemId)) return "";
+  const amount = getVehicleExtensionCoverageAmount(flowType, q, itemId);
+  return amount > 0 ? formatRupiah(amount) : "";
+}
+function getVehicleExtensionInputAmountText(flowType: FlowType, q: any, itemId: string) {
+  const amount = getVehicleExtensionCoverageAmount(flowType, q, itemId);
+  return amount > 0 ? formatRupiah(amount) : "";
+}
+function getPassengerSeatsValue(q: any) {
+  return String(q.extensions.passengerPa?.seats || DEFAULT_CAR_PASSENGER_SEATS);
 }
 function addOneYear(dateStr: string) {
   if (!dateStr) return "";
@@ -729,20 +773,15 @@ function getExtensionDisplayFee(flowType: FlowType, q: any, itemId: string) {
   const mv = Math.max(0, Number(q.marketValue) || 0);
   const region = getRegion(q.plateRegion);
   const isMotor = flowType === "motor";
-  const equipmentAmount = !isMotor
-    ? Math.min(
-        Math.min(25000000, Math.round(mv * 0.1)),
-        Math.max(0, Number(q.extensions.equipment?.amount || 0) || 0)
-      )
-    : 0;
+  const equipmentAmount = !isMotor ? getCarEquipmentAmount(q, mv) : 0;
   const insuredValue = mv + equipmentAmount;
   if (itemId === "tpl") {
     if (isMotor) {
       const amount = Math.min(1000000, Math.max(0, Number(q.extensions.tpl.amount || 1000000)));
       return progressiveTPL(amount, "Angkutan Penumpang");
     }
-    const amount = Math.min(100000000, Math.max(0, Number(q.extensions.tpl.amount || 25000000)));
-    return computeCarTplFee(amount, mv, q.vehicleType || "Angkutan Penumpang");
+    const amount = getCarTplCoverageAmount(q, mv, DEFAULT_CAR_TPL_AMOUNT);
+    return computeCarTplFee(amount, q.vehicleType || "Angkutan Penumpang");
   }
   if (!mv) return 0;
   if (itemId === "srcc") return Math.round((isMotor ? mv : insuredValue) * (flowType === "carComp" ? SRCC_RATE_COMP : SRCC_RATE_TLO));
@@ -757,15 +796,13 @@ function getExtensionDisplayFee(flowType: FlowType, q: any, itemId: string) {
   }
   if (isMotor) return 0;
   if (itemId === "driverPa") {
-    const amount = Math.max(0, Number(q.extensions.driverPa.amount || 10000000) || 10000000);
-    const capped = Math.min(25000000, mv || 25000000, amount);
-    return Math.round(capped * DRIVER_PA_RATE);
+    const amount = getCarPaCoverageAmount(q, "driverPa", mv, DEFAULT_CAR_PA_AMOUNT);
+    return Math.round(amount * DRIVER_PA_RATE);
   }
   if (itemId === "passengerPa") {
-    const amount = Math.max(0, Number(q.extensions.passengerPa.amount || 10000000) || 10000000);
-    const seats = Math.min(7, Math.max(1, Number(q.extensions.passengerPa.seats || 4) || 4));
-    const capped = Math.min(25000000, mv || 25000000, amount);
-    return Math.round(capped * PASSENGER_PA_RATE * seats);
+    const amount = getCarPaCoverageAmount(q, "passengerPa", mv, DEFAULT_CAR_PA_AMOUNT);
+    const seats = Math.min(7, Math.max(1, Number(q.extensions.passengerPa.seats || DEFAULT_CAR_PASSENGER_SEATS) || Number(DEFAULT_CAR_PASSENGER_SEATS)));
+    return Math.round(amount * PASSENGER_PA_RATE * seats);
   }
   if (itemId === "equipment") {
     const baseRate = flowType === "carComp"
@@ -773,9 +810,7 @@ function getExtensionDisplayFee(flowType: FlowType, q: any, itemId: string) {
       : getCarTloBaseRate(region, q.vehicleType || "Angkutan Penumpang", mv);
     return Math.round(equipmentAmount * baseRate);
   }
-  if (itemId === "ambulance") return AMBULANCE_PREMIUM;
-  if (itemId === "authorizedWorkshop") return Math.round(mv * AUTH_WORKSHOP_RATE);
-  if (itemId === "theftByOwnDriver") return Math.round(mv * THEFT_BY_OWN_DRIVER_RATE);
+  if (itemId === "authorizedWorkshop") return flowType === "carComp" ? Math.round(insuredValue * AUTH_WORKSHOP_RATE) : 0;
   return 0;
 }
 
@@ -806,16 +841,17 @@ function calcCarShared(
   tsRate = TS_RATE_TLO,
   floodRates = FLOOD_RATES_TLO,
   quakeRates = QUAKE_RATES_TLO,
-  equipmentRate = 0
+  equipmentRate = 0,
+  includeAuthorizedWorkshop = false
 ) {
-  const equipmentCap = Math.min(25000000, Math.round(mv * 0.1));
-  const equipmentAmount = q.extensions.equipment?.enabled ? Math.min(equipmentCap, Math.max(0, Number(q.extensions.equipment.amount) || 0)) : 0;
+  const equipmentCap = getCarEquipmentCap(mv);
+  const equipmentAmount = getCarEquipmentAmount(q, mv);
   const insuredValue = mv + equipmentAmount;
-  const driverPaAmount = q.extensions.driverPa?.enabled ? Math.min(25000000, mv || 25000000, Math.max(0, Number(q.extensions.driverPa.amount) || 0)) : 0;
-  const passengerPaAmount = q.extensions.passengerPa?.enabled ? Math.min(25000000, mv || 25000000, Math.max(0, Number(q.extensions.passengerPa.amount) || 0)) : 0;
-  const passengerSeats = Math.min(7, Math.max(1, Number(q.extensions.passengerPa.seats) || 1));
+  const driverPaAmount = q.extensions.driverPa?.enabled ? getCarPaCoverageAmount(q, "driverPa", mv, DEFAULT_CAR_PA_AMOUNT) : 0;
+  const passengerPaAmount = q.extensions.passengerPa?.enabled ? getCarPaCoverageAmount(q, "passengerPa", mv, DEFAULT_CAR_PA_AMOUNT) : 0;
+  const passengerSeats = Math.min(7, Math.max(1, Number(q.extensions.passengerPa.seats || DEFAULT_CAR_PASSENGER_SEATS) || Number(DEFAULT_CAR_PASSENGER_SEATS)));
   const details = {
-    tplFee: q.extensions.tpl.enabled ? computeCarTplFee(Math.min(100000000, Number(q.extensions.tpl.amount) || 0), mv, q.vehicleType) : 0,
+    tplFee: q.extensions.tpl.enabled ? computeCarTplFee(getCarTplCoverageAmount(q, mv), q.vehicleType) : 0,
     srccFee: q.extensions.srcc.enabled ? Math.round(insuredValue * srccRate) : 0,
     tsFee: q.extensions.ts.enabled ? Math.round(insuredValue * tsRate) : 0,
     floodFee: q.extensions.flood.enabled ? Math.round(insuredValue * floodRates[region as 1 | 2 | 3].min) : 0,
@@ -823,9 +859,7 @@ function calcCarShared(
     driverPaFee: q.extensions.driverPa?.enabled ? Math.round(driverPaAmount * DRIVER_PA_RATE) : 0,
     passengerPaFee: q.extensions.passengerPa?.enabled ? Math.round(passengerPaAmount * PASSENGER_PA_RATE * passengerSeats) : 0,
     equipmentFee: q.extensions.equipment?.enabled ? Math.round(equipmentAmount * equipmentRate) : 0,
-    ambulanceFee: q.extensions.ambulance?.enabled ? AMBULANCE_PREMIUM : 0,
-    authWorkshopFee: q.extensions.authorizedWorkshop?.enabled ? Math.round((mv + equipmentAmount) * AUTH_WORKSHOP_RATE) : 0,
-    theftByOwnDriverFee: q.extensions.theftByOwnDriver?.enabled ? Math.round((mv + equipmentAmount) * THEFT_BY_OWN_DRIVER_RATE) : 0,
+    authWorkshopFee: includeAuthorizedWorkshop && q.extensions.authorizedWorkshop?.enabled ? Math.round((mv + equipmentAmount) * AUTH_WORKSHOP_RATE) : 0,
     equipmentCap,
     insuredValue,
   };
@@ -846,7 +880,7 @@ function calcCarShared(
 function calcCarTlo(q: any) {
   const mv = Math.max(0, Number(q.marketValue) || 0);
   const region = getRegion(q.plateRegion);
-  if (!q.vehicleType) return { mainPremium: 0, extensionTotal: 0, stamp: 0, total: 0, details: { tplFee: 0, srccFee: 0, tsFee: 0, floodFee: 0, quakeFee: 0, driverPaFee: 0, passengerPaFee: 0, equipmentFee: 0, ambulanceFee: 0, authWorkshopFee: 0, theftByOwnDriverFee: 0, equipmentCap: 0 }, categoryLabel: "-", status: "Isi Data" };
+  if (!q.vehicleType) return { mainPremium: 0, extensionTotal: 0, stamp: 0, total: 0, details: { tplFee: 0, srccFee: 0, tsFee: 0, floodFee: 0, quakeFee: 0, driverPaFee: 0, passengerPaFee: 0, equipmentFee: 0, authWorkshopFee: 0, equipmentCap: 0 }, categoryLabel: "-", status: "Isi Data" };
   const vehicleCategory = getCarCategory(q.vehicleType);
   if (vehicleCategory === "Angkutan Penumpang") {
     const category = getCategory(mv);
@@ -864,7 +898,7 @@ function calcCarTlo(q: any) {
 function calcCarComp(q: any) {
   const mv = Math.max(0, Number(q.marketValue) || 0);
   const region = getRegion(q.plateRegion);
-  if (!q.vehicleType) return { mainPremium: 0, extensionTotal: 0, stamp: 0, total: 0, details: { tplFee: 0, srccFee: 0, tsFee: 0, floodFee: 0, quakeFee: 0, driverPaFee: 0, passengerPaFee: 0, equipmentFee: 0, ambulanceFee: 0, authWorkshopFee: 0, theftByOwnDriverFee: 0, equipmentCap: 0 }, categoryLabel: "-", status: "Isi Data", baseMainPremium: 0, ageLoadingAmount: 0 };
+  if (!q.vehicleType) return { mainPremium: 0, extensionTotal: 0, stamp: 0, total: 0, details: { tplFee: 0, srccFee: 0, tsFee: 0, floodFee: 0, quakeFee: 0, driverPaFee: 0, passengerPaFee: 0, equipmentFee: 0, authWorkshopFee: 0, equipmentCap: 0 }, categoryLabel: "-", status: "Isi Data", baseMainPremium: 0, ageLoadingAmount: 0 };
   let category = 0;
   let baseMainPremium = 0;
   const vehicleCategory = getCarCategory(q.vehicleType);
@@ -880,7 +914,7 @@ function calcCarComp(q: any) {
   }
   const ageLoadingAmount = Math.round(baseMainPremium * Math.max(0, CURRENT_YEAR - Number(q.year || CURRENT_YEAR) - 5) * 0.05);
   const equipmentRate = mv ? (baseMainPremium + ageLoadingAmount) / mv : 0;
-  const res = calcCarShared(q, mv, region, category, baseMainPremium + ageLoadingAmount, SRCC_RATE_COMP, TS_RATE_COMP, FLOOD_RATES_COMP, QUAKE_RATES_COMP, equipmentRate) as any;
+  const res = calcCarShared(q, mv, region, category, baseMainPremium + ageLoadingAmount, SRCC_RATE_COMP, TS_RATE_COMP, FLOOD_RATES_COMP, QUAKE_RATES_COMP, equipmentRate, true) as any;
   res.baseMainPremium = baseMainPremium;
   res.ageLoadingAmount = ageLoadingAmount;
   return res;
@@ -898,16 +932,18 @@ function deductibleText(flowType: FlowType, vehicleType: string, itemId: string)
   if (itemId === "tpl" || itemId === "driverPa" || itemId === "passengerPa") return "Tanpa risiko sendiri saat klaim.";
   if (itemId === "srcc" || itemId === "ts") return "10% dari nilai yang disetujui, paling sedikit Rp500.000,- per kejadian.";
   if (itemId === "flood" || itemId === "quake") return "10% dari nilai kerugian, minimum Rp500.000,-- untuk setiap kejadian.";
-  if (itemId === "theftByOwnDriver") return "10% dari Total Harga Pertanggungan.";
   if (itemId === "equipment") return "Mengikuti ketentuan pertanggungan utama.";
   return "";
 }
 
 function mainCoverText(flowType: FlowType) {
   if (flowType === "carComp") {
-    return "Menjamin kerugian atau kerusakan pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tanpa risiko sendiri saat klaim.";
+    return "Menjamin kerugian atau kerusakan pada Kendaraan Bermotor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, termasuk kebakaran akibat benda lain yang berdekatan, sambaran petir, upaya pemadaman, atau perintah pihak berwenang untuk mencegah menjalarnya kebakaran.";
   }
-    return "Menjamin kerugian total pada kendaraan yang langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan mencapai sedikitnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila kendaraan tidak ditemukan dalam 60 hari. Termasuk biaya penyelamatan yang wajar untuk penjagaan, pengangkutan, atau penarikan kendaraan ke bengkel atau tempat lain guna mengurangi kerugian, paling tinggi 0,5% dari harga pertanggungan dan tanpa risiko sendiri saat klaim.";
+  if (flowType === "motor") {
+    return "Menjamin kerugian total pada sepeda motor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan, penggantian, atau pemulihan mencapai sekurang-kurangnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila sepeda motor tidak ditemukan dalam waktu 60 hari sejak terjadinya pencurian.";
+  }
+  return "Menjamin kerugian total pada Kendaraan Bermotor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan, penggantian, atau pemulihan mencapai sekurang-kurangnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila Kendaraan Bermotor tidak ditemukan dalam waktu 60 hari sejak terjadinya pencurian.";
 }
 
 function mainCoverTitle(flowType: FlowType) {
@@ -948,13 +984,13 @@ function mainDeductibleText(flowType: FlowType, vehicleType: string) {
       : "Kerugian total: Rp500.000. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
   }
   return getCarCategory(vehicleType) === "Angkutan Penumpang"
-    ? "Kerugian atau kerusakan: Rp300.000. Kehilangan karena pencurian: 5% dari harga pertanggungan."
-    : "Kerugian atau kerusakan: Rp500.000. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
+    ? "Kerugian sebagian atau kerugian total: Rp300.000 per kejadian. Kehilangan karena pencurian: 5% dari harga pertanggungan."
+    : "Kerugian sebagian atau kerugian total: Rp500.000 per kejadian. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
 }
 
 function vehicleDeductibleIsDirectText(value: string) {
   const text = String(value || "").trim().toLowerCase();
-  return ["tanpa biaya sendiri", "tanpa risiko sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) => text.startsWith(token));
+  return ["tanpa risiko sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) => text.startsWith(token));
 }
 
 function VehicleGuaranteeDetailCard({
@@ -963,12 +999,14 @@ function VehicleGuaranteeDetailCard({
   premium,
   detail,
   deductible,
+  coverageAmount,
 }: {
   title: string;
   icon?: any;
   premium: string;
   detail: string;
   deductible?: string;
+  coverageAmount?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -987,15 +1025,21 @@ function VehicleGuaranteeDetailCard({
       </button>
       {expanded ? (
         <div className="border-t border-[#D6E0EA] px-3.5 py-3">
+          {coverageAmount ? (
+            <div className="mb-2 text-[12px] leading-5 text-slate-600">
+              <span className="font-medium text-slate-700">Nilai pertanggungan: </span>
+              <span>{coverageAmount}</span>
+            </div>
+          ) : null}
           <div className="whitespace-pre-line text-[12.5px] leading-5 text-slate-700">{detail}</div>
           {deductible ? (
             <div className="mt-2 text-[12px] leading-5 text-slate-600">
               {vehicleDeductibleIsDirectText(deductible) ? (
-                <span>{String(deductible || "").replace(/biaya sendiri/gi, "risiko sendiri")}</span>
+                <span>{String(deductible || "")}</span>
               ) : (
                 <>
                   <span className="font-medium text-slate-700">Risiko sendiri saat klaim: </span>
-                  <span>{String(deductible || "").replace(/biaya sendiri/gi, "risiko sendiri")}</span>
+                  <span>{String(deductible || "")}</span>
                 </>
               )}
             </div>
@@ -1368,6 +1412,7 @@ function PreviewGuaranteeOption({
   onToggleExpand,
   detail,
   deductible,
+  coverageAmount,
 }: {
   title: string;
   icon?: any;
@@ -1378,6 +1423,7 @@ function PreviewGuaranteeOption({
   onToggleExpand: () => void;
   detail?: string;
   deductible?: string;
+  coverageAmount?: string;
 }) {
   return (
     <div
@@ -1415,15 +1461,21 @@ function PreviewGuaranteeOption({
               <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition duration-200", expanded && "rotate-180")} />
             </button>
           </div>
-          {expanded ? <div className="mt-1.5 pl-[30px] text-[12.5px] leading-5 text-slate-600">{detail}</div> : null}
+          {expanded && coverageAmount ? (
+            <div className="mt-1.5 pl-[30px] text-[12px] leading-5 text-slate-600">
+              <span className="font-medium text-slate-700">Nilai pertanggungan: </span>
+              <span>{coverageAmount}</span>
+            </div>
+          ) : null}
+          {expanded ? <div className={cls("text-[12.5px] leading-5 text-slate-600", coverageAmount ? "mt-1 pl-[30px]" : "mt-1.5 pl-[30px]")}>{detail}</div> : null}
           {expanded && deductible ? (
             <div className="mt-2 pl-[30px] text-[12px] leading-5 text-slate-600">
               {vehicleDeductibleIsDirectText(deductible) ? (
-                <span>{String(deductible || "").replace(/biaya sendiri/gi, "risiko sendiri")}</span>
+                <span>{String(deductible || "")}</span>
               ) : (
                 <>
                   <span className="font-medium text-slate-700">Risiko sendiri saat klaim: </span>
-                  <span>{String(deductible || "").replace(/biaya sendiri/gi, "risiko sendiri")}</span>
+                  <span>{String(deductible || "")}</span>
                 </>
               )}
             </div>
@@ -1445,22 +1497,41 @@ function PaymentInfoPanel({ title, children }: any) {
   return <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4"><div className="text-sm font-semibold text-slate-900">{title}</div><div className="mt-2 text-sm leading-6 text-slate-600">{children}</div></div>;
 }
 
-function AccordionRiskRow({ title, premium, summary, detail, deductible, checked, onToggleChecked, expanded, onToggleExpand, alwaysIncluded = false, extra, itemIcon }: any) {
+function AccordionRiskRow({
+  title,
+  premium,
+  summary,
+  detail,
+  deductible,
+  coverageAmount,
+  checked,
+  onToggleChecked,
+  expanded,
+  onToggleExpand,
+  alwaysIncluded = false,
+  readOnly = false,
+  extra,
+  itemIcon,
+}: any) {
+  const Icon = itemIcon || Shield;
   return (
     <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
       <div className="flex items-center gap-3 px-3.5 py-3">
-        {alwaysIncluded ? (
-          <div className="flex h-5 w-5 items-center justify-center rounded border border-[#0A4D82] bg-[#0A4D82]/10 text-[#0A4D82]"><Shield className="h-3.5 w-3.5" /></div>
+        {alwaysIncluded || readOnly ? (
+          <div className="flex h-5 w-5 items-center justify-center rounded border border-[#0A4D82] bg-[#0A4D82]/10 text-[#0A4D82]">
+            {React.createElement(alwaysIncluded ? Shield : Icon, { className: "h-3.5 w-3.5" })}
+          </div>
         ) : (
           <input type="checkbox" checked={checked} onChange={onToggleChecked} className="h-5 w-5 rounded border-slate-300 text-[#0A4D82] focus:ring-[#0A4D82]" />
         )}
         <button type="button" onClick={onToggleExpand} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[#0A4D82]">
-              {!alwaysIncluded && itemIcon ? React.createElement(itemIcon, { className: "h-4 w-4 shrink-0" }) : null}
+              {!alwaysIncluded && !readOnly && itemIcon ? React.createElement(itemIcon, { className: "h-4 w-4 shrink-0" }) : null}
               <div className="truncate text-[14px] font-medium leading-[1.35]">{title}</div>
             </div>
             <div className="mt-0.5 text-[12px] font-normal text-slate-500">Premi: {premium}</div>
+            {coverageAmount ? <div className="mt-0.5 text-[12px] font-normal text-slate-500">Nilai pertanggungan: {coverageAmount}</div> : null}
           </div>
           <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
         </button>
@@ -1468,9 +1539,13 @@ function AccordionRiskRow({ title, premium, summary, detail, deductible, checked
       {expanded ? (
         <div className="border-t border-[#D6E0EA] px-3.5 py-3">
           <div className="whitespace-pre-line text-[12.5px] leading-5 text-slate-700">{summary}</div>
-              {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{["tanpa biaya sendiri", "tanpa risiko sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) => String(deductible || "").trim().toLowerCase().startsWith(token)) ? deductible.replace(/biaya sendiri/gi, "risiko sendiri") : <><span className="font-medium text-slate-700">Risiko sendiri saat klaim:</span> {deductible.replace(/biaya sendiri/gi, "risiko sendiri")}</>}</div> : null}
+              {deductible ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{vehicleDeductibleIsDirectText(deductible) ? deductible : <><span className="font-medium text-slate-700">Risiko sendiri saat klaim:</span> {deductible}</>}</div> : null}
           {detail ? <div className="mt-2 whitespace-pre-line text-[12px] leading-5 text-slate-500">{detail}</div> : null}
-          {extra ? <div className="mt-3">{extra}</div> : null}
+          {extra ? (
+            <div className="mt-3 rounded-xl border border-[#D8E1EA] bg-white/85 p-3">
+              {extra}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -1845,7 +1920,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
       : selected.quote.usage === "Komersial"
         ? "Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan."
         : "";
-  const exts = flowType === "motor" ? MOTOR_EXTS : CAR_EXTS;
+  const exts = getVisibleExtensionItems(flowType);
   const enabledExtensionItems = exts
     .filter((item) => selected.quote.extensions[item.id]?.enabled)
     .map((item) => ({ title: item.label, premium: Number(getExtensionDisplayFee(flowType, selected.quote, item.id) || 0) }));
@@ -1866,7 +1941,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const vehicleSummaryYear = String(selected.quote.year || "").trim() || "-";
   const vehicleSummaryUsage = String(selected.quote.usage || "").trim() || "-";
   const vehicleSummaryValue = String(selected.quote.marketValue || "").trim()
-    ? `Rp ${formatRupiah(Number(selected.quote.marketValue || 0))}`
+    ? formatRupiah(Number(selected.quote.marketValue || 0))
     : "-";
   const enabledExtensionVisualItems = exts.filter((item) => selected.quote.extensions[item.id]?.enabled);
 
@@ -1880,15 +1955,14 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         driverPa: getExtensionDisplayFee(flowType, selected.quote, "driverPa"),
         passengerPa: getExtensionDisplayFee(flowType, selected.quote, "passengerPa"),
         equipment: getExtensionDisplayFee(flowType, selected.quote, "equipment"),
-        ambulance: getExtensionDisplayFee(flowType, selected.quote, "ambulance"),
         authorizedWorkshop: getExtensionDisplayFee(flowType, selected.quote, "authorizedWorkshop"),
-        theftByOwnDriver: getExtensionDisplayFee(flowType, selected.quote, "theftByOwnDriver"),
       }
     : {};
   const selectedExtensionDetailItems = enabledExtensionVisualItems.map((item) => ({
     title: item.label,
     icon: item.icon || Shield,
-    premium: `Rp ${formatRupiah(Number((feeMap as any)[item.id] || 0))}`,
+    premium: formatRupiah(Number((feeMap as any)[item.id] || 0)),
+    coverageAmount: getVehicleExtensionCoverageText(flowType, selected.quote, item.id),
     detail: EXT_INFO[item.id],
     deductible: deductibleText(flowType, selected.quote.vehicleType, item.id),
   }));
@@ -1922,6 +1996,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const shareJourneyKey = flowType === "motor" ? "motor-external" : flowType === "carTlo" ? "car-tlo-external" : "mobil-comp";
   const sharedOfferView = isInternalMode && step === 2 && readyForNextStage ? "payment" : "offer-indicative";
   const shareUrl = getJourneyShareUrl(shareJourneyKey, {
+    role: "guest",
     view: sharedOfferView,
     viewer: "customer",
     shareData: {
@@ -2246,7 +2321,12 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     </ActionCard>
   );
 
-  const renderCoverageSummaryCard = () => (
+  const renderCoverageSummaryCard = () => {
+    const visibleExtensionRows = isSharedCustomerPreview
+      ? exts.filter((item) => selected.quote.extensions[item.id]?.enabled)
+      : exts;
+
+    return (
     <ActionCard>
       <div className="space-y-5">
         <div>
@@ -2264,7 +2344,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
           </div>
           <div className="mt-4 space-y-2.5">
-            {exts.map((item) => {
+            {visibleExtensionRows.map((item) => {
               const enabled = selected.quote.extensions[item.id].enabled;
               return (
                 <AccordionRiskRow
@@ -2272,10 +2352,13 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                   itemIcon={item.icon}
                   title={item.label}
                   premium={formatRupiah((feeMap as any)[item.id] || 0)}
+                  coverageAmount={getVehicleExtensionCoverageText(flowType, selected.quote, item.id)}
                   summary={EXT_INFO[item.id]}
                   deductible={deductibleText(flowType, selected.quote.vehicleType, item.id)}
-                  checked={enabled}
+                  checked={isSharedCustomerPreview || enabled}
+                  readOnly={isSharedCustomerPreview}
                   onToggleChecked={() => {
+                    if (isSharedCustomerPreview) return;
                     const next = !enabled;
                     if (item.id === "ts") {
                       setAt(flowType, `quote.extensions.ts.enabled`, next);
@@ -2289,34 +2372,44 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         return;
                       }
                     }
+                    if (item.id === "tpl" && flowType !== "motor" && next && !selected.quote.extensions.tpl.amount) {
+                      setAt(flowType, "quote.extensions.tpl.amount", DEFAULT_CAR_TPL_AMOUNT);
+                    }
+                    if (item.id === "driverPa" && flowType !== "motor" && next && !selected.quote.extensions.driverPa.amount) {
+                      setAt(flowType, "quote.extensions.driverPa.amount", DEFAULT_CAR_PA_AMOUNT);
+                    }
+                    if (item.id === "passengerPa" && flowType !== "motor" && next) {
+                      if (!selected.quote.extensions.passengerPa.amount) setAt(flowType, "quote.extensions.passengerPa.amount", DEFAULT_CAR_PA_AMOUNT);
+                      if (!selected.quote.extensions.passengerPa.seats) setAt(flowType, "quote.extensions.passengerPa.seats", DEFAULT_CAR_PASSENGER_SEATS);
+                    }
                     setAt(flowType, `quote.extensions.${item.id}.enabled`, next);
                   }}
                   expanded={!!expandedRows[item.id]}
                   onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
-                  extra={enabled ? item.type === "amount-seat" ? (
+                  extra={!isSharedCustomerPreview ? item.type === "amount-seat" ? (
                     <div className="grid gap-3 md:grid-cols-2">
-                      <div><FieldLabel label="Nilai pertanggungan per penumpang" compact /><TextInput value={selected.quote.extensions.passengerPa.amount ? formatRupiah(Number(selected.quote.extensions.passengerPa.amount)) : ""} onChange={(value: string) => {
+                      <div><FieldLabel label="Nilai pertanggungan per penumpang" compact required={false} /><TextInput value={getVehicleExtensionInputAmountText(flowType, selected.quote, "passengerPa")} onChange={(value: string) => {
                         const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
                         const marketValue = Number(selected.quote.marketValue || 0) || 0;
-                        const capped = Math.min(raw, 25000000, marketValue || 25000000);
+                        const capped = Math.min(raw, 100000000, marketValue || 100000000);
                         setAt(flowType, "quote.extensions.passengerPa.amount", capped);
                       }} inputMode="numeric" /></div>
-                      <div><FieldLabel label="Jumlah penumpang" compact /><SelectInput value={String(selected.quote.extensions.passengerPa.seats || "")} onChange={(value: string) => setAt(flowType, "quote.extensions.passengerPa.seats", value)} options={["1", "2", "3", "4", "5", "6", "7"]} placeholder="Jumlah penumpangnya berapa?" /></div>
-                      <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,1% dari nilai pertanggungan per penumpang. Tanpa risiko sendiri saat klaim.</div>
+                      <div><FieldLabel label="Jumlah penumpang yang dijamin" compact required={false} /><SelectInput value={getPassengerSeatsValue(selected.quote)} onChange={(value: string) => setAt(flowType, "quote.extensions.passengerPa.seats", value)} options={["1", "2", "3", "4", "5", "6", "7"]} placeholder="Berapa penumpang yang dijamin?" /></div>
                     </div>
                   ) : item.type === "amount" ? (
                     <div className="grid gap-3 md:grid-cols-2">
-                      <div><FieldLabel label={item.id === "tpl" ? "Nilai pertanggungan pihak ketiga" : item.id === "driverPa" ? "Nilai pertanggungan pengemudi" : item.id === "equipment" ? "Nilai perlengkapan tambahan" : "Nilai pertanggungan"} compact /><TextInput value={selected.quote.extensions[item.id].amount ? formatRupiah(Number(selected.quote.extensions[item.id].amount)) : ""} onChange={(value: string) => {
+                      <div><FieldLabel label={item.id === "tpl" ? "Nilai pertanggungan pihak ketiga" : item.id === "driverPa" ? "Nilai pertanggungan pengemudi" : item.id === "equipment" ? "Nilai perlengkapan" : "Nilai pertanggungan"} compact required={false} /><TextInput value={item.id === "tpl" || item.id === "driverPa" ? getVehicleExtensionInputAmountText(flowType, selected.quote, item.id) : selected.quote.extensions[item.id].amount ? formatRupiah(Number(selected.quote.extensions[item.id].amount)) : ""} onChange={(value: string) => {
                         const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
                         let capped = raw;
 
                         if (item.id === "tpl") {
-                          capped = flowType === "motor" ? Math.min(raw, 1000000) : Math.min(raw, 100000000);
+                          const marketValue = Number(selected.quote.marketValue || 0) || 0;
+                          capped = flowType === "motor" ? Math.min(raw, 1000000) : Math.min(raw, 100000000, marketValue || 100000000);
                         }
 
                         if (item.id === "driverPa" || item.id === "passengerPa") {
                           const marketValue = Number(selected.quote.marketValue || 0) || 0;
-                          capped = Math.min(raw, 25000000, marketValue || 25000000);
+                          capped = Math.min(raw, 100000000, marketValue || 100000000);
                         }
 
                         if (item.id === "equipment") {
@@ -2327,12 +2420,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         setAt(flowType, `quote.extensions.${item.id}.amount`, capped);
                       }} inputMode="numeric" /></div>
                       {item.id === "equipment" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Batas maksimal: {formatRupiah(calc.details.equipmentCap || 0)}</div> : null}
-                      {item.id === "driverPa" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Tarif 0,5% dari nilai pertanggungan. Tanpa risiko sendiri saat klaim.</div> : null}
                     </div>
                   ) : null : null}
                 />
               );
             })}
+            {isSharedCustomerPreview && visibleExtensionRows.length === 0 ? (
+              <div className="rounded-xl border border-[#D8E1EA] bg-white px-3.5 py-3 text-[13px] leading-5 text-slate-600">
+                Tidak ada perluasan jaminan tambahan pada penawaran ini.
+              </div>
+            ) : null}
           </div>
           {selected.quote.extensions.ts.enabled ? (
             <div className="mt-3 rounded-xl border border-[#D8E1EA] bg-white px-3.5 py-3 text-[13px] leading-5 text-slate-600">
@@ -2342,7 +2439,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         </div>
       </div>
     </ActionCard>
-  );
+    );
+  };
 
   const renderSharedPreviewSummaryCard = () => (
     <SectionCard
@@ -2502,7 +2600,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                   <VehicleGuaranteeDetailCard
                     title={mainCoverTitle(flowType)}
                     icon={Shield}
-                    premium={displayedBasePremium === "-" ? "-" : `Rp ${displayedBasePremium}`}
+                    premium={displayedBasePremium}
                     detail={mainCoverText(flowType)}
                     deductible={mainDeductibleText(flowType, selected.quote.vehicleType)}
                   />
@@ -2519,6 +2617,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       icon={item.icon}
                       title={item.label}
                       premium={formatRupiah((feeMap as any)[item.id] || 0)}
+                      coverageAmount={getVehicleExtensionCoverageText(flowType, selected.quote, item.id)}
                       checked={enabled}
                       expanded={!!expandedRows[item.id]}
                       onToggleChecked={() => {
@@ -2534,6 +2633,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                             setAt(flowType, `quote.extensions.srcc.enabled`, true);
                             return;
                           }
+                        }
+                        if (item.id === "tpl" && flowType !== "motor" && next && !selected.quote.extensions.tpl.amount) {
+                          setAt(flowType, "quote.extensions.tpl.amount", DEFAULT_CAR_TPL_AMOUNT);
+                        }
+                        if (item.id === "driverPa" && flowType !== "motor" && next && !selected.quote.extensions.driverPa.amount) {
+                          setAt(flowType, "quote.extensions.driverPa.amount", DEFAULT_CAR_PA_AMOUNT);
+                        }
+                        if (item.id === "passengerPa" && flowType !== "motor" && next) {
+                          if (!selected.quote.extensions.passengerPa.amount) setAt(flowType, "quote.extensions.passengerPa.amount", DEFAULT_CAR_PA_AMOUNT);
+                          if (!selected.quote.extensions.passengerPa.seats) setAt(flowType, "quote.extensions.passengerPa.seats", DEFAULT_CAR_PASSENGER_SEATS);
                         }
                         setAt(flowType, `quote.extensions.${item.id}.enabled`, next);
                       }}
@@ -2619,7 +2728,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             Cek Premi
           </button>
         ) : null}
-        {isInternalMode ? (
+        {showPremiumDetails && isInternalMode ? (
           <button
             type="button"
             disabled={!quoteReady}
@@ -2632,20 +2741,22 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             Kirim Penawaran
           </button>
         ) : null}
-        <button
-          type="button"
-          disabled={!quoteReady}
-          onClick={() => {
-            setJourneyStatus("");
-            setStep(2);
-          }}
-          className={cls(
-            "inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition",
-            quoteReady ? (isInternalMode ? "bg-[#0A4D82] hover:brightness-105" : "bg-[#F5A623] hover:brightness-105") : "cursor-not-allowed bg-slate-400",
-          )}
-        >
-          {"Isi Data Lanjutan"}
-        </button>
+        {showPremiumDetails ? (
+          <button
+            type="button"
+            disabled={!quoteReady}
+            onClick={() => {
+              setJourneyStatus("");
+              setStep(2);
+            }}
+            className={cls(
+              "inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition",
+              quoteReady ? (isInternalMode ? "bg-[#0A4D82] hover:brightness-105" : "bg-[#F5A623] hover:brightness-105") : "cursor-not-allowed bg-slate-400",
+            )}
+          >
+            {"Isi Data Lanjutan"}
+          </button>
+        ) : null}
       </div>
       {!isInternalMode && hasSharedOfferJourney ? (
         <div className="mt-3 space-y-3">
@@ -3221,7 +3332,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           sharedOfferView === "offer-indicative"
             ? () => {
                 setShowOfferShareModal(false);
-                openShareWindow(shareUrl);
+                openOfferPreview(shareUrl);
               }
             : null
         }
@@ -3229,7 +3340,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           sharedOfferView === "payment"
             ? () => {
                 setShowOfferShareModal(false);
-                openShareWindow(shareUrl);
+                openOfferPreview(shareUrl);
               }
             : null
         }
@@ -3593,7 +3704,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                                 <VehicleGuaranteeDetailCard
                                   title={mainCoverTitle(flowType)}
                                   icon={Shield}
-                                  premium={displayedBasePremium === "-" ? "-" : `Rp ${displayedBasePremium}`}
+                                  premium={displayedBasePremium}
                                   detail={mainCoverText(flowType)}
                                   deductible={mainDeductibleText(flowType, selected.quote.vehicleType)}
                                 />
@@ -3621,6 +3732,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                                         title={item.title}
                                         icon={item.icon}
                                         premium={item.premium}
+                                        coverageAmount={item.coverageAmount}
                                         detail={item.detail}
                                         deductible={item.deductible}
                                       />
