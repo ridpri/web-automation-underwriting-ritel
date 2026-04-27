@@ -252,6 +252,9 @@ const QUAKE_RATES_COMP = { 1: { min: 0.0012 }, 2: { min: 0.001 }, 3: { min: 0.00
 const SRCC_RATE_COMP = 0.0005;
 const TS_RATE_COMP = 0.0005;
 const AUTH_WORKSHOP_RATE = 0.0025;
+const COMMERCIAL_CASCO_LOADING_RATE = 0.05;
+const CAR_COMP_LOADING_DEDUCTIBLE_AMOUNT_CATEGORY_1_5 = 500000;
+const CAR_COMP_LOADING_DEDUCTIBLE_AMOUNT_CATEGORY_6_7 = 750000;
 
 export function getCarVehicleCategory(vehicleType) {
   const value = String(vehicleType || "").toLowerCase();
@@ -274,6 +277,24 @@ export function getCarVehicleCategory(vehicleType) {
     return "Angkutan Barang";
   }
   return "Angkutan Penumpang";
+}
+
+function getCarCompAgeLoadingYears(year) {
+  const vehicleYear = Number(year || CURRENT_YEAR);
+  if (Number.isNaN(vehicleYear)) return 0;
+  return Math.max(0, CURRENT_YEAR - vehicleYear - 5);
+}
+
+function getCarCompLoadingDeductibleAmount(vehicleType) {
+  return getCarVehicleCategory(vehicleType) === "Angkutan Penumpang"
+    ? CAR_COMP_LOADING_DEDUCTIBLE_AMOUNT_CATEGORY_1_5
+    : CAR_COMP_LOADING_DEDUCTIBLE_AMOUNT_CATEGORY_6_7;
+}
+
+function usesCarCompLoadingDeductibleSubstitution(quote) {
+  const requiredDeductible = getCarCompLoadingDeductibleAmount(quote?.vehicleType || "");
+  return getCarCompAgeLoadingYears(quote?.year) > 0
+    && Number(quote?.mainDeductibleOverrideAmount || 0) >= requiredDeductible;
 }
 
 function progressiveTPL(amount, vehicleType) {
@@ -520,11 +541,16 @@ export function calcCarCompPremium(quote) {
   } else {
     baseMainPremium = Math.round(marketValue * (region === 1 ? 0.0104 : region === 2 ? 0.0104 : 0.0088));
   }
-  const ageLoadingAmount = Math.round(baseMainPremium * Math.max(0, CURRENT_YEAR - Number(quote.year || CURRENT_YEAR) - 5) * 0.05);
+  const ageLoadingYears = getCarCompAgeLoadingYears(quote.year);
+  const standardAgeLoadingAmount = Math.round(baseMainPremium * ageLoadingYears * 0.05);
+  const ageLoadingDeductibleSubstituted = usesCarCompLoadingDeductibleSubstitution(quote);
+  const ageLoadingAmount = ageLoadingDeductibleSubstituted ? 0 : standardAgeLoadingAmount;
+  const commercialLoadingAmount = quote.usage === "Komersial" ? Math.round(baseMainPremium * COMMERCIAL_CASCO_LOADING_RATE) : 0;
+  const mainPremium = baseMainPremium + ageLoadingAmount + commercialLoadingAmount;
   const driverPaAmount = Math.min(100000000, marketValue || 100000000, Math.max(0, Number(quote.extensions.driverPa.amount || 0)));
   const passengerPaAmount = Math.min(100000000, marketValue || 100000000, Math.max(0, Number(quote.extensions.passengerPa.amount || 0)));
   const passengerSeats = Math.min(7, Math.max(1, Number(quote.extensions.passengerPa.seats || 4)));
-  const equipmentRate = marketValue ? (baseMainPremium + ageLoadingAmount) / marketValue : 0;
+  const equipmentRate = marketValue ? mainPremium / marketValue : 0;
   const details = {
     tplFee: quote.extensions.tpl.enabled ? computeCarTplFee(getCarTplCoverageAmount(quote, marketValue), vehicleType) : 0,
     srccFee: quote.extensions.srcc.enabled ? Math.round(insuredValue * SRCC_RATE_COMP) : 0,
@@ -539,14 +565,18 @@ export function calcCarCompPremium(quote) {
     insuredValue,
     baseMainPremium,
     ageLoadingAmount,
+    standardAgeLoadingAmount,
+    commercialLoadingAmount,
+    ageLoadingYears,
+    ageLoadingDeductibleSubstituted,
   };
   const extensionTotal = Object.entries(details)
-    .filter(([key]) => !["equipmentCap", "insuredValue", "baseMainPremium", "ageLoadingAmount"].includes(key))
+    .filter(([key]) => !["equipmentCap", "insuredValue", "baseMainPremium", "ageLoadingAmount", "standardAgeLoadingAmount", "commercialLoadingAmount", "ageLoadingYears", "ageLoadingDeductibleSubstituted"].includes(key))
     .reduce((sum, [, item]) => sum + Number(item || 0), 0);
-  const netPremium = baseMainPremium + ageLoadingAmount + extensionTotal;
+  const netPremium = mainPremium + extensionTotal;
   const stamp = netPremium > 5000000 ? 20000 : 10000;
   return {
-    mainPremium: baseMainPremium + ageLoadingAmount,
+    mainPremium,
     extensionTotal,
     stamp,
     total: netPremium + stamp,

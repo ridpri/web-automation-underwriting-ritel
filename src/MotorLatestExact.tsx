@@ -67,6 +67,7 @@ type FlowState = {
     marketValue: string;
     coverageStart: string;
     coverageEnd: string;
+    mainDeductibleOverrideAmount: number | "";
     extensions: ExtensionsState;
   };
   insured: { customerType: string; nik: string; fullName: string; lookup: string; address: string; email: string; phone: string };
@@ -258,9 +259,13 @@ const TS_RATE_COMP = 0.0005;
 const DRIVER_PA_RATE = 0.005;
 const PASSENGER_PA_RATE = 0.001;
 const AUTH_WORKSHOP_RATE = 0.0025;
+const MIN_COVERAGE_INPUT_AMOUNT = 1000000;
 const DEFAULT_CAR_TPL_AMOUNT = 25000000;
 const DEFAULT_CAR_PA_AMOUNT = 10000000;
 const DEFAULT_CAR_PASSENGER_SEATS = "4";
+const CAR_COMP_LOADING_DEDUCTIBLE_AMOUNT_CATEGORY_1_5 = 500000;
+const CAR_COMP_LOADING_DEDUCTIBLE_AMOUNT_CATEGORY_6_7 = 750000;
+const COMMERCIAL_CASCO_LOADING_RATE = 0.05;
 const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
 const DEMO_MODEL_LABELS: Record<FlowType, string> = {
@@ -345,6 +350,7 @@ function createFlowState(type: FlowType): FlowState {
       marketValue: "",
       coverageStart: "",
       coverageEnd: "",
+      mainDeductibleOverrideAmount: "",
       extensions: isMotor
         ? { tpl: { enabled: false, amount: "" }, srcc: { enabled: false }, ts: { enabled: false }, flood: { enabled: false }, quake: { enabled: false } }
         : {
@@ -374,6 +380,9 @@ function createFlowState(type: FlowType): FlowState {
 
 function formatRupiah(v: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Number(v || 0));
+}
+function digitsOnly(value: string | number) {
+  return String(value || "").replace(/[^0-9]/g, "");
 }
 function formatDisplayDateTime(value: Date) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -708,21 +717,32 @@ function getCarEquipmentAmount(q: any, marketValue: number, requireEnabled = tru
   if (requireEnabled && !isEnabled) return 0;
   return Math.min(getCarEquipmentCap(marketValue), Math.max(0, Number(q.extensions.equipment?.amount || 0) || 0));
 }
+function clampCoverageInputAmount(value: any, minAmount: number, maxAmount: number, fallbackAmount = minAmount) {
+  const maxSafe = Math.max(0, Number(maxAmount) || 0);
+  const minSafe = Math.max(0, Number(minAmount) || 0);
+  const effectiveMin = maxSafe > 0 ? Math.min(minSafe, maxSafe) : minSafe;
+  const parsed = Number(value);
+  const requested = Number.isFinite(parsed) && parsed > 0 ? parsed : Number(fallbackAmount || effectiveMin);
+  const withMinimum = Math.max(effectiveMin, requested);
+  return maxSafe > 0 ? Math.min(maxSafe, withMinimum) : withMinimum;
+}
 function getCarTplCoverageAmount(q: any, marketValue: number, fallbackAmount = 0) {
-  const requested = Math.max(0, Number(q.extensions.tpl?.amount || fallbackAmount) || fallbackAmount);
   const maxCoverage = marketValue ? Math.min(100000000, Math.max(0, Number(marketValue) || 0)) : 100000000;
-  return Math.min(maxCoverage, requested);
+  const rawAmount = q.extensions.tpl?.amount;
+  const fallback = fallbackAmount || MIN_COVERAGE_INPUT_AMOUNT;
+  return clampCoverageInputAmount(rawAmount, MIN_COVERAGE_INPUT_AMOUNT, maxCoverage, fallback);
 }
 function getCarPaCoverageAmount(q: any, itemId: "driverPa" | "passengerPa", marketValue: number, fallbackAmount = 0) {
-  const requested = Math.max(0, Number(q.extensions[itemId]?.amount || fallbackAmount) || fallbackAmount);
   const maxCoverage = marketValue ? Math.min(100000000, Math.max(0, Number(marketValue) || 0)) : 100000000;
-  return Math.min(maxCoverage, requested);
+  const rawAmount = q.extensions[itemId]?.amount;
+  const fallback = fallbackAmount || MIN_COVERAGE_INPUT_AMOUNT;
+  return clampCoverageInputAmount(rawAmount, MIN_COVERAGE_INPUT_AMOUNT, maxCoverage, fallback);
 }
 function getVehicleExtensionCoverageAmount(flowType: FlowType, q: any, itemId: string) {
   const mv = Math.max(0, Number(q.marketValue) || 0);
   const isMotor = flowType === "motor";
   if (itemId === "tpl") {
-    if (isMotor) return Math.min(1000000, Math.max(0, Number(q.extensions.tpl?.amount || 1000000) || 1000000));
+    if (isMotor) return clampCoverageInputAmount(q.extensions.tpl?.amount, MIN_COVERAGE_INPUT_AMOUNT, MIN_COVERAGE_INPUT_AMOUNT, MIN_COVERAGE_INPUT_AMOUNT);
     return getCarTplCoverageAmount(q, mv, DEFAULT_CAR_TPL_AMOUNT);
   }
   if (itemId === "driverPa") return isMotor ? 0 : getCarPaCoverageAmount(q, "driverPa", mv, DEFAULT_CAR_PA_AMOUNT);
@@ -736,10 +756,6 @@ function getVehicleExtensionCoverageAmount(flowType: FlowType, q: any, itemId: s
 }
 function getVehicleExtensionCoverageText(flowType: FlowType, q: any, itemId: string) {
   if (!["tpl", "driverPa", "passengerPa"].includes(itemId)) return "";
-  const amount = getVehicleExtensionCoverageAmount(flowType, q, itemId);
-  return amount > 0 ? formatRupiah(amount) : "";
-}
-function getVehicleExtensionInputAmountText(flowType: FlowType, q: any, itemId: string) {
   const amount = getVehicleExtensionCoverageAmount(flowType, q, itemId);
   return amount > 0 ? formatRupiah(amount) : "";
 }
@@ -777,7 +793,7 @@ function getExtensionDisplayFee(flowType: FlowType, q: any, itemId: string) {
   const insuredValue = mv + equipmentAmount;
   if (itemId === "tpl") {
     if (isMotor) {
-      const amount = Math.min(1000000, Math.max(0, Number(q.extensions.tpl.amount || 1000000)));
+      const amount = getVehicleExtensionCoverageAmount(flowType, q, "tpl");
       return progressiveTPL(amount, "Angkutan Penumpang");
     }
     const amount = getCarTplCoverageAmount(q, mv, DEFAULT_CAR_TPL_AMOUNT);
@@ -819,7 +835,7 @@ function calcMotor(q: any) {
   const region = getRegion(q.plateRegion);
   const mainPremium = Math.round(mv * TLO_RATES_MOTOR[region as 1 | 2 | 3].min);
   const details = {
-    tplFee: q.extensions.tpl.enabled ? progressiveTPL(Math.min(1000000, Number(q.extensions.tpl.amount) || 0), "Angkutan Penumpang") : 0,
+    tplFee: q.extensions.tpl.enabled ? progressiveTPL(getVehicleExtensionCoverageAmount("motor", q, "tpl"), "Angkutan Penumpang") : 0,
     srccFee: q.extensions.srcc.enabled ? Math.round(mv * SRCC_RATE_TLO) : 0,
     tsFee: q.extensions.ts.enabled ? Math.round(mv * TS_RATE_TLO) : 0,
     floodFee: q.extensions.flood.enabled ? Math.round(mv * FLOOD_RATES_TLO[region as 1 | 2 | 3].min) : 0,
@@ -895,10 +911,33 @@ function calcCarTlo(q: any) {
   return calcCarShared(q, mv, region, 7, Math.round(mv * baseRate), SRCC_RATE_TLO, TS_RATE_TLO, FLOOD_RATES_TLO, QUAKE_RATES_TLO, baseRate);
 }
 
+function getCarCompAgeLoadingYears(year: string | number) {
+  const vehicleYear = Number(year || CURRENT_YEAR);
+  if (Number.isNaN(vehicleYear)) return 0;
+  return Math.max(0, CURRENT_YEAR - vehicleYear - 5);
+}
+
+function getCarCompLoadingDeductibleAmount(vehicleType: string) {
+  const vehicleCategory = getCarCategory(vehicleType);
+  return vehicleCategory === "Angkutan Penumpang"
+    ? CAR_COMP_LOADING_DEDUCTIBLE_AMOUNT_CATEGORY_1_5
+    : CAR_COMP_LOADING_DEDUCTIBLE_AMOUNT_CATEGORY_6_7;
+}
+
+function getCarCompStandardDeductibleAmount(vehicleType: string) {
+  return getCarCategory(vehicleType) === "Angkutan Penumpang" ? 300000 : 500000;
+}
+
+function usesCarCompLoadingDeductibleSubstitution(q: any) {
+  const requiredDeductible = getCarCompLoadingDeductibleAmount(q?.vehicleType || "");
+  return getCarCompAgeLoadingYears(q?.year) > 0
+    && Number(q?.mainDeductibleOverrideAmount || 0) >= requiredDeductible;
+}
+
 function calcCarComp(q: any) {
   const mv = Math.max(0, Number(q.marketValue) || 0);
   const region = getRegion(q.plateRegion);
-  if (!q.vehicleType) return { mainPremium: 0, extensionTotal: 0, stamp: 0, total: 0, details: { tplFee: 0, srccFee: 0, tsFee: 0, floodFee: 0, quakeFee: 0, driverPaFee: 0, passengerPaFee: 0, equipmentFee: 0, authWorkshopFee: 0, equipmentCap: 0 }, categoryLabel: "-", status: "Isi Data", baseMainPremium: 0, ageLoadingAmount: 0 };
+  if (!q.vehicleType) return { mainPremium: 0, extensionTotal: 0, stamp: 0, total: 0, details: { tplFee: 0, srccFee: 0, tsFee: 0, floodFee: 0, quakeFee: 0, driverPaFee: 0, passengerPaFee: 0, equipmentFee: 0, authWorkshopFee: 0, equipmentCap: 0 }, categoryLabel: "-", status: "Isi Data", baseMainPremium: 0, ageLoadingAmount: 0, standardAgeLoadingAmount: 0, ageLoadingYears: 0, ageLoadingDeductibleSubstituted: false };
   let category = 0;
   let baseMainPremium = 0;
   const vehicleCategory = getCarCategory(q.vehicleType);
@@ -912,11 +951,20 @@ function calcCarComp(q: any) {
     category = 7;
     baseMainPremium = Math.round(mv * (region === 1 ? 0.0104 : region === 2 ? 0.0104 : 0.0088));
   }
-  const ageLoadingAmount = Math.round(baseMainPremium * Math.max(0, CURRENT_YEAR - Number(q.year || CURRENT_YEAR) - 5) * 0.05);
-  const equipmentRate = mv ? (baseMainPremium + ageLoadingAmount) / mv : 0;
-  const res = calcCarShared(q, mv, region, category, baseMainPremium + ageLoadingAmount, SRCC_RATE_COMP, TS_RATE_COMP, FLOOD_RATES_COMP, QUAKE_RATES_COMP, equipmentRate, true) as any;
+  const ageLoadingYears = getCarCompAgeLoadingYears(q.year);
+  const standardAgeLoadingAmount = Math.round(baseMainPremium * ageLoadingYears * 0.05);
+  const ageLoadingDeductibleSubstituted = usesCarCompLoadingDeductibleSubstitution(q);
+  const ageLoadingAmount = ageLoadingDeductibleSubstituted ? 0 : standardAgeLoadingAmount;
+  const commercialLoadingAmount = q.usage === "Komersial" ? Math.round(baseMainPremium * COMMERCIAL_CASCO_LOADING_RATE) : 0;
+  const mainPremium = baseMainPremium + ageLoadingAmount + commercialLoadingAmount;
+  const equipmentRate = mv ? mainPremium / mv : 0;
+  const res = calcCarShared(q, mv, region, category, mainPremium, SRCC_RATE_COMP, TS_RATE_COMP, FLOOD_RATES_COMP, QUAKE_RATES_COMP, equipmentRate, true) as any;
   res.baseMainPremium = baseMainPremium;
   res.ageLoadingAmount = ageLoadingAmount;
+  res.standardAgeLoadingAmount = standardAgeLoadingAmount;
+  res.commercialLoadingAmount = commercialLoadingAmount;
+  res.ageLoadingYears = ageLoadingYears;
+  res.ageLoadingDeductibleSubstituted = ageLoadingDeductibleSubstituted;
   return res;
 }
 
@@ -976,16 +1024,23 @@ function secondaryMainCoverText(flowType: FlowType) {
   return "Menjamin kehilangan kendaraan karena pencurian bila kendaraan tidak ditemukan dalam 60 hari.";
 }
 
-function mainDeductibleText(flowType: FlowType, vehicleType: string) {
+function mainDeductibleText(flowType: FlowType, vehicleType: string, quote?: any) {
   if (flowType === "motor") return "Kerugian total: Rp150.000. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
   if (flowType === "carTlo") {
     return getCarCategory(vehicleType) === "Angkutan Penumpang"
       ? "Kerugian total: Rp300.000. Kehilangan karena pencurian: 5% dari harga pertanggungan."
       : "Kerugian total: Rp500.000. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
   }
+  if (usesCarCompLoadingDeductibleSubstitution(quote)) {
+    const deductibleAmount = Math.max(
+      getCarCompLoadingDeductibleAmount(vehicleType),
+      Number(quote?.mainDeductibleOverrideAmount || 0),
+    );
+    return `Kerugian sebagian dan kerugian total: ${formatRupiah(deductibleAmount)} per kejadian. Kehilangan karena pencurian: 5% dari harga pertanggungan.`;
+  }
   return getCarCategory(vehicleType) === "Angkutan Penumpang"
-    ? "Kerugian sebagian atau kerugian total: Rp300.000 per kejadian. Kehilangan karena pencurian: 5% dari harga pertanggungan."
-    : "Kerugian sebagian atau kerugian total: Rp500.000 per kejadian. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
+    ? "Kerugian sebagian dan kerugian total: Rp300.000 per kejadian. Kehilangan karena pencurian: 5% dari harga pertanggungan."
+    : "Kerugian sebagian dan kerugian total: Rp500.000 per kejadian. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
 }
 
 function vehicleDeductibleIsDirectText(value: string) {
@@ -1107,6 +1162,57 @@ function TextInput({ value, onChange, placeholder, icon, type = "text", readOnly
           icon && "pl-10",
           readOnly && "bg-slate-50"
         )}
+      />
+    </div>
+  );
+}
+
+function CurrencyAmountInput({ value, onCommit, min = 0, max = Number.MAX_SAFE_INTEGER, placeholder }: any) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const numericValue = Math.max(0, Number(value || 0) || 0);
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState(numericValue > 0 ? formatRupiah(numericValue) : "");
+
+  useEffect(() => {
+    if (!focused) setDraft(numericValue > 0 ? formatRupiah(numericValue) : "");
+  }, [focused, numericValue]);
+
+  const commitDraft = () => {
+    const raw = Number(digitsOnly(draft)) || 0;
+    const next = clampCoverageInputAmount(raw, Number(min) || 0, Number(max) || Number.MAX_SAFE_INTEGER, Number(min) || 0);
+    onCommit?.(next);
+    setFocused(false);
+    setDraft(next > 0 ? formatRupiah(next) : "");
+  };
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={focused ? draft : numericValue > 0 ? formatRupiah(numericValue) : ""}
+        inputMode="numeric"
+        onFocus={() => {
+          setFocused(true);
+          window.setTimeout(() => inputRef.current?.select(), 0);
+        }}
+        onClick={(event) => event.currentTarget.select()}
+        onMouseUp={(event) => event.preventDefault()}
+        onChange={(event) => setDraft(digitsOnly(event.target.value))}
+        onBlur={commitDraft}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            commitDraft();
+          }
+          if (event.key === "Escape") {
+            setFocused(false);
+            setDraft(numericValue > 0 ? formatRupiah(numericValue) : "");
+            inputRef.current?.blur();
+          }
+        }}
+        placeholder={placeholder}
+        className="h-[44px] w-full rounded-[8px] border border-[#D5DDE6] bg-white px-3.5 text-[14px] text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#0A4D82] focus:ring-4 focus:ring-[#0A4D82]/10"
       />
     </div>
   );
@@ -1929,6 +2035,14 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const displayedExtensionPremium = shouldShowSidebarPricing && calc.extensionTotal > 0 ? formatRupiah(calc.extensionTotal) : null;
   const displayedStampDuty = shouldShowSidebarPricing ? formatRupiah(calc.stamp) : "-";
   const displayedTotalPremium = shouldShowSidebarPricing ? formatRupiah(calc.total) : "-";
+  const carCompStandardAgeLoadingAmount = flowType === "carComp" ? Number((calc as any).standardAgeLoadingAmount || 0) : 0;
+  const carCompAgeLoadingYears = flowType === "carComp" ? Number((calc as any).ageLoadingYears || 0) : 0;
+  const carCompLoadingDeductibleAmount = flowType === "carComp" ? getCarCompLoadingDeductibleAmount(selected.quote.vehicleType) : 0;
+  const carCompStandardDeductibleAmount = flowType === "carComp" ? getCarCompStandardDeductibleAmount(selected.quote.vehicleType) : 0;
+  const carCompUsesDeductibleSubstitution = flowType === "carComp" && usesCarCompLoadingDeductibleSubstitution(selected.quote);
+  const shouldShowCarCompInternalLoadingSetting = Boolean(
+    isInternalMode && flowType === "carComp" && showPremiumDetails && carCompStandardAgeLoadingAmount > 0,
+  );
   const showSidebar = false;
   const shouldAutoSyncOperatingSignals = false;
   const policySummaryTitle = "Polis Standar Asuransi Kendaraan Bermotor Indonesia";
@@ -2336,7 +2450,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           </div>
           <div className="mt-4 text-[15px] font-semibold tracking-tight text-slate-900">Risiko yang Dijamin</div>
           <div className="mt-3 space-y-2.5">
-            <AccordionRiskRow itemIcon={Shield} title={mainCoverTitle(flowType)} premium={formatRupiah(calc.mainPremium)} summary={mainCoverText(flowType)} detail="" deductible={mainDeductibleText(flowType, selected.quote.vehicleType)} alwaysIncluded expanded={!!expandedRows.main} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, main: !prev.main }))} />
+            <AccordionRiskRow itemIcon={Shield} title={mainCoverTitle(flowType)} premium={formatRupiah(calc.mainPremium)} summary={mainCoverText(flowType)} detail="" deductible={mainDeductibleText(flowType, selected.quote.vehicleType, selected.quote)} alwaysIncluded expanded={!!expandedRows.main} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, main: !prev.main }))} />
           </div>
         </div>
         <div>
@@ -2346,6 +2460,15 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           <div className="mt-4 space-y-2.5">
             {visibleExtensionRows.map((item) => {
               const enabled = selected.quote.extensions[item.id].enabled;
+              const marketValue = Number(selected.quote.marketValue || 0) || 0;
+              const personalCoverageMax = Math.min(100000000, marketValue || 100000000);
+              const amountInputMin = item.id === "equipment" ? 0 : MIN_COVERAGE_INPUT_AMOUNT;
+              const amountInputMax = item.id === "tpl"
+                ? flowType === "motor" ? MIN_COVERAGE_INPUT_AMOUNT : personalCoverageMax
+                : item.id === "equipment" ? calc?.details?.equipmentCap || 0 : personalCoverageMax;
+              const amountInputValue = item.id === "equipment"
+                ? Number(selected.quote.extensions[item.id]?.amount || 0) || 0
+                : getVehicleExtensionCoverageAmount(flowType, selected.quote, item.id);
               return (
                 <AccordionRiskRow
                   key={item.id}
@@ -2372,8 +2495,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         return;
                       }
                     }
-                    if (item.id === "tpl" && flowType !== "motor" && next && !selected.quote.extensions.tpl.amount) {
-                      setAt(flowType, "quote.extensions.tpl.amount", DEFAULT_CAR_TPL_AMOUNT);
+                    if (item.id === "tpl" && next && !selected.quote.extensions.tpl.amount) {
+                      setAt(flowType, "quote.extensions.tpl.amount", flowType === "motor" ? MIN_COVERAGE_INPUT_AMOUNT : DEFAULT_CAR_TPL_AMOUNT);
                     }
                     if (item.id === "driverPa" && flowType !== "motor" && next && !selected.quote.extensions.driverPa.amount) {
                       setAt(flowType, "quote.extensions.driverPa.amount", DEFAULT_CAR_PA_AMOUNT);
@@ -2388,37 +2511,12 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                   onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
                   extra={!isSharedCustomerPreview ? item.type === "amount-seat" ? (
                     <div className="grid gap-3 md:grid-cols-2">
-                      <div><FieldLabel label="Nilai pertanggungan per penumpang" compact required={false} /><TextInput value={getVehicleExtensionInputAmountText(flowType, selected.quote, "passengerPa")} onChange={(value: string) => {
-                        const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
-                        const marketValue = Number(selected.quote.marketValue || 0) || 0;
-                        const capped = Math.min(raw, 100000000, marketValue || 100000000);
-                        setAt(flowType, "quote.extensions.passengerPa.amount", capped);
-                      }} inputMode="numeric" /></div>
+                      <div><FieldLabel label="Nilai pertanggungan per penumpang" compact required={false} /><CurrencyAmountInput value={getVehicleExtensionCoverageAmount(flowType, selected.quote, "passengerPa")} min={MIN_COVERAGE_INPUT_AMOUNT} max={personalCoverageMax} onCommit={(next: number) => setAt(flowType, "quote.extensions.passengerPa.amount", next)} /></div>
                       <div><FieldLabel label="Jumlah penumpang yang dijamin" compact required={false} /><SelectInput value={getPassengerSeatsValue(selected.quote)} onChange={(value: string) => setAt(flowType, "quote.extensions.passengerPa.seats", value)} options={["1", "2", "3", "4", "5", "6", "7"]} placeholder="Berapa penumpang yang dijamin?" /></div>
                     </div>
                   ) : item.type === "amount" ? (
                     <div className="grid gap-3 md:grid-cols-2">
-                      <div><FieldLabel label={item.id === "tpl" ? "Nilai pertanggungan pihak ketiga" : item.id === "driverPa" ? "Nilai pertanggungan pengemudi" : item.id === "equipment" ? "Nilai perlengkapan" : "Nilai pertanggungan"} compact required={false} /><TextInput value={item.id === "tpl" || item.id === "driverPa" ? getVehicleExtensionInputAmountText(flowType, selected.quote, item.id) : selected.quote.extensions[item.id].amount ? formatRupiah(Number(selected.quote.extensions[item.id].amount)) : ""} onChange={(value: string) => {
-                        const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
-                        let capped = raw;
-
-                        if (item.id === "tpl") {
-                          const marketValue = Number(selected.quote.marketValue || 0) || 0;
-                          capped = flowType === "motor" ? Math.min(raw, 1000000) : Math.min(raw, 100000000, marketValue || 100000000);
-                        }
-
-                        if (item.id === "driverPa" || item.id === "passengerPa") {
-                          const marketValue = Number(selected.quote.marketValue || 0) || 0;
-                          capped = Math.min(raw, 100000000, marketValue || 100000000);
-                        }
-
-                        if (item.id === "equipment") {
-                          const max = calc?.details?.equipmentCap || 0;
-                          capped = Math.min(raw, max);
-                        }
-
-                        setAt(flowType, `quote.extensions.${item.id}.amount`, capped);
-                      }} inputMode="numeric" /></div>
+                      <div><FieldLabel label={item.id === "tpl" ? "Nilai pertanggungan pihak ketiga" : item.id === "driverPa" ? "Nilai pertanggungan pengemudi" : item.id === "equipment" ? "Nilai perlengkapan" : "Nilai pertanggungan"} compact required={false} /><CurrencyAmountInput value={amountInputValue} min={amountInputMin} max={amountInputMax} onCommit={(next: number) => setAt(flowType, `quote.extensions.${item.id}.amount`, next)} /></div>
                       {item.id === "equipment" ? <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">Batas maksimal: {formatRupiah(calc.details.equipmentCap || 0)}</div> : null}
                     </div>
                   ) : null : null}
@@ -2439,6 +2537,66 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         </div>
       </div>
     </ActionCard>
+    );
+  };
+
+  const renderInternalCarCompLoadingSetting = () => {
+    if (!shouldShowCarCompInternalLoadingSetting) return null;
+
+    const optionBaseClass = "flex min-h-[58px] flex-1 items-start gap-2.5 rounded-xl border px-3 py-2 text-left transition";
+    const loadingOptionClass = carCompUsesDeductibleSubstitution
+      ? "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]"
+      : "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]";
+    const deductibleOptionClass = carCompUsesDeductibleSubstitution
+      ? "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]"
+      : "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]";
+
+    return (
+      <ActionCard className="p-3 md:p-3">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EEF6FD] text-[#0A4D82]">
+                <ShieldAlert className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <div className="text-[14px] font-bold text-slate-900">Pengaturan Ketentuan Usia Kendaraan</div>
+                <div className="mt-0.5 text-xs leading-5 text-slate-500">
+                  Usia kendaraan di atas 5 tahun, sehingga terkena ketentuan loading {carCompAgeLoadingYears} tahun. Pilih ketentuan yang akan diterapkan.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setAt(flowType, "quote.mainDeductibleOverrideAmount", "")}
+              className={cls(optionBaseClass, loadingOptionClass)}
+            >
+              <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", carCompUsesDeductibleSubstitution ? "border-slate-300" : "border-[#0A4D82] bg-[#0A4D82] text-white")}>
+                {!carCompUsesDeductibleSubstitution ? <Check className="h-3 w-3" /> : null}
+              </span>
+              <span>
+                <span className="block text-[13px] font-bold">Dikenakan loading usia</span>
+                <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Premi utama ditambah loading {formatRupiah(carCompStandardAgeLoadingAmount)}. Risiko sendiri tetap {formatRupiah(carCompStandardDeductibleAmount)} per kejadian.</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAt(flowType, "quote.mainDeductibleOverrideAmount", carCompLoadingDeductibleAmount)}
+              className={cls(optionBaseClass, deductibleOptionClass)}
+            >
+              <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", carCompUsesDeductibleSubstitution ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300")}>
+                {carCompUsesDeductibleSubstitution ? <Check className="h-3 w-3" /> : null}
+              </span>
+              <span>
+                <span className="block text-[13px] font-bold">Dikenakan risiko sendiri {formatRupiah(carCompLoadingDeductibleAmount)}</span>
+                <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Loading tidak ditagihkan. Risiko sendiri kerugian sebagian dan kerugian total menjadi {formatRupiah(carCompLoadingDeductibleAmount)} per kejadian.</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </ActionCard>
     );
   };
 
@@ -2602,7 +2760,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                     icon={Shield}
                     premium={displayedBasePremium}
                     detail={mainCoverText(flowType)}
-                    deductible={mainDeductibleText(flowType, selected.quote.vehicleType)}
+                    deductible={mainDeductibleText(flowType, selected.quote.vehicleType, selected.quote)}
                   />
                 </div>
               <div className="space-y-2">
@@ -2634,8 +2792,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                             return;
                           }
                         }
-                        if (item.id === "tpl" && flowType !== "motor" && next && !selected.quote.extensions.tpl.amount) {
-                          setAt(flowType, "quote.extensions.tpl.amount", DEFAULT_CAR_TPL_AMOUNT);
+                        if (item.id === "tpl" && next && !selected.quote.extensions.tpl.amount) {
+                          setAt(flowType, "quote.extensions.tpl.amount", flowType === "motor" ? MIN_COVERAGE_INPUT_AMOUNT : DEFAULT_CAR_TPL_AMOUNT);
                         }
                         if (item.id === "driverPa" && flowType !== "motor" && next && !selected.quote.extensions.driverPa.amount) {
                           setAt(flowType, "quote.extensions.driverPa.amount", DEFAULT_CAR_PA_AMOUNT);
@@ -3648,6 +3806,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       </div>
                     </ActionCard>
 
+                    {showPremiumDetails ? renderInternalCarCompLoadingSetting() : null}
                     {showPremiumDetails ? renderCoverageSummaryCard() : null}
                     {showPremiumDetails ? renderPremiumSummaryCard(false) : null}
                     {step === 1 ? renderStepOneActions() : null}
@@ -3706,7 +3865,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                                   icon={Shield}
                                   premium={displayedBasePremium}
                                   detail={mainCoverText(flowType)}
-                                  deductible={mainDeductibleText(flowType, selected.quote.vehicleType)}
+                                  deductible={mainDeductibleText(flowType, selected.quote.vehicleType, selected.quote)}
                                 />
                               </div>
                               <div>
