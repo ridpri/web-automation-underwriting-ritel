@@ -2312,7 +2312,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
 
                   {!quoted ? (
                     <div className="flex justify-stretch gap-3 sm:justify-end sm:gap-3">
-                      <button type="button" disabled={!canAdvanceInternalStepOne} onClick={() => setQuoted(true)} className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Simulasi</button>
+                      <button type="button" disabled={!canAdvanceInternalStepOne} onClick={() => setQuoted(true)} className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Cek Premi</button>
                     </div>
                   ) : null}
 
