@@ -105,7 +105,7 @@ export function buildPropertyCatalog(propertyItems) {
   }));
 }
 
-export function buildVehicleCatalog({ motorItem, carTloItem }) {
+export function buildVehicleCatalog({ motorItem, carTloItem, carCompItem }) {
   return VEHICLE_PRODUCTS.map((item) => ({
     ...item,
     active: item.active,
@@ -115,7 +115,7 @@ export function buildVehicleCatalog({ motorItem, carTloItem }) {
         : item.key === "mobil-tlo"
           ? carTloItem
           : item.key === "mobil-comp"
-            ? "mobil-comp"
+            ? carCompItem
             : item.key,
   }));
 }

@@ -1992,7 +1992,7 @@ export default function MotorLatestExact({
   const heroGreeting = isInternalMode ? `Selamat datang kembali, ${userName}` : `Halo, ${externalDisplayName}`;
   const showPaymentStep = entryMode === "external" || viewerMode === "customer";
   const isSharedCustomerPreview = !isInternalMode && hasSharedOfferJourney;
-  const stepOneTitle = isInternalMode ? "Data Awal" : hasSharedOfferJourney ? "Tinjau Penawaran" : "Simulasi Premi";
+  const stepOneTitle = hasSharedOfferJourney ? "Tinjau Penawaran" : "Simulasi Premi";
   const activeProduct = PRODUCTS.find((item) => item.id === flowType);
   const hasQuoteBasis = Boolean(selected.quote.plateRegion)
     && Boolean(selected.quote.year)
@@ -3016,7 +3016,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             }}
             className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
           >
-            Kembali ke Data Awal
+            Kembali ke Simulasi Premi
           </button>
           <button
             type="button"
@@ -4055,7 +4055,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         Minta Bantuan Isi Data Lanjutan
                       </button>
                     ) : null}
-                    <button onClick={() => { setJourneyStatus(""); setStep(1); }} className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]">{isInternalMode ? "Kembali ke Data Awal" : "Kembali ke Simulasi Premi"}</button>
+                    <button onClick={() => { setJourneyStatus(""); setStep(1); }} className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]">Kembali ke Simulasi Premi</button>
                     {!isInternalMode ? (
                       <div className="text-center">
                         <button
