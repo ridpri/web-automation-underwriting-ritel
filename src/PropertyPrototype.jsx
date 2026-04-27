@@ -2349,24 +2349,23 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                           </div>
                         </div>
                       </SectionCard>
-                      <SectionCard title="Ringkasan Premi" subtitle="Estimasi premi yang dihitung dari data properti dan perluasan jaminan yang dipilih.">
-                        <div className="rounded-2xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4F8FD_100%)] px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] md:px-6">
+                      <SectionCard title="Ringkasan Pembayaran">
+                        <div className="rounded-2xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4F8FD_100%)] px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.04)] md:px-6 md:py-4">
                           <div className="mx-auto flex max-w-[460px] flex-col items-center text-center">
-                            <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Estimasi Premi 1 Tahun</div>
-                            <div className="mt-2 text-[24px] font-bold tracking-tight text-[#0A4D82] md:text-[28px]">Rp {formatRupiah(estimatedTotalNumber)}</div>
+                            <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Total Pembayaran</div>
+                            <div className="mt-2 text-[20px] font-bold tracking-tight text-[#0A4D82] md:text-[22px]">Rp {formatRupiah(estimatedTotalNumber)}</div>
                           </div>
-                          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-xl border border-[#E3E9F0] bg-white px-4 py-3">
-                              <div className="text-[13px] font-medium text-slate-500">Premi Dasar</div>
-                              <div className="mt-1 text-[16px] font-semibold text-slate-900">Rp {formatRupiah(basePremiumNumber)}</div>
+                        </div>
+                        <div className="mt-3 border-t border-slate-100 pt-2.5">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Rincian</div>
+                          <div className="mt-2 divide-y divide-slate-100">
+                            <div className="flex items-start justify-between gap-4 py-3 text-sm">
+                              <div className="text-slate-500">Premi</div>
+                              <div className="text-right font-semibold text-slate-900">Rp {formatRupiah(basePremiumNumber + additionalPremiumNumber)}</div>
                             </div>
-                            <div className="rounded-xl border border-[#E3E9F0] bg-white px-4 py-3">
-                              <div className="text-[13px] font-medium text-slate-500">Premi Perluasan</div>
-                              <div className="mt-1 text-[16px] font-semibold text-slate-900">Rp {formatRupiah(additionalPremiumNumber)}</div>
-                            </div>
-                            <div className="rounded-xl border border-[#E3E9F0] bg-white px-4 py-3">
-                              <div className="text-[13px] font-medium text-slate-500">Biaya Meterai</div>
-                              <div className="mt-1 text-[16px] font-semibold text-slate-900">Rp {formatRupiah(stampDutyNumber)}</div>
+                            <div className="flex items-start justify-between gap-4 py-3 text-sm">
+                              <div className="text-slate-500">Biaya Meterai</div>
+                              <div className="text-right font-semibold text-slate-900">Rp {formatRupiah(stampDutyNumber)}</div>
                             </div>
                           </div>
                         </div>
@@ -2385,7 +2384,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                           }}
                           className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                         >
-                          Kirim Indikasi
+                          Kirim Penawaran
                         </button>
                       ) : null}
                       <button
@@ -2394,7 +2393,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                         onClick={() => { setInternalStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                         className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                       >
-                        Isi Data
+                        Isi Data Lanjutan
                       </button>
                     </div>
                   ) : null}
