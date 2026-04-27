@@ -1500,13 +1500,19 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   );
 }
 
-function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSelectMethod, onBack, onProceedPayment, paymentStatus, operatingRecord, isExpired }) {
+function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSelectMethod, onBack, onProceedPayment, paymentStatus, operatingRecord, isExpired, onSimulate }) {
   const operatingBlockedMessage = paymentBlockMessage(operatingRecord);
   const canProceedPayment = canProceedToPaymentFromOperating(operatingRecord);
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-4 md:px-6"><div className="flex items-center gap-3"><div className="text-[18px] font-black leading-tight text-[#0A4D82]">Danantara<div className="-mt-1">Indonesia</div></div><div className="text-[16px] font-semibold text-slate-700">asuransi jasindo</div></div><button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Kembali</button></div>
+        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-4 md:px-6">
+          <div className="flex items-center gap-3"><div className="text-[18px] font-black leading-tight text-[#0A4D82]">Danantara<div className="-mt-1">Indonesia</div></div><div className="text-[16px] font-semibold text-slate-700">asuransi jasindo</div></div>
+          <div className="flex items-center gap-3">
+            {onSimulate ? <button type="button" onClick={onSimulate} className="hidden h-10 items-center justify-center rounded-[10px] border border-[#0A4D82]/25 bg-[#F8FBFE] px-4 text-sm font-semibold text-[#0A4D82] shadow-sm transition hover:bg-[#EAF3FB] md:inline-flex">Simulasi</button> : null}
+            <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Kembali</button>
+          </div>
+        </div>
       </div>
       <div className="bg-[#0A4D82] pb-8">
         <div className="mx-auto max-w-[960px] px-4 pt-6 md:px-6">
@@ -2112,7 +2118,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
   }
 
   if (externalView === "payment") {
-    return <ExternalPaymentPage customerName={effectiveCustomerName} estimatedTotal={estimatedTotalNumber} paymentMethod={paymentMethod} onSelectMethod={(value) => { setPaymentMethod(value); setPaymentStatus(""); }} onBack={() => setExternalView("offer-final")} onProceedPayment={() => setPaymentStatus(`${activeVariant.paymentSuccessMessage} Integrasi pembayaran online akan disambungkan pada tahap berikutnya.`)} paymentStatus={paymentStatus} operatingRecord={operatingRecord} isExpired={operatingRecord?.status === "Expired"} />;
+    return <ExternalPaymentPage customerName={effectiveCustomerName} estimatedTotal={estimatedTotalNumber} paymentMethod={paymentMethod} onSelectMethod={(value) => { setPaymentMethod(value); setPaymentStatus(""); }} onBack={() => setExternalView("offer-final")} onProceedPayment={() => setPaymentStatus(`${activeVariant.paymentSuccessMessage} Integrasi pembayaran online akan disambungkan pada tahap berikutnya.`)} paymentStatus={paymentStatus} operatingRecord={operatingRecord} isExpired={operatingRecord?.status === "Expired"} onSimulate={() => { setPaymentMethod(PAYMENT_OPTIONS[0]); setPaymentStatus(""); }} />;
   }
 
   if (externalView === "external-underwriting") {
@@ -2152,6 +2158,8 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
         continueLabel="Tinjau Penawaran Final"
         onContinue={() => setExternalView("offer-final")}
         onBack={() => setExternalView("offer-indicative")}
+        topActionLabel="Simulasi"
+        onTopAction={fillStepTwoDemoData}
       >
         <UnderwritingSections
           form={form}
@@ -2182,7 +2190,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                 <div className="hidden items-center gap-3 md:flex"><button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button><button type="button" onClick={() => { if (embedded && onExit) onExit(); else setScreen("catalog"); }} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button></div>
           </div>
           <div className="relative flex items-center gap-4 text-white">
-            {isInternalMode ? <button type="button" onClick={fillDemoForCurrentStep} className="hidden rounded-[10px] border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15 md:inline-flex md:text-sm">Simulasi</button> : null}
+            <button type="button" onClick={fillDemoForCurrentStep} className="hidden rounded-[10px] border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15 md:inline-flex md:text-sm">Simulasi</button>
             <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{sessionName}{helpRequestSent ? <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" /> : null}</button>
             <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
             <UserMenu
