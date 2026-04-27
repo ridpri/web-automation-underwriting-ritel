@@ -556,7 +556,7 @@ function downloadVehicleOfferPdf({
     drawLabelValue("Tahun Kendaraan", year || "-");
     drawLabelValue("Harga Pertanggungan", formatRupiah(Number(marketValue || 0)));
     drawLabelValue("Penggunaan Kendaraan", usage || "-");
-    if (tariffInfo) drawLabelValue("Kategori Tarif / Wilayah Tarif", tariffInfo);
+    if (tariffInfo) drawLabelValue("Wilayah Tarif dan Kategori Tarif", tariffInfo);
     y += 4;
 
     if (extensionItems?.length) {
@@ -2006,14 +2006,14 @@ export default function MotorLatestExact({
   const selectedVehicleMeta = getVehicleCatalogItem(flowType === "motor" ? "motor" : "car", selected.quote.vehicleName);
   const tariffCategoryLabel = getVehicleTariffCategory(flowType, selected.quote);
   const tariffRegionLabel = getRegionLabel(selected.quote.plateRegion);
-  const tariffInfoValue = tariffRegionLabel ? `${tariffCategoryLabel} · ${tariffRegionLabel}` : tariffCategoryLabel;
+  const tariffInfoValue = tariffRegionLabel ? `${tariffRegionLabel} dengan ${tariffCategoryLabel}` : tariffCategoryLabel;
   const shouldShowTariffSummary = Boolean(
     isInternalMode &&
       selected.quote.plateRegion &&
       (flowType === "motor" || selected.quote.marketValue || selected.quote.vehicleType),
   );
   const tariffInfoSummary = tariffRegionLabel
-    ? `Kendaraan ini termasuk dalam ${tariffCategoryLabel} / ${tariffRegionLabel}.`
+    ? `Kendaraan ini termasuk dalam ${tariffRegionLabel} dengan ${tariffCategoryLabel}.`
     : `Kendaraan ini termasuk dalam ${tariffCategoryLabel}.`;
   const vehicleUsageHelpText = `Kendaraan ini digunakan untuk apa?
 
