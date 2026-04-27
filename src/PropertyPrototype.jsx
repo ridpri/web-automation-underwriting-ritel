@@ -2349,6 +2349,28 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                           </div>
                         </div>
                       </SectionCard>
+                      <SectionCard title="Ringkasan Premi" subtitle="Estimasi premi yang dihitung dari data properti dan perluasan jaminan yang dipilih.">
+                        <div className="rounded-2xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4F8FD_100%)] px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] md:px-6">
+                          <div className="mx-auto flex max-w-[460px] flex-col items-center text-center">
+                            <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Estimasi Premi 1 Tahun</div>
+                            <div className="mt-2 text-[24px] font-bold tracking-tight text-[#0A4D82] md:text-[28px]">Rp {formatRupiah(estimatedTotalNumber)}</div>
+                          </div>
+                          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-xl border border-[#E3E9F0] bg-white px-4 py-3">
+                              <div className="text-[13px] font-medium text-slate-500">Premi Dasar</div>
+                              <div className="mt-1 text-[16px] font-semibold text-slate-900">Rp {formatRupiah(basePremiumNumber)}</div>
+                            </div>
+                            <div className="rounded-xl border border-[#E3E9F0] bg-white px-4 py-3">
+                              <div className="text-[13px] font-medium text-slate-500">Premi Perluasan</div>
+                              <div className="mt-1 text-[16px] font-semibold text-slate-900">Rp {formatRupiah(additionalPremiumNumber)}</div>
+                            </div>
+                            <div className="rounded-xl border border-[#E3E9F0] bg-white px-4 py-3">
+                              <div className="text-[13px] font-medium text-slate-500">Biaya Meterai</div>
+                              <div className="mt-1 text-[16px] font-semibold text-slate-900">Rp {formatRupiah(stampDutyNumber)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </SectionCard>
                     </div>
                   ) : null}
 
