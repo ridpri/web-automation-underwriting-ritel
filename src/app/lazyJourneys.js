@@ -1,9 +1,9 @@
 import { lazy } from "react";
 
 export const CarCompInternalPrototype = lazy(() => import("../CarCompInternalPrototype.jsx"));
-export const CarTloInternalPrototype = lazy(() => import("../CarTloInternalPrototype.jsx"));
+export const CarTloInternalPrototype = lazy(() => import("../CarTloInternalLatest.jsx"));
 export const InternalOperatingShell = lazy(() => import("../InternalOperatingShell.jsx"));
-export const MotorInternalPrototype = lazy(() => import("../MotorInternalPrototype.jsx"));
+export const MotorInternalPrototype = lazy(() => import("../MotorInternalLatest.jsx"));
 export const MotorLatestExact = lazy(() => import("../MotorLatestExact.tsx"));
 export const PropertyExternalPrototype = lazy(() => import("../PropertyExternalPrototype.jsx"));
 export const PropertySafeBrdPage = lazy(() => import("../PropertySafeBrdPage.jsx"));

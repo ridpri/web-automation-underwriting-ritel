@@ -1116,11 +1116,13 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
             <p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{activeVariant.heroSubtitle}</p>
           </div>
 
-          <div className="mx-auto mt-6 max-w-[860px] rounded-[28px] bg-white p-5 shadow-sm">
+          <div className="mx-auto mt-6 max-w-[960px] rounded-[28px] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-6 rounded-[18px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-5 md:flex-row md:items-center md:gap-4 md:px-6">
               <StepNode step="Langkah 1" title="Tinjau Penawaran" subtitle={isIndicative ? "Sedang dibuka" : "Selesai"} active={isIndicative} done={!isIndicative} icon={<FileText className="h-4 w-4" />} onClick={isIndicative ? undefined : onSecondary} />
               <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-              <StepNode step="Langkah 2" title="Pembayaran" subtitle={isIndicative ? "Menunggu" : "Siap dilanjutkan"} active={!isIndicative} done={false} icon={<Wallet className="h-4 w-4" />} />
+              <StepNode step="Langkah 2" title="Data Lanjutan" subtitle={isIndicative ? "Menunggu" : "Selesai"} active={false} done={!isIndicative} icon={<FileText className="h-4 w-4" />} />
+              <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
+              <StepNode step="Langkah 3" title="Pembayaran" subtitle={isIndicative ? "Menunggu" : "Siap dilanjutkan"} active={!isIndicative} done={false} icon={<Wallet className="h-4 w-4" />} />
             </div>
           </div>
         </div>
@@ -1506,6 +1508,19 @@ function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSe
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-4 md:px-6"><div className="flex items-center gap-3"><div className="text-[18px] font-black leading-tight text-[#0A4D82]">Danantara<div className="-mt-1">Indonesia</div></div><div className="text-[16px] font-semibold text-slate-700">asuransi jasindo</div></div><button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Kembali</button></div>
       </div>
+      <div className="bg-[#0A4D82] pb-8">
+        <div className="mx-auto max-w-[960px] px-4 pt-6 md:px-6">
+          <div className="mx-auto rounded-[28px] bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-6 rounded-[18px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-5 md:flex-row md:items-center md:gap-4 md:px-6">
+              <StepNode step="Langkah 1" title="Tinjau Penawaran" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
+              <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
+              <StepNode step="Langkah 2" title="Data Lanjutan" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
+              <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
+              <StepNode step="Langkah 3" title="Pembayaran" subtitle="Sedang dibuka" active={true} done={false} icon={<Wallet className="h-4 w-4" />} />
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <SectionCard title="Pembayaran" subtitle="Halaman ini hanya muncul untuk calon tertanggung, bukan untuk user internal.">
@@ -1567,6 +1582,7 @@ export default function PropertyStepOneFrontendCompact({
   }, [allowedPropertyTypes]);
   const [currentProductVariant, setCurrentProductVariant] = useState(productVariant);
   const activeVariant = getPropertyVariant(currentProductVariant);
+  const isInternalMode = entryMode === "internal";
   const activeGuarantees = useMemo(
     () =>
       getPropertyExtensions(currentProductVariant).map((item) => ({
@@ -1577,7 +1593,7 @@ export default function PropertyStepOneFrontendCompact({
   );
   const [screen, setScreen] = useState(embedded ? "property" : "catalog");
   const [internalStep, setInternalStep] = useState(1);
-  const [externalView, setExternalView] = useState(embedded && entryMode === "external" ? "offer-indicative" : "");
+  const [externalView, setExternalView] = useState("");
   const [quoted, setQuoted] = useState(false);
   const [showConstructionGuide, setShowConstructionGuide] = useState(false);
   const [showIndicationModal, setShowIndicationModal] = useState(false);
@@ -1722,7 +1738,8 @@ export default function PropertyStepOneFrontendCompact({
   }, [showIndicationModal]);
   useEffect(() => {
     const { view, viewer, referral, sender, customer, offer } = readShareContextFromUrl();
-    if (view === "offer-indicative" || view === "offer-final" || view === "external-underwriting" || view === "payment") {
+    const isSharedOfferView = view === "offer-indicative" || view === "offer-final" || view === "external-underwriting" || view === "payment";
+    if (isSharedOfferView && offer) {
       setExternalView(view);
     }
     if (viewer === "internal" || viewer === "customer") {
@@ -2165,7 +2182,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                 <div className="hidden items-center gap-3 md:flex"><button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button><button type="button" onClick={() => { if (embedded && onExit) onExit(); else setScreen("catalog"); }} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button></div>
           </div>
           <div className="relative flex items-center gap-4 text-white">
-            <button type="button" onClick={fillDemoForCurrentStep} className="hidden rounded-[10px] border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15 md:inline-flex md:text-sm">Isi Otomatis Langkah {internalStep} (Demo)</button>
+            {isInternalMode ? <button type="button" onClick={fillDemoForCurrentStep} className="hidden rounded-[10px] border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15 md:inline-flex md:text-sm">Simulasi</button> : null}
             <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{sessionName}{helpRequestSent ? <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" /> : null}</button>
             <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
             <UserMenu
@@ -2215,7 +2232,19 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                 <button type="button" tabIndex={-1} aria-hidden="true" className="pointer-events-none invisible inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
               </div>
               <div className="mt-6 text-center text-white"><div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Selamat datang kembali, {sessionName}</div><h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{activeVariant.title}</h1><p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{activeVariant.heroSubtitle}</p></div>
-              <div className="mx-auto mt-6 max-w-3xl rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-4xl md:p-5"><div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5"><div className="flex flex-col gap-5 md:flex-row md:gap-5"><StepNode step="Langkah 1" title="Simulasi Premi" subtitle={internalStep === 1 ? "Sedang diisi" : "Selesai"} active={internalStep === 1} done={internalStep > 1} icon={<Wallet className="h-4 w-4" />} onClick={() => { if (internalStep !== 1) setInternalStep(1); }} /><div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /><StepNode step="Langkah 2" title="Isi Data" subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={false} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted) setInternalStep(2); }} /></div></div></div>
+              <div className="mx-auto mt-6 max-w-3xl rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-4xl md:p-5">
+                <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5">
+                  <div className="flex flex-col gap-5 md:flex-row md:gap-5">
+                    <StepNode step="Langkah 1" title="Simulasi Premi" subtitle={internalStep === 1 ? "Sedang diisi" : "Selesai"} active={internalStep === 1} done={internalStep > 1} icon={<Wallet className="h-4 w-4" />} onClick={() => { if (internalStep !== 1) setInternalStep(1); }} />
+                    <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
+                    <StepNode step="Langkah 2" title={isInternalMode ? "Isi Data" : "Data Lanjutan"} subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={!isInternalMode && internalStep > 2} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted) setInternalStep(2); }} />
+                    {!isInternalMode ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
+                    {!isInternalMode ? (
+                      <StepNode step="Langkah 3" title="Pembayaran" subtitle="Menunggu" active={false} done={false} icon={<Wallet className="h-4 w-4" />} />
+                    ) : null}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -2245,17 +2274,19 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                 </SectionCard>
                   <div className={cls("flex justify-stretch gap-3", quoted ? "justify-stretch sm:justify-end" : "sm:justify-end sm:gap-3")}>
                     {!quoted ? <button type="button" disabled={!canAdvanceInternalStepOne} onClick={() => setQuoted(true)} className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Cek Premi</button> : null}
-                    <button
-                      type="button"
-                      disabled={!canAdvanceInternalStepOne}
-                      onClick={() => {
-                        setQuoted(true);
-                        setShowIndicationModal(true);
-                      }}
-                      className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
-                    >
-                      Kirim Indikasi
-                    </button>
+                    {isInternalMode ? (
+                      <button
+                        type="button"
+                        disabled={!canAdvanceInternalStepOne}
+                        onClick={() => {
+                          setQuoted(true);
+                          setShowIndicationModal(true);
+                        }}
+                        className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+                      >
+                        Kirim Indikasi
+                      </button>
+                    ) : null}
                     {(quoted || canAdvanceInternalStepOne) ? (
                       <button
                         type="button"
@@ -2282,17 +2313,19 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                     <SummaryRow label="Biaya Meterai" value={stampDutySummaryValue} />
                   </div>
                   <div className="mt-4 space-y-2.5">
-                    <button
-                      type="button"
-                      disabled={!canAdvanceInternalStepOne}
-                      onClick={() => {
-                        setQuoted(true);
-                        setShowIndicationModal(true);
-                      }}
-                      className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
-                    >
-                      Kirim Indikasi
-                    </button>
+                    {isInternalMode ? (
+                      <button
+                        type="button"
+                        disabled={!canAdvanceInternalStepOne}
+                        onClick={() => {
+                          setQuoted(true);
+                          setShowIndicationModal(true);
+                        }}
+                        className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+                      >
+                        Kirim Indikasi
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       disabled={!canAdvanceInternalStepOne}
@@ -2326,8 +2359,8 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
               </div>
               <SummarySidebarAlert items={underwritingPendingItems} />
               <div className="space-y-2">
-                <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setShowIndicationModal(true)} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Kirim Indikasi</button>
-                <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setExternalView("offer-final")} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] border border-white/20 text-sm font-bold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20", canAdvanceUnderwriting ? "bg-[#0A4D82] hover:brightness-110" : "cursor-not-allowed bg-slate-500/70")}>Pembayaran</button>
+                {isInternalMode ? <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setShowIndicationModal(true)} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Kirim Indikasi</button> : null}
+                <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setExternalView("offer-final")} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] border border-white/20 text-sm font-bold uppercase tracking-wide text-white shadow-sm ring-1 ring-white/20", canAdvanceUnderwriting ? "bg-[#0A4D82] hover:brightness-110" : "cursor-not-allowed bg-slate-500/70")}>{isInternalMode ? "Pembayaran" : "Tinjau Penawaran"}</button>
                 <button type="button" onClick={() => setInternalStep(1)} className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-white/20 bg-[#0A4D82] text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali</button>
               </div>
             </SummarySidebarShell></div></div>

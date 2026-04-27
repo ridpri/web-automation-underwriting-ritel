@@ -2332,11 +2332,11 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   }, [isSharedCustomerPreview]);
 
   const handleSendIndicative = () => {
-    setJourneyStatus("Indikasi awal kendaraan sudah disiapkan untuk calon pemegang polis.");
+    setJourneyStatus("Penawaran awal kendaraan sudah disiapkan untuk calon pemegang polis.");
     setShowOfferShareModal(true);
     onOperatingSignal({
-      status: "Indikasi Terkirim",
-      reason: "Indikasi kendaraan dikirim ke calon pemegang polis.",
+      status: "Penawaran Terkirim",
+      reason: "Penawaran kendaraan dikirim ke calon pemegang polis.",
       notes: "Calon pemegang polis dapat membuka langkah 1 untuk melihat simulasi premi awal.",
     });
   };
@@ -2345,8 +2345,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     setJourneyStatus("Data lanjutan kendaraan sudah lengkap dan siap dikirim ke calon pemegang polis.");
     setShowOfferShareModal(true);
     onOperatingSignal({
-      status: "Indikasi Terkirim",
-      reason: "Versi indikasi kendaraan terbaru dikirim ke calon pemegang polis.",
+      status: "Penawaran Terkirim",
+      reason: "Versi penawaran kendaraan terbaru dikirim ke calon pemegang polis.",
       notes: "Versi terbaru mencakup data lanjutan yang sudah dilengkapi dari jalur internal.",
     });
   };
