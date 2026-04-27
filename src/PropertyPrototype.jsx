@@ -31,6 +31,7 @@ import { canProceedToPaymentFromOperating, paymentBlockMessage } from "./operati
 import { getPropertyExtensions, getPropertyVariant } from "./propertyProductConfig.js";
 import { CustomerDataJourneyShell } from "./components/CustomerDataJourneyShell.jsx";
 import { OfferShareModal } from "./components/OfferShareModal.jsx";
+import { PremiumBreakdown, PremiumPriceHero } from "./components/PremiumSummaryBlocks.jsx";
 
 const PROPERTY_TYPES = ["Rumah Tinggal", "Ruko", "Toko", "Kantor", "Kos-kosan"];
 const CONSTRUCTION_CLASSES = ["Kelas 1", "Kelas 2", "Kelas 3"];
@@ -613,33 +614,6 @@ function ProposalAccordion({ title, subtitle, open, onToggle, children }) {
   );
 }
 
-function TooltipDot({ text }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <span className="relative inline-flex">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => {
-          window.setTimeout(() => setOpen(false), 120);
-        }}
-        aria-label="Lihat penjelasan estimasi premi"
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/35 text-[10px] font-semibold text-white/85"
-      >
-        !
-      </button>
-      {open ? (
-        <span className="absolute right-0 top-[calc(100%+8px)] z-20 w-[240px] rounded-xl bg-white px-3 py-2 text-left text-[12px] font-medium leading-5 text-slate-700 shadow-[0_18px_40px_rgba(15,23,42,0.18)] ring-1 ring-slate-200">
-          {text}
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
 function ProposalBadge({ children, tone = "blue" }) {
   const toneClass =
     tone === "amber"
@@ -1000,7 +974,6 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   const operatingValidUntil = operatingRecord?.validUntil;
   const operatingOwner = operatingRecord?.owner;
   const operatingId = operatingRecord?.id;
-  const coverageLabel = isIndicative ? "Estimasi Premi 1 Tahun" : "Premi 1 Tahun";
   const primaryLabel = isIndicative ? "Isi Data" : "Pembayaran";
   const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === constructionClass);
   const [sectionOpen, setSectionOpen] = useState({ property: false, insured: false, guarantee: false });
@@ -1048,14 +1021,6 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   const greetingRecipientName = customerDisplay && customerDisplay !== "-"
     ? String(customerDisplay).trim().split(/\s+/)[0]
     : "Calon Tertanggung";
-  const objectSummaryLabel =
-    propertyType && occupancy
-      ? `${propertyType} yang digunakan untuk ${String(occupancy).toLowerCase()}`
-      : propertyType
-        ? propertyType
-        : occupancy
-          ? `Properti untuk ${String(occupancy).toLowerCase()}`
-          : "Informasi properti belum dilengkapi";
   const coverageValue = "Rp " + formatRupiah(totalValue);
   const visibleGuarantees = isIndicative ? extensionOptions : selectedExtensions;
   const objectTypeSummary = objectRows.length
@@ -1197,15 +1162,11 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
           >
             <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
               <div className="space-y-3">
-                <OfferSummarySection
-                  title="Ringkasan Informasi Calon Tertanggung"
-                  action={!isInternalPreview ? <SummaryEditButton onClick={onEditInsured} /> : null}
-                >
+                <OfferSummarySection title="Ringkasan Informasi Calon Pemegang Polis" action={!isInternalPreview ? <SummaryEditButton onClick={onEditInsured} /> : null}>
                   <div className="space-y-2.5">
-                    <OfferSummaryKeyValue label="Nama Tertanggung" value={customerDisplay} />
+                    <OfferSummaryKeyValue label="Nama Calon Pemegang Polis" value={customerDisplay} />
                     <OfferSummaryKeyValue label="Alamat Email" value={emailDisplay} />
                     <OfferSummaryKeyValue label="Nomor Handphone" value={phoneDisplay} />
-                    <OfferSummaryKeyValue label="Status Penawaran" value={canProceed ? "Siap ditinjau" : "Masih perlu dilengkapi"} />
                   </div>
                 </OfferSummarySection>
 
@@ -1214,7 +1175,8 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                   action={!isInternalPreview ? <SummaryEditButton onClick={onEditObject} /> : null}
                 >
                   <div className="space-y-2.5">
-                    <OfferSummaryKeyValue label="Properti" value={objectSummaryLabel} emphasize />
+                    <OfferSummaryKeyValue label="Jenis Bangunan" value={propertyType} />
+                    <OfferSummaryKeyValue label="Penggunaan Bangunan" value={occupancy} />
                     <OfferSummaryKeyValue
                       label="Objek yang Dijamin"
                       emphasize
@@ -1234,72 +1196,72 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                         )
                       }
                     />
-                    <OfferSummaryKeyValue label="Harga Pertanggungan" value={coverageValue} />
                     <OfferSummaryKeyValue
                       label="Kelas Konstruksi"
                       value={constructionInfo ? `${constructionSummaryLabel}: ${constructionInfo.desc}` : constructionSummaryLabel}
                       emphasize
                     />
+                    <OfferSummaryKeyValue label="Harga Pertanggungan" value={coverageValue} />
                     <OfferSummaryKeyValue label="Cakupan Polis" value={activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle} />
                   </div>
                 </OfferSummarySection>
 
-                <OfferSummarySection title="Ringkasan Jaminan">
-                  <div className="space-y-3">
+                <OfferSummarySection title="Ringkasan Syarat dan Ketentuan">
+                  <div className="space-y-4">
                     <div className="rounded-xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F7FAFD_100%)] px-4 py-3">
-                      <SummaryGuaranteeItem title={activeVariant.primaryCoverageTitle} icon={Flame} />
-                      <div className="mt-2 text-[13px] leading-5 text-slate-600">{activeVariant.primaryCoverageDescription}</div>
-                      <div className="mt-2 text-[12px] font-semibold text-[#0A4D82]">Premi: Rp {formatRupiah(basePremium)}</div>
-                      <div className="mt-1 text-[12px] leading-5 text-slate-500">
-                        Risiko sendiri saat klaim: {constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther}
+                      <div className="text-[15px] font-medium leading-[1.4] text-slate-900">{activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}</div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-[14px] font-medium text-slate-600">Risiko yang dijamin</div>
+                      <div className="rounded-xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F7FAFD_100%)] px-4 py-3">
+                        <SummaryGuaranteeItem title={activeVariant.primaryCoverageTitle} icon={Flame} />
+                        <div className="mt-2 text-[13px] leading-5 text-slate-600">{activeVariant.primaryCoverageDescription}</div>
+                        <div className="mt-2 text-[12px] font-semibold text-[#0A4D82]">Premi: Rp {formatRupiah(basePremium)}</div>
+                        <div className="mt-1 text-[12px] leading-5 text-slate-500">
+                          Risiko sendiri saat klaim: {constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther}
+                        </div>
                       </div>
                     </div>
-                    {guaranteeSummaryVisualItems.length ? (
-                      <div className="grid gap-2 md:grid-cols-2">
-                        {selectedExtensions.map((item) => (
-                          <div key={item.key} className="rounded-xl border border-[#D8E1EA] bg-white px-4 py-3">
-                            <SummaryGuaranteeItem title={item.title} icon={item.icon || Shield} compact />
-                            {item.detail ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{item.detail}</div> : null}
-                            <div className="mt-2 text-[12px] font-semibold text-[#0A4D82]">Premi: Rp {formatRupiah(Math.round(totalValue * item.rate))}</div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-[#CAD6E3] bg-white px-4 py-3 text-[13px] text-slate-500">Belum ada perluasan jaminan yang dipilih.</div>
-                    )}
+                    <div className="space-y-2">
+                      <div className="text-[14px] font-medium text-slate-600">Perluasan Jaminan</div>
+                      {guaranteeSummaryVisualItems.length ? (
+                        <div className="grid gap-2 md:grid-cols-2">
+                          {selectedExtensions.map((item) => (
+                            <div key={item.key} className="rounded-xl border border-[#D8E1EA] bg-white px-4 py-3">
+                              <SummaryGuaranteeItem title={item.title} icon={item.icon || Shield} compact />
+                              {item.detail ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{item.detail}</div> : null}
+                              <div className="mt-2 text-[12px] font-semibold text-[#0A4D82]">Premi: Rp {formatRupiah(Math.round(totalValue * item.rate))}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-[#CAD6E3] bg-white px-4 py-3 text-[13px] text-slate-500">Belum ada perluasan jaminan yang dipilih.</div>
+                      )}
+                    </div>
                   </div>
                 </OfferSummarySection>
 
-                <OfferSummarySection title="Ringkasan Biaya">
-                  <div className="grid gap-3 sm:grid-cols-4">
-                    <div className="rounded-xl border border-[#E3E9F0] bg-[#F8FBFE] px-4 py-3">
-                      <div className="text-[13px] font-medium text-slate-500">Premi Dasar</div>
-                      <div className="mt-1 text-[16px] font-semibold text-slate-900">{"Rp " + formatRupiah(basePremium)}</div>
-                    </div>
-                    <div className="rounded-xl border border-[#E3E9F0] bg-[#F8FBFE] px-4 py-3">
-                      <div className="text-[13px] font-medium text-slate-500">Premi Perluasan</div>
-                      <div className="mt-1 text-[16px] font-semibold text-slate-900">{"Rp " + formatRupiah(extensionPremium)}</div>
-                    </div>
-                    <div className="rounded-xl border border-[#E3E9F0] bg-[#F8FBFE] px-4 py-3">
-                      <div className="text-[13px] font-medium text-slate-500">Biaya Meterai</div>
-                      <div className="mt-1 text-[16px] font-semibold text-slate-900">{"Rp " + formatRupiah(stampDuty)}</div>
-                    </div>
-                    <div className="rounded-xl bg-[#0A4D82] px-4 py-3 text-white">
-                      <div className="flex items-center gap-2 text-[13px] font-medium text-white/80">
-                        <span>{coverageLabel}</span>
-                        {isIndicative ? <TooltipDot text="Nilai ini masih berupa estimasi awal. Premi final dapat menyesuaikan setelah informasi properti dilengkapi lebih rinci." /> : null}
-                      </div>
-                      <div className="mt-1 text-[16px] font-semibold text-white">Rp {formatRupiah(estimatedTotal)}</div>
-                    </div>
-                  </div>
+                <OfferSummarySection title="Ringkasan Pembayaran">
+                  <PremiumPriceHero
+                    label="Total Pembayaran"
+                    value={"Rp " + formatRupiah(estimatedTotal)}
+                    tooltipText={isIndicative ? "Total pembayaran ini masih perkiraan awal. Setelah Data Lanjutan dilengkapi, nilainya dapat dihitung ulang sesuai informasi akhir." : undefined}
+                  />
+                  <PremiumBreakdown>
+                    <ProposalRow label="Premi" value={"Rp " + formatRupiah(basePremium)} />
+                    {extensionPremium ? <ProposalRow label="Premi Perluasan" value={"Rp " + formatRupiah(extensionPremium)} /> : null}
+                    <ProposalRow label="Biaya Meterai" value={"Rp " + formatRupiah(stampDuty)} />
+                  </PremiumBreakdown>
+                </OfferSummarySection>
 
-                  {!isInternalPreview ? (
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {!isInternalPreview ? (
+                  <div className="rounded-[24px] border border-[#D8E1EA] bg-white p-4 shadow-sm">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       {!isIndicative ? (
                         <button
                           type="button"
                           onClick={onSecondary}
-                          className="flex h-[42px] w-full items-center justify-center rounded-[12px] border border-[#D5DDE6] bg-white px-4 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+                          className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DDE6] bg-white px-4 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
                         >
                           Kembali
                         </button>
@@ -1309,7 +1271,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                         disabled={!canProceed || (!isIndicative && offerMeta.isExpired)}
                         onClick={onPrimary}
                         className={cls(
-                          "flex h-[42px] w-full items-center justify-center rounded-[12px] px-4 text-sm font-semibold text-white shadow-sm",
+                          "flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm",
                           !isIndicative && "sm:col-start-2",
                           canProceed && (isIndicative || !offerMeta.isExpired)
                             ? "bg-[#F5A623] hover:brightness-105"
@@ -1319,8 +1281,8 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                         {primaryLabel}
                       </button>
                     </div>
-                  ) : null}
-                </OfferSummarySection>
+                  </div>
+                ) : null}
               </div>
             </div>
           </SectionCard>

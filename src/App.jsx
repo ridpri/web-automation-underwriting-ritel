@@ -98,10 +98,12 @@ function resolveInitialNavigationState() {
   const params = new URLSearchParams(window.location.search);
   const shareJourney = inferJourneyFromShareData(decodeUrlShareToken(params.get("share") || ""));
   const requestedJourney = params.get("journey") || shareJourney || "";
+  const requestedJourneyRole = requestedJourney ? inferSessionRoleFromJourney(requestedJourney) : null;
   const sessionRole =
     resolveUrlSessionRole(params.get("role"))
+    || requestedJourneyRole
     || readStoredSessionRole()
-    || inferSessionRoleFromJourney(requestedJourney);
+    || "guest";
 
   return {
     activeJourney: sanitizeJourneyForRole(requestedJourney, sessionRole),
@@ -244,13 +246,6 @@ export default function App() {
       onClick: () => setActiveJourney("self-care-portal"),
     },
   ];
-
-  useEffect(() => {
-    if (resolvedActiveJourney === activeJourney) return;
-    setRoleMenuOpen(false);
-    setAccountMenuOpen(false);
-    setActiveJourney(resolvedActiveJourney);
-  }, [activeJourney, resolvedActiveJourney]);
 
   useEffect(() => {
     const win = typeof window !== "undefined" ? window : null;
