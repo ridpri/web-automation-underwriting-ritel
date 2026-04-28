@@ -190,8 +190,8 @@ export default function PropertyExternalPrototype({ onExit, entryMode = "guest",
   if (rows.some((r) => reqNote(r.type) && !String(r.note || "").trim())) step1Missing.push("Objek jenis stok wajib dilengkapi keterangan.");
   if (showFloor && !Number(floorCount)) step1Missing.push("Lengkapi jumlah lantai untuk perluasan gempa.");
   const step2Missing = [];
-  if (!form.customerType) step2Missing.push("Pilih jenis nasabah.");
-  if (!form.identity.trim()) step2Missing.push("Lengkapi nama nasabah.");
+  if (!form.customerType) step2Missing.push("Pilih tipe calon pemegang polis.");
+  if (!form.identity.trim()) step2Missing.push("Lengkapi nama calon pemegang polis.");
   if (!validPhone(form.phone)) step2Missing.push("Lengkapi nomor handphone yang valid.");
   if (!validEmail(form.email)) step2Missing.push("Lengkapi alamat email yang valid.");
   if (!uw.ownership) step2Missing.push("Pilih status kepemilikan.");

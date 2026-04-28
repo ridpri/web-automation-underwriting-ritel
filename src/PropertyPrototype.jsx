@@ -1129,7 +1129,7 @@ function UnderwritingSections({
   const identityLabel = customerType === "Badan Usaha" ? "NPWP" : "NIK";
   const insuredName = selectedCustomer ? selectedCustomer.name : form.identity;
   const coverageEndDate = calculateCoverageEnd(uwForm.coverageStartDate);
-  const customerSectionTitle = external ? "Lengkapi Informasi Nasabah" : "Informasi Nasabah Lanjutan";
+  const customerSectionTitle = "Informasi Calon Pemegang Polis";
   const propertySectionTitle = external ? "Lengkapi Informasi Properti" : "Informasi Properti Lanjutan";
   const photoSectionTitle = external ? "Lampiran Foto Properti" : "Foto Properti";
   const photoSectionSubtitle = external
@@ -2058,7 +2058,7 @@ export default function PropertyStepOneFrontendCompact({
   const hasCompleteUploads = hasRequiredUploads(uploads);
   const canAdvanceUnderwriting = hasValidUwIdentity && hasValidPicName && hasValidUnderwriting && hasCompleteUploads;
   const stepOnePendingItems = [];
-  if (!hasValidStepOneIdentity) stepOnePendingItems.push("Isi nama nasabah atau pilih CIF.");
+  if (!hasValidStepOneIdentity) stepOnePendingItems.push("Isi nama calon pemegang polis atau pilih CIF.");
 if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone dan alamat email yang valid.");
   if (!hasValidStepOneLocation) stepOnePendingItems.push("Isi lokasi properti atau gunakan tombol lokasi cepat.");
   if (!form.constructionClass) stepOnePendingItems.push("Lengkapi material bangunan untuk menentukan kelas konstruksi.");
@@ -2472,9 +2472,9 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
             <div className={cls("mx-auto px-4 md:px-6", showStepOneSummarySidebar ? "max-w-[1280px]" : "max-w-4xl")}>
               <div className={cls("mt-6 grid items-start gap-5", showStepOneSummarySidebar ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
                 <div className="space-y-5">
-                  <SectionCard title="Informasi Nasabah">
+                  <SectionCard title="Informasi Calon Pemegang Polis">
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="md:col-span-2"><FieldLabel label="Nama / CIF" required helpText="Ketik nama untuk mencari data CIF, atau lanjutkan sebagai nasabah baru." /><div className="relative"><TextInput value={form.identity} onChange={(value) => { setSelectedCustomer(null); setField("identity", value); }} placeholder="Masukkan nama nasabah atau kode CIF" icon={<User className="h-4 w-4" />} />{form.identity && customerSuggestions.length > 0 && !selectedCustomer ? <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">{customerSuggestions.map((item) => <button key={item.cif} type="button" onClick={() => { setSelectedCustomer(item); setForm((prev) => ({ ...prev, identity: item.name + " - " + item.cif, customerType: item.type, phone: item.phone || prev.phone, email: item.email || prev.email })); }} className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"><div><div className="font-semibold text-slate-900">{item.name}</div><div className="text-xs text-slate-500">{item.type}</div></div><div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div></button>)}</div> : null}</div>{selectedCustomer ? <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div> : form.identity ? <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div> : null}</div>
+                      <div className="md:col-span-2"><FieldLabel label="Nama Calon Pemegang Polis" required helpText="Ketik nama calon pemegang polis untuk mencari data CIF, atau lanjutkan sebagai nasabah baru." /><div className="relative"><TextInput value={form.identity} onChange={(value) => { setSelectedCustomer(null); setField("identity", value); }} placeholder="Masukkan nama calon pemegang polis atau kode CIF" icon={<User className="h-4 w-4" />} />{form.identity && customerSuggestions.length > 0 && !selectedCustomer ? <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">{customerSuggestions.map((item) => <button key={item.cif} type="button" onClick={() => { setSelectedCustomer(item); setForm((prev) => ({ ...prev, identity: item.name + " - " + item.cif, customerType: item.type, phone: item.phone || prev.phone, email: item.email || prev.email })); }} className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"><div><div className="font-semibold text-slate-900">{item.name}</div><div className="text-xs text-slate-500">{item.type}</div></div><div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div></button>)}</div> : null}</div>{selectedCustomer ? <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div> : form.identity ? <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div> : null}</div>
                       {Boolean(form.identity.trim()) && !selectedCustomer && !isDigitsOnly(form.identity.trim()) ? <div><FieldLabel label="Tipe Nasabah" required /><SelectInput value={form.customerType} onChange={(value) => setField("customerType", value)} options={CUSTOMER_TYPES} placeholder="Nasabah ini perorangan atau badan usaha?" /></div> : null}
                       <div><FieldLabel label="Nomor Handphone" required /><TextInput value={form.phone} onChange={(value) => setField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} /></div>
                       <div><FieldLabel label="Alamat Email" required /><TextInput value={form.email} onChange={(value) => setField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" /></div>
@@ -2613,7 +2613,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                 </div>
                 {showStepOneSummarySidebar ? <SummarySidebarShell title="Ringkasan">
                   <div className="border-t border-white/15 pt-3">
-                    <SummaryRow label={selectedCustomer || isDigitsOnly(form.identity.trim()) ? "Kode CIF / Nama" : "Nama Nasabah"} value={form.identity || "-"} />
+                    <SummaryRow label={selectedCustomer || isDigitsOnly(form.identity.trim()) ? "Kode CIF / Nama" : "Nama Calon Pemegang Polis"} value={form.identity || "-"} />
                     <SummaryRow label="Jenis Bangunan" value={form.propertyType} />
                     <SummaryRow label="Penggunaan bangunan" value={form.occupancy} />
                     <SummaryRow label="Kelas Konstruksi" value={form.constructionClass} />
