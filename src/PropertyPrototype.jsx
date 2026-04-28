@@ -1213,7 +1213,7 @@ function UnderwritingSections({
         <div><FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" /><TextInput value={coverageEndDate} onChange={() => {}} placeholder="Otomatis 1 tahun" readOnly={true} /></div>
           {hasStockObject ? (
             <div>
-              <FieldLabel label="Jenis Stok" required helpText="Wajib diisi bila ada objek pertanggungan jenis stok." />
+              <FieldLabel label="Jenis Stok" required />
               <SelectInput value={uwForm.stockType || ""} onChange={(value) => setUwField("stockType", value)} options={STOCK_TYPE_OPTIONS.map((item) => item.label)} placeholder="Pilih jenis stok" />
               {!external && selectedStockTypeMeta ? (
                 <div className="mt-1 text-xs leading-5 text-slate-500">
