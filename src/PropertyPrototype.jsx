@@ -150,20 +150,23 @@ const PERSONAL_PRODUCTS = [
   },
 ];
 
+const PROPERTY_SAFE_VARIANT = getPropertyVariant("property-safe");
+const PROPERTY_ALL_RISK_VARIANT = getPropertyVariant("property-all-risk");
+
 const PROPERTY_PRODUCTS = [
   {
-    title: "Asuransi Kebakaran",
+    title: PROPERTY_SAFE_VARIANT.title,
     category: "Harta Benda",
-    subtitle: "Perlindungan bangunan dan isi properti.",
-    image: "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=900&q=80",
+    subtitle: PROPERTY_SAFE_VARIANT.catalogSubtitle,
+    image: PROPERTY_SAFE_VARIANT.catalogImage,
     active: true,
     variantKey: "property-safe",
   },
   {
-    title: "Asuransi Property All Risk",
+    title: PROPERTY_ALL_RISK_VARIANT.title,
     category: "Harta Benda",
-    subtitle: "Perlindungan all risk untuk bangunan dan isi properti.",
-    image: "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=900&q=80",
+    subtitle: PROPERTY_ALL_RISK_VARIANT.catalogSubtitle,
+    image: PROPERTY_ALL_RISK_VARIANT.catalogImage,
     active: true,
     variantKey: "property-all-risk",
   },
