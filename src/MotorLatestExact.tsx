@@ -123,7 +123,6 @@ const CAR_COMP_UPLOAD_FIELDS = [
   "Ambil foto bagian samping kanan",
   "Ambil foto bagian samping kiri",
   "Foto interior dashboard dan odometer",
-  "Foto STNK",
   "Foto nomor rangka / VIN",
   CAR_COMP_EXISTING_DAMAGE_UPLOAD,
 ] as const;
@@ -1023,7 +1022,6 @@ function getVehiclePhotoTitle(name: string) {
   if (name === "Ambil foto bagian samping kanan") return "Sisi kanan penuh";
   if (name === "Ambil foto bagian samping kiri") return "Sisi kiri penuh";
   if (name === "Foto interior dashboard dan odometer") return "Interior/dashboard + odometer";
-  if (name === "Foto STNK") return "Foto STNK";
   if (name === "Foto nomor rangka / VIN") return "Nomor rangka/VIN";
   if (name === CAR_COMP_EXISTING_DAMAGE_UPLOAD) return "Foto kerusakan existing";
   return "Foto kendaraan";
@@ -1035,7 +1033,6 @@ function getVehiclePhotoHelper(name: string, noExistingDamage = false) {
   if (name === "Ambil foto bagian samping kanan") return "Ambil kendaraan sisi kanan secara penuh dari ujung depan sampai belakang.";
   if (name === "Ambil foto bagian samping kiri") return "Ambil kendaraan sisi kiri secara penuh dari ujung depan sampai belakang.";
   if (name === "Foto interior dashboard dan odometer") return "Pastikan dashboard dan angka odometer/kilometer terlihat jelas.";
-  if (name === "Foto STNK") return "Foto STNK asli yang masih terbaca untuk verifikasi data kendaraan.";
   if (name === "Foto nomor rangka / VIN") return "Ambil area nomor rangka/VIN kendaraan bila dapat diakses dengan aman.";
   if (name === CAR_COMP_EXISTING_DAMAGE_UPLOAD) {
     return noExistingDamage
@@ -3315,16 +3312,6 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                               }),
                             },
                           }));
-                          if (flowType === "carComp") {
-                            setAt(flowType, "uploads.Foto STNK", true);
-                            setEvidence((prev) => ({
-                              ...prev,
-                              [flowType]: {
-                                ...prev[flowType],
-                                "Foto STNK": createVehiclePhotoMetadata("Foto STNK", selected.insured.address),
-                              },
-                            }));
-                          }
                         }}
                         className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-bold text-white hover:brightness-105"
                       >
@@ -3507,7 +3494,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                   </div>
                 ) : null}
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
               {visibleUploadNames.map((name) => {
                 const uploaded = selected.uploads[name];
                 const photoTitle = getVehiclePhotoTitle(name);
@@ -3516,14 +3503,14 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                 return (
                   <div
                     key={name}
-                    className="rounded-2xl border border-[#D8E1EA] bg-white p-3"
+                    className="rounded-xl border border-[#D8E1EA] bg-white p-2.5"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-[15px] font-semibold tracking-tight text-slate-900">{photoTitle}</div>
-                        <div className="mt-1 text-sm text-slate-500">{helperText}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold leading-5 tracking-tight text-slate-900">{photoTitle}</div>
+                        <div className="mt-1 text-[12px] leading-5 text-slate-500">{helperText}</div>
                       </div>
-                      <Camera className="h-5 w-5 text-slate-400" />
+                      <Camera className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                     </div>
                     <button
                       type="button"
@@ -3541,20 +3528,20 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         }));
                       }}
                       className={cls(
-                        "mt-3 flex h-40 w-full flex-col items-center justify-center rounded-2xl border px-4 text-center transition hover:border-[#0A4D82]/30",
+                        "mt-2 flex h-28 w-full flex-col items-center justify-center rounded-xl border px-3 text-center transition hover:border-[#0A4D82]/30",
                         uploaded
                           ? "border-[#D8E1EA] bg-white"
                           : "border-dashed border-[#C9D6E4] bg-[linear-gradient(180deg,#FAFCFF_0%,#F4F8FC_100%)]",
                       )}
                     >
-                      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#DCE6F0]">
-                        <Camera className="h-5 w-5 text-[#0A4D82]" />
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#DCE6F0]">
+                        <Camera className="h-4 w-4 text-[#0A4D82]" />
                       </span>
-                      <span className="mt-3 text-sm font-medium text-slate-700">
-                        {uploaded ? "Foto kendaraan sudah diambil" : "Ambil foto kendaraan"}
+                      <span className="mt-2 text-[13px] font-medium text-slate-700">
+                        {uploaded ? "Foto sudah diambil" : "Ambil foto"}
                       </span>
-                      <span className="mt-1 text-xs leading-5 text-slate-500">
-                        {uploaded && photoEvidence?.capturedAt ? "Foto tersimpan untuk verifikasi lanjutan." : "Ketuk area ini untuk membuka kamera."}
+                      <span className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                        {uploaded && photoEvidence?.capturedAt ? "Tersimpan untuk verifikasi." : "Ketuk untuk membuka kamera."}
                       </span>
                     </button>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -3571,9 +3558,9 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                               },
                             }));
                           }}
-                          className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[#D5DDE6] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                           Hapus Foto
                         </button>
                       ) : null}
