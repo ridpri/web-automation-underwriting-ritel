@@ -1,7 +1,7 @@
 export const PROPERTY_PRODUCT_VARIANTS = {
   "property-safe": {
     key: "property-safe",
-    title: "Property Safe",
+    title: "Asuransi Kebakaran",
     heroSubtitle: "Perlindungan untuk bangunan dan isi properti terhadap risiko kebakaran, dengan tambahan perlindungan yang bisa dipilih sesuai kebutuhan.",
     catalogSubtitle: "Perlindungan untuk bangunan dan isi properti dari risiko kebakaran.",
     catalogDescription: "Perlindungan untuk bangunan, inventaris, dan isi properti dari risiko kebakaran, dengan tambahan perlindungan opsional.",
@@ -22,9 +22,9 @@ export const PROPERTY_PRODUCT_VARIANTS = {
       "Perlindungan utama mencakup kerusakan akibat kebakaran sesuai jenis bangunan dan nilai yang ingin Anda lindungi.",
     summaryCoverageLine: "Tambahan perlindungan yang tersedia dapat dipilih untuk melengkapi proteksi dari risiko kebakaran.",
     optionalExtensionsLabel: "Tambahan perlindungan yang tersedia",
-    shareSubject: "Penawaran Property Safe",
-    shareLabel: "Property Safe",
-    paymentSuccessMessage: "Pembayaran Property Safe berhasil disimulasikan.",
+    shareSubject: "Penawaran Asuransi Kebakaran",
+    shareLabel: "Asuransi Kebakaran",
+    paymentSuccessMessage: "Pembayaran Asuransi Kebakaran berhasil disimulasikan.",
     policyDocumentName: "Polis Standar Asuransi Kebakaran Indonesia",
     activeExtensions: ["riot", "flood", "earthquake"],
   },

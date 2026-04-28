@@ -75,9 +75,9 @@ const MOCK_CIF = [
 ];
 
 const MOCK_SENT_OFFERS = [
-  { id: "OFR-001", name: "Sony Laksono", product: "Property Safe", status: "Dibuka, menunggu jawaban" },
-  { id: "OFR-002", name: "PT Maju Sentosa", product: "Property Safe", status: "Sudah jawab, minta revisi" },
-  { id: "OFR-003", name: "Siti Rahma", product: "Property Safe", status: "Sudah setuju, menunggu bayar" },
+  { id: "OFR-001", name: "Sony Laksono", product: "Asuransi Kebakaran", status: "Dibuka, menunggu jawaban" },
+  { id: "OFR-002", name: "PT Maju Sentosa", product: "Asuransi Kebakaran", status: "Sudah jawab, minta revisi" },
+  { id: "OFR-003", name: "Siti Rahma", product: "Asuransi Kebakaran", status: "Sudah setuju, menunggu bayar" },
 ];
 
 const CONSTRUCTION_GUIDE = [
@@ -153,7 +153,7 @@ const PERSONAL_PRODUCTS = [
 
 const PROPERTY_PRODUCTS = [
   {
-    title: "Property Safe",
+    title: "Asuransi Kebakaran",
     category: "Harta Benda",
     subtitle: "Perlindungan bangunan dan isi properti.",
     image: "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=900&q=80",
