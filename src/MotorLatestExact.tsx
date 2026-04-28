@@ -3452,16 +3452,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             </div>
           </div>
           {flowType !== "motor" ? (
-            <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
-              <div className="space-y-4">
+            <div className="rounded-xl border border-[#D8E1EA] bg-white p-3">
+              <div className="space-y-2.5">
                 <div>
-                  <div className="text-[18px] font-bold tracking-tight text-slate-900">Perlengkapan Tambahan</div>
-                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                  <div className="text-[14px] font-bold text-slate-900">Perlengkapan Tambahan</div>
+                  <div className="mt-0.5 text-[11px] leading-4 text-slate-500">
                     Aksesori atau perangkat non-standar yang bukan bawaan pabrik. Pilih apakah nilainya sudah termasuk dalam harga pertanggungan utama agar premi tidak dihitung dua kali.
                   </div>
                 </div>
 
-                <div className="grid gap-2.5 md:grid-cols-2">
+                <div className="grid gap-2 md:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -3491,12 +3491,17 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       });
                     }}
                     className={cls(
-                      "rounded-[14px] border px-4 py-3 text-left transition",
-                      equipmentStatus !== "yes" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                      "flex min-h-[58px] items-start gap-2.5 rounded-xl border px-3 py-2 text-left transition",
+                      equipmentStatus !== "yes" ? "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]" : "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]",
                     )}
                   >
-                    <div className="text-sm font-semibold text-[#0A4D82]">Tidak ada perlengkapan tambahan</div>
-                    <div className="mt-1 text-xs leading-5 text-slate-500">Tidak ada aksesori non-standar yang perlu dicatat atau dijamin.</div>
+                    <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", equipmentStatus !== "yes" ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300")}>
+                      {equipmentStatus !== "yes" ? <Check className="h-3 w-3" /> : null}
+                    </span>
+                    <span>
+                      <span className="block text-[13px] font-bold">Tidak ada perlengkapan tambahan</span>
+                      <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Tidak ada aksesori non-standar yang perlu dicatat atau dijamin.</span>
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -3517,12 +3522,17 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       });
                     }}
                     className={cls(
-                      "rounded-[14px] border px-4 py-3 text-left transition",
-                      equipmentStatus === "yes" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                      "flex min-h-[58px] items-start gap-2.5 rounded-xl border px-3 py-2 text-left transition",
+                      equipmentStatus === "yes" ? "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]" : "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]",
                     )}
                   >
-                    <div className="text-sm font-semibold text-[#0A4D82]">Ada perlengkapan tambahan</div>
-                    <div className="mt-1 text-xs leading-5 text-slate-500">Isi rincian, status nilai pertanggungan, dan foto perlengkapannya.</div>
+                    <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", equipmentStatus === "yes" ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300")}>
+                      {equipmentStatus === "yes" ? <Check className="h-3 w-3" /> : null}
+                    </span>
+                    <span>
+                      <span className="block text-[13px] font-bold">Ada perlengkapan tambahan</span>
+                      <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Isi rincian, status nilai pertanggungan, dan foto perlengkapannya.</span>
+                    </span>
                   </button>
                 </div>
 
