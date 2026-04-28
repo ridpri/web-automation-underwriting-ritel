@@ -56,7 +56,43 @@ const FLAMMABLE_MATERIAL_OPTIONS = ["Tidak ada", "Ada"];
 const FIRE_PROTECTION_CHOICES = ["Tidak Ada", "Ada"];
 const FIRE_PROTECTION_ITEMS = ["APAR", "Hydrant", "Sprinkler"];
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
-const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
+const PAYMENT_METHOD_GROUPS = [
+  {
+    label: "Bank Transfer",
+    methods: [
+      { label: "BRI", feeAmount: 4440 },
+      { label: "Mandiri", feeAmount: 4440 },
+      { label: "BNI", feeAmount: 4440 },
+      { label: "BCA", feeAmount: 4440 },
+      { label: "BSI", feeAmount: 4440 },
+      { label: "CIMB Niaga", feeAmount: 4440 },
+      { label: "Permata", feeAmount: 4440 },
+    ],
+  },
+  {
+    label: "E Wallet",
+    methods: [
+      { label: "OVO", feeAmount: 458 },
+      { label: "LinkAja", feeAmount: 458 },
+      { label: "AstraPay", feeAmount: 458 },
+    ],
+  },
+  {
+    label: "Kartu Kredit",
+    methods: [{ label: "Credit Card", feeAmount: 3343 }],
+  },
+  {
+    label: "Scan QRIS",
+    methods: [{ label: "QRIS", feeAmount: 191 }],
+  },
+];
+const PAYMENT_METHOD_FEE_LOOKUP = PAYMENT_METHOD_GROUPS.reduce((lookup, group) => {
+  group.methods.forEach((method) => {
+    lookup[method.label] = method.feeAmount;
+  });
+  return lookup;
+}, {});
+const PAYMENT_OPTIONS = PAYMENT_METHOD_GROUPS.flatMap((group) => group.methods.map((method) => method.label));
 const STOCK_TYPE_OPTIONS = [
   { label: "Sembako", risk: "Tidak mudah terbakar" },
   { label: "Minuman Kemasan", risk: "Tidak mudah terbakar" },
@@ -492,18 +528,49 @@ function calculateCoverageEnd(startDate) {
   return formatDateInput(date);
 }
 
-function SectionCard({ title, subtitle, children, action, headerAlign = "left" }) {
+function SectionCard({ title, subtitle, children, action, headerAlign = "left", className = "", compactHeader = false, heroHeader = false }) {
   return (
-    <section className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">
+    <section
+      className={cls(
+        compactHeader
+          ? "rounded-2xl border border-[#D8E1EA] bg-white px-4 py-3.5 md:px-5"
+          : "rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5",
+        className
+      )}
+    >
       <div
         className={cls(
           "flex items-start gap-4",
           action ? "justify-between" : headerAlign === "center" ? "justify-center" : "justify-start"
         )}
       >
-        <div className={headerAlign === "center" ? "text-center" : ""}>
-          <div className="text-[18px] font-bold text-slate-900">{title}</div>
-          {subtitle ? <div className="mt-1 text-sm text-slate-500">{subtitle}</div> : null}
+        <div className={cls(headerAlign === "center" ? "text-center" : "", heroHeader ? "w-full" : "")}>
+          <div
+            className={cls(
+              heroHeader
+                ? "text-[26px] font-bold tracking-tight md:text-[30px]"
+                : compactHeader
+                  ? "text-[15px] font-semibold"
+                  : "text-[18px] font-bold",
+              "text-slate-900"
+            )}
+          >
+            {title}
+          </div>
+          {subtitle ? (
+            <div
+              className={cls(
+                heroHeader
+                  ? "mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]"
+                  : compactHeader
+                    ? "mt-1 text-[13px] leading-5"
+                    : "mt-1 text-sm text-slate-500",
+                !heroHeader && !compactHeader ? "text-slate-500" : ""
+              )}
+            >
+              {subtitle}
+            </div>
+          ) : null}
         </div>
         {action ? <div>{action}</div> : null}
       </div>
@@ -1689,42 +1756,306 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
   );
 }
 
-function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSelectMethod, onBack, onProceedPayment, paymentStatus, operatingRecord, isExpired, onSimulate }) {
+function ExternalPaymentPage({
+  productTitle,
+  customerName,
+  form,
+  uwForm,
+  occupancy,
+  objectRows,
+  selectedGuarantees,
+  extensionOptions,
+  totalValue,
+  estimatedTotal,
+  basePremium,
+  extensionPremium,
+  stampDuty,
+  paymentMethod,
+  onSelectMethod,
+  onBack,
+  onEditExtensions,
+  policyConsentApproved,
+  onOpenConsent,
+  onConfirmPayment,
+  paymentStatus,
+  operatingRecord,
+  isExpired,
+  productConfig,
+  stepOneTitle = "Tinjau Penawaran",
+  guestMode = false,
+  onSimulate,
+}) {
+  const [openPaymentGroup, setOpenPaymentGroup] = useState("");
+  const activeVariant = productConfig || getPropertyVariant("property-safe");
   const operatingBlockedMessage = paymentBlockMessage(operatingRecord);
   const canProceedPayment = canProceedToPaymentFromOperating(operatingRecord);
+  const effectiveConstructionClass = form.constructionClass || deriveConstructionClass(form);
+  const customerDisplay = customerName || form.identity || uwForm.picName || "Calon Pemegang Polis";
+  const coverageEndDate = calculateCoverageEnd(uwForm.coverageStartDate);
+  const coveragePeriod = uwForm.coverageStartDate && coverageEndDate
+    ? `${formatDisplayDate(new Date(`${uwForm.coverageStartDate}T00:00:00`))} - ${formatDisplayDate(new Date(`${coverageEndDate}T00:00:00`))}`
+    : "-";
+  const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
+  const guaranteeSummaryItems = selectedExtensions.map((item) => ({
+    title: item.title,
+    icon: item.icon || Shield,
+    premium: totalValue > 0 ? `Rp ${formatRupiah(Math.round(totalValue * item.rate))}` : "-",
+    detail: item.detail,
+    deductible: item.key === "earthquake" ? `2,5% dari Rp ${formatRupiah(totalValue)}` : item.deductible,
+  }));
+  const fireProtectionItems = selectedFireProtectionItems(uwForm);
+  const fireProtectionSummary =
+    uwForm.fireProtectionChoice === "Ada"
+      ? fireProtectionItems.length
+        ? fireProtectionItems.join(", ")
+        : "Ada"
+      : uwForm.fireProtectionChoice || uwForm.fireProtection || "-";
+  const claimHistorySummary = uwForm.claimHistory || "-";
+  const hasStockObject = objectRows.some((row) => row.type === "Stok");
+  const stockTypeSummary = hasStockObject ? uwForm.stockType || "-" : "";
+  const objectSummary = objectRows.length
+    ? objectRows
+        .map((row) => {
+          const pieces = [row.type || "Objek", `Rp ${formatRupiah(parseNumber(row.amount))}`];
+          if (row.note) pieces.push(row.note);
+          return pieces.join(" - ");
+        })
+        .join(", ")
+    : "-";
+  const phoneDisplay = form.phone || "-";
+  const emailDisplay = form.email || "-";
+  const policySummaryTitle = activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle;
+  const coverageValue = `Rp ${formatRupiah(totalValue)}`;
+  const transactionFee = paymentMethod ? PAYMENT_METHOD_FEE_LOOKUP[paymentMethod] || 0 : 0;
+  const totalPayment = estimatedTotal + transactionFee;
+  const canConfirmPayment = Boolean(paymentMethod) && policyConsentApproved && canProceedPayment && !isExpired && !paymentStatus;
+  const paymentPendingItems = [];
+  if (!paymentMethod) paymentPendingItems.push("Pilih salah satu metode pembayaran terlebih dahulu.");
+  if (!policyConsentApproved) paymentPendingItems.push("Buka dan setujui Syarat dan Ketentuan Persetujuan atas SPAU elektronik ini.");
+
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-4 md:px-6">
-          <div className="flex items-center gap-3"><div className="text-[18px] font-black leading-tight text-[#0A4D82]">Danantara<div className="-mt-1">Indonesia</div></div><div className="text-[16px] font-semibold text-slate-700">asuransi jasindo</div></div>
-          <div className="flex items-center gap-3">
-            {onSimulate ? <button type="button" onClick={onSimulate} className="hidden h-10 items-center justify-center rounded-[10px] border border-[#0A4D82]/25 bg-[#F8FBFE] px-4 text-sm font-semibold text-[#0A4D82] shadow-sm transition hover:bg-[#EAF3FB] md:inline-flex">Simulasi</button> : null}
-            <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-[10px] border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-4 w-4" />Kembali</button>
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
+        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-3 md:px-6">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 text-white">
+              <div className="text-[15px] font-black leading-tight md:text-[18px]">Danantara<div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div></div>
+              <div className="hidden text-[15px] font-semibold text-white/95 sm:block">asuransi jasindo</div>
+            </div>
+            <div className="hidden items-center gap-3 md:flex">
+              <button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button>
+              <button type="button" className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-white">
+            {onSimulate ? <button type="button" onClick={onSimulate} className="hidden h-10 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:inline-flex">Simulasi</button> : null}
+            {guestMode ? (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "https://esppa.asuransijasindo.co.id/";
+                }}
+                className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
+              >
+                <Home className="h-4 w-4" aria-hidden="true" />
+                Masuk
+              </button>
+            ) : (
+              <>
+                <button type="button" className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{String(customerDisplay).trim() || "Calon Pemegang Polis"}</button>
+                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
+              </>
+            )}
           </div>
         </div>
-      </div>
+      </header>
       <div className="bg-[#0A4D82] pb-8">
-        <div className="mx-auto max-w-[960px] px-4 pt-6 md:px-6">
-          <div className="mx-auto rounded-[28px] bg-white p-5 shadow-sm">
+        <div className="mx-auto max-w-[1280px] px-4 pt-6 md:px-6">
+          <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali ke Data Lanjutan</button>
+          <div className="mt-5 text-center text-white">
+            {!guestMode ? <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Halo, {String(customerDisplay).trim() || "Calon Pemegang Polis"}</div> : null}
+            <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{productTitle || activeVariant.title}</h1>
+            <p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">Pilih metode pembayaran dan tinjau ringkasan singkat penawaran Anda sebelum melanjutkan.</p>
+          </div>
+          <div className="mx-auto mt-6 max-w-[860px] rounded-[28px] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-6 rounded-[18px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-5 md:flex-row md:items-center md:gap-4 md:px-6">
-              <StepNode step="Langkah 1" title="Tinjau Penawaran" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
+              <StepNode step="Langkah 1" title={stepOneTitle} subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
               <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
               <StepNode step="Langkah 2" title="Data Lanjutan" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
               <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-              <StepNode step="Langkah 3" title="Pembayaran" subtitle="Sedang dibuka" active={true} done={false} icon={<Wallet className="h-4 w-4" />} />
+              <StepNode step="Langkah 3" title="Pembayaran" subtitle={paymentStatus ? "Selesai" : "Sedang dibuka"} active={!paymentStatus} done={Boolean(paymentStatus)} icon={<Wallet className="h-4 w-4" />} />
             </div>
           </div>
         </div>
       </div>
-      <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <SectionCard title="Pembayaran" subtitle="Halaman ini hanya muncul untuk calon tertanggung, bukan untuk user internal.">
-            <div className="space-y-3">{PAYMENT_OPTIONS.map((item) => <button key={item} type="button" onClick={() => onSelectMethod(item)} className={cls("flex w-full items-center justify-between rounded-xl border px-4 py-4 text-left", paymentMethod === item ? "border-[#0A4D82] bg-[#F8FBFE]" : "border-slate-200 bg-white")}><span className="font-semibold text-slate-900">{item}</span>{paymentMethod === item ? <CheckCircle2 className="h-5 w-5 text-[#0A4D82]" /> : null}</button>)}</div>
+      <div className="mx-auto max-w-[860px] px-4 py-8 md:px-6">
+        <div className="space-y-5">
+          <SectionCard
+            title="Ringkasan Sebelum Pembayaran"
+            subtitle={`Tinjau kembali ringkasan Anda sebelum melanjutkan ke pembayaran. Ringkasan ini disusun dari data SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada ${policySummaryTitle}.`}
+            headerAlign="center"
+            heroHeader
+          >
+            <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <div className="space-y-3">
+                <OfferSummarySection title="Ringkasan Informasi Calon Pemegang Polis">
+                  <div className="space-y-2.5">
+                    <OfferSummaryKeyValue label="Nama Calon Pemegang Polis" value={customerDisplay} />
+                    <OfferSummaryKeyValue label="Alamat Email" value={emailDisplay} />
+                    <OfferSummaryKeyValue label="Nomor Handphone" value={phoneDisplay} />
+                  </div>
+                </OfferSummarySection>
+
+                <OfferSummarySection title="Ringkasan Informasi Properti">
+                  <div className="space-y-2.5">
+                    <OfferSummaryKeyValue label="Penggunaan Properti yang Diasuransikan" value={occupancy || "-"} />
+                    <OfferSummaryKeyValue label="Objek Pertanggungan" value={objectSummary} />
+                    <OfferSummaryKeyValue label="Total Harga Pertanggungan" value={coverageValue} />
+                    <OfferSummaryKeyValue label="Kelas Konstruksi" value={effectiveConstructionClass || "-"} />
+                    <OfferSummaryKeyValue label="Perlindungan Kebakaran" value={fireProtectionSummary} />
+                    <OfferSummaryKeyValue label="Riwayat Klaim 3 Tahun Terakhir" value={claimHistorySummary} />
+                    {hasStockObject ? <OfferSummaryKeyValue label="Jenis Stok" value={stockTypeSummary} /> : null}
+                    <OfferSummaryKeyValue label="Jangka Waktu Pertanggungan" value={coveragePeriod} />
+                  </div>
+                </OfferSummarySection>
+
+                <OfferSummarySection title="Ringkasan Syarat dan Ketentuan">
+                  <div className="space-y-4">
+                    <div className="text-[15px] font-normal text-slate-900">{policySummaryTitle}</div>
+                    <div className="space-y-2">
+                      <div className="text-[13px] font-medium text-slate-500">Risiko yang dijamin</div>
+                      <PropertyGuaranteeDetailCard
+                        title={activeVariant.primaryCoverageTitle}
+                        icon={Flame}
+                        premium={`Rp ${formatRupiah(basePremium)}`}
+                        detail={activeVariant.primaryCoverageDescription}
+                        deductible={effectiveConstructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther}
+                      />
+                    </div>
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <div className="text-[13px] font-medium text-slate-500">Perluasan Jaminan</div>
+                        <button type="button" onClick={onEditExtensions} className="text-[12px] font-medium text-[#0A4D82] underline underline-offset-2 hover:text-[#0D5B98]">
+                          {guaranteeSummaryItems.length ? "Ubah Perluasan Jaminan" : "Tambahkan Perluasan Jaminan"}
+                        </button>
+                      </div>
+                      {guaranteeSummaryItems.length ? (
+                        <div className="space-y-2">
+                          {guaranteeSummaryItems.map((item) => (
+                            <PropertyGuaranteeDetailCard
+                              key={item.title}
+                              title={item.title}
+                              icon={item.icon}
+                              premium={item.premium}
+                              detail={item.detail}
+                              deductible={item.deductible}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </OfferSummarySection>
+
+                <OfferSummarySection title="Ringkasan Pembayaran">
+                  <PremiumPriceHero label="Total Pembayaran" value={`Rp ${formatRupiah(totalPayment)}`} />
+                  <PremiumBreakdown>
+                    <ProposalRow label="Premi" value={`Rp ${formatRupiah(basePremium)}`} />
+                    {extensionPremium > 0 ? <ProposalRow label="Premi Perluasan" value={`Rp ${formatRupiah(extensionPremium)}`} /> : null}
+                    <ProposalRow label="Biaya Transaksi" value={`Rp ${formatRupiah(transactionFee)}`} />
+                    <ProposalRow label="Biaya Meterai" value={`Rp ${formatRupiah(stampDuty)}`} />
+                    <ProposalRow label="Total Pembayaran" value={`Rp ${formatRupiah(totalPayment)}`} strong />
+                  </PremiumBreakdown>
+                </OfferSummarySection>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Pilih Metode Pembayaran">
+            <div className="space-y-7">
+              {PAYMENT_METHOD_GROUPS.map((group) => (
+                <div key={group.label} className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setOpenPaymentGroup((current) => (current === group.label ? "" : group.label))}
+                    className="flex w-full items-center justify-between border-b border-[#D8E1EA] pb-3 text-left"
+                  >
+                    <div className="text-[15px] font-semibold text-slate-600">{group.label}</div>
+                    <ChevronDown className={cls("h-4 w-4 text-slate-500 transition-transform", openPaymentGroup === group.label ? "rotate-180" : "")} />
+                  </button>
+                  {openPaymentGroup === group.label ? (
+                    <div className="grid gap-3 md:grid-cols-3">
+                      {group.methods.map((method) => {
+                        const selected = paymentMethod === method.label;
+                        return (
+                          <button
+                            key={method.label}
+                            type="button"
+                            onClick={() => onSelectMethod(method.label)}
+                            className={cls(
+                              "min-h-[52px] rounded-[6px] border px-4 py-3 text-left transition",
+                              selected
+                                ? "border-[#0A4D82] bg-[#F8FBFE] shadow-sm"
+                                : "border-[#7E9AB6] bg-white hover:border-[#0A4D82] hover:bg-[#FBFDFF]"
+                            )}
+                          >
+                            <div className="text-[15px] font-semibold leading-5 text-[#5A748B]">{method.label}</div>
+                            <div className="mt-0.5 text-[12px] leading-4 text-[#7B97AC]">+IDR {formatRupiah(method.feeAmount)}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
             {operatingBlockedMessage ? <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{operatingBlockedMessage}</div> : null}
             {isExpired ? <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Masa berlaku penawaran ini sudah berakhir. Silakan minta versi penawaran terbaru sebelum melanjutkan pembayaran.</div> : null}
             {paymentStatus ? <div className="mt-4 rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{paymentStatus}</div> : null}
           </SectionCard>
-    <aside className="h-fit self-start rounded-2xl bg-[#0A4D82] p-5 text-white shadow-lg lg:sticky lg:top-24"><div className="text-[18px] font-bold">Ringkasan Pembayaran</div><div className="mt-4 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Nasabah</div><div className="mt-1 font-semibold">{customerName || "Calon nasabah"}</div></div><div className="mt-3 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Total yang Dibayar</div><div className="mt-2 text-[30px] font-bold leading-none">Rp {formatRupiah(estimatedTotal)}</div></div><div className="mt-3 rounded-xl bg-white/10 p-4"><div className="text-sm text-white/75">Metode Pembayaran</div><div className="mt-1 font-semibold">{paymentMethod || "Pilih metode pembayaran"}</div></div><button type="button" disabled={!paymentMethod || !canProceedPayment || isExpired} onClick={onProceedPayment} className={cls("mt-4 flex h-[48px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", paymentMethod && canProceedPayment && !isExpired ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Pembayaran</button></aside>
+
+          <SectionCard title="Lanjutkan Pembayaran" subtitle="Selesaikan persetujuan atas SPAU elektronik ini terlebih dahulu, lalu lanjutkan pembayaran.">
+            <div className="rounded-2xl border border-[#D8E1EA] bg-white px-4 py-4">
+              <div className="flex items-start gap-3">
+                <button
+                  type="button"
+                  onClick={onOpenConsent}
+                  className={cls(
+                    "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border transition",
+                    policyConsentApproved ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-[#B7C7D8] bg-white text-transparent hover:border-[#0A4D82]"
+                  )}
+                  aria-label={policyConsentApproved ? "Persetujuan kebijakan sudah disetujui" : "Buka syarat dan ketentuan persetujuan"}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </button>
+                <div className="min-w-0 text-sm leading-6 text-slate-700">
+                  <span>Saya telah membaca dan menyetujui </span>
+                  <button type="button" onClick={onOpenConsent} className="inline p-0 font-medium text-[#0A4D82] underline underline-offset-2 hover:text-[#0D5B98]">
+                    Syarat dan Ketentuan Persetujuan
+                  </button>
+                  <span> atas SPAU elektronik ini.</span>
+                </div>
+              </div>
+            </div>
+            {!paymentStatus ? <div className="mt-4"><SummarySidebarAlert items={paymentPendingItems} /></div> : null}
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-center text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE] sm:flex-1"
+              >
+                Kembali ke Data Lanjutan
+              </button>
+              <button
+                type="button"
+                disabled={!canConfirmPayment}
+                onClick={onConfirmPayment}
+                className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-bold uppercase tracking-wide text-white shadow-sm sm:flex-1", canConfirmPayment ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+              >
+                {paymentStatus ? "Pembayaran Selesai" : "Lanjutkan Pembayaran"}
+              </button>
+            </div>
+          </SectionCard>
         </div>
       </div>
     </div>
@@ -1804,6 +2135,7 @@ export default function PropertyStepOneFrontendCompact({
   const [rejectReason, setRejectReason] = useState("");
   const [rejectCustomReason, setRejectCustomReason] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [policyConsentApproved, setPolicyConsentApproved] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState("");
   const [shareFeedback, setShareFeedback] = useState("");
   const [rejectionStatus, setRejectionStatus] = useState("");
@@ -2277,7 +2609,6 @@ export default function PropertyStepOneFrontendCompact({
   if (externalView === "offer-final") {
     return (
       <>
-        <ConsentModal agreed={false} open={showConsentModal} onClose={() => setShowConsentModal(false)} onAgree={() => { setShowConsentModal(false); setExternalView("payment"); }} />
         <RejectModal open={showRejectModal} onClose={() => setShowRejectModal(false)} reason={rejectReason} setReason={setRejectReason} customReason={rejectCustomReason} setCustomReason={setRejectCustomReason} onSubmit={() => { const finalReason = rejectReason === "Alasan lainnya" ? rejectCustomReason.trim() : rejectReason; setRejectionStatus("Alasan penolakan tersimpan: " + finalReason + ". Ini masih simulasi untuk handoff ke tim IT."); setShowRejectModal(false); }} />
         <ExternalProposalPage
           mode="final"
@@ -2321,7 +2652,7 @@ export default function PropertyStepOneFrontendCompact({
             }
             setExternalView("");
           }}
-          onPrimary={() => setShowConsentModal(true)}
+          onPrimary={() => setExternalView("payment")}
           onSecondary={() => setExternalView("offer-indicative")}
           onReject={() => setShowRejectModal(true)}
           helpRequestSent={helpRequestSent}
@@ -2343,7 +2674,58 @@ export default function PropertyStepOneFrontendCompact({
   }
 
   if (externalView === "payment") {
-    return <ExternalPaymentPage customerName={effectiveCustomerName} estimatedTotal={estimatedTotalNumber} paymentMethod={paymentMethod} onSelectMethod={(value) => { setPaymentMethod(value); setPaymentStatus(""); }} onBack={() => setExternalView(sharedOfferSnapshot ? "offer-final" : "external-underwriting")} onProceedPayment={() => setPaymentStatus(`${activeVariant.paymentSuccessMessage} Integrasi pembayaran online akan disambungkan pada tahap berikutnya.`)} paymentStatus={paymentStatus} operatingRecord={operatingRecord} isExpired={operatingRecord?.status === "Expired"} onSimulate={() => { setPaymentMethod(PAYMENT_OPTIONS[0]); setPaymentStatus(""); }} stepOneTitle={sharedOfferSnapshot ? "Tinjau Penawaran" : "Simulasi Premi"} />;
+    return (
+      <>
+        <ConsentModal
+          agreed={policyConsentApproved}
+          open={showConsentModal}
+          onClose={() => setShowConsentModal(false)}
+          onAgree={() => {
+            setShowConsentModal(false);
+            setPolicyConsentApproved(true);
+          }}
+        />
+        <ExternalPaymentPage
+          productTitle={activeVariant.title}
+          customerName={effectiveCustomerName || uwForm.picName}
+          form={form}
+          uwForm={uwForm}
+          occupancy={form.occupancy}
+          objectRows={objectRows}
+          selectedGuarantees={selectedGuarantees}
+          extensionOptions={activeGuarantees}
+          totalValue={totalValue}
+          estimatedTotal={estimatedTotalNumber}
+          basePremium={basePremiumNumber}
+          extensionPremium={additionalPremiumNumber}
+          stampDuty={stampDutyNumber}
+          paymentMethod={paymentMethod}
+          onSelectMethod={(value) => {
+            setPaymentMethod(value);
+            setPaymentStatus("");
+          }}
+          onBack={() => setExternalView("external-underwriting")}
+          onEditExtensions={() => {
+            setPaymentStatus("");
+            setExternalView(sharedOfferSnapshot ? "offer-indicative" : "");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          policyConsentApproved={policyConsentApproved}
+          onOpenConsent={() => setShowConsentModal(true)}
+          onConfirmPayment={() => setPaymentStatus(`${activeVariant.paymentSuccessMessage} Integrasi pembayaran online akan disambungkan pada tahap berikutnya.`)}
+          paymentStatus={paymentStatus}
+          operatingRecord={operatingRecord}
+          isExpired={operatingRecord?.status === "Expired"}
+          productConfig={activeVariant}
+          stepOneTitle={sharedOfferSnapshot ? "Tinjau Penawaran" : "Simulasi Premi"}
+          guestMode={entryMode === "external"}
+          onSimulate={() => {
+            setPaymentMethod(PAYMENT_OPTIONS[0]);
+            setPaymentStatus("");
+          }}
+        />
+      </>
+    );
   }
 
   if (externalView === "external-underwriting") {
@@ -2381,7 +2763,7 @@ export default function PropertyStepOneFrontendCompact({
         pendingItems={underwritingPendingItems}
         canContinue={canAdvanceUnderwriting}
         continueLabel="Lanjut ke Pembayaran"
-        onContinue={() => setExternalView(sharedOfferSnapshot ? "offer-final" : "payment")}
+        onContinue={() => setExternalView("payment")}
         onBack={() => setExternalView("offer-indicative")}
         showSidebar={false}
         stepOneTitle={sharedOfferSnapshot ? "Tinjau Penawaran" : "Simulasi Premi"}
