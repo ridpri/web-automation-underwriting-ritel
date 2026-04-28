@@ -37,7 +37,6 @@ import { PremiumBreakdown, PremiumPriceHero } from "./components/PremiumSummaryB
 const PROPERTY_TYPES = ["Rumah Tinggal", "Ruko", "Toko", "Kantor", "Kos-kosan"];
 const OBJECT_TYPES = ["Bangunan", "Inventaris / Isi", "Stok", "Mesin / Peralatan"];
 const CUSTOMER_TYPES = ["Nasabah Perorangan", "Badan Usaha"];
-const OWNERSHIP_TYPES = ["Milik Sendiri", "Sewa", "Kontrak", "Lainnya"];
 const WALL_MATERIAL_OPTIONS = [
   "Seluruhnya dari beton, bata, hebel, atau bahan tidak mudah terbakar",
   "Ada bagian bahan mudah terbakar, maksimal sekitar 20% dari luas dinding",
@@ -58,6 +57,18 @@ const FIRE_PROTECTION_CHOICES = ["Tidak Ada", "Ada"];
 const FIRE_PROTECTION_ITEMS = ["APAR", "Hydrant", "Sprinkler"];
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
 const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
+const STOCK_TYPE_OPTIONS = [
+  { label: "Sembako", risk: "Tidak mudah terbakar" },
+  { label: "Minuman Kemasan", risk: "Tidak mudah terbakar" },
+  { label: "Bahan Bangunan", risk: "Tidak mudah terbakar" },
+  { label: "Sparepart / Logam", risk: "Tidak mudah terbakar" },
+  { label: "Elektronik", risk: "Tidak mudah terbakar" },
+  { label: "Obat / Kosmetik", risk: "Tidak mudah terbakar" },
+  { label: "Pakaian / Tekstil", risk: "Mudah terbakar" },
+  { label: "Kertas / Buku", risk: "Mudah terbakar" },
+  { label: "Furniture / Kayu", risk: "Mudah terbakar" },
+  { label: "Plastik / Karet", risk: "Mudah terbakar" },
+];
 const ICON_MAP = { shield: Shield, waves: Waves, sparkles: Sparkles };
 const REJECT_REASONS = [
   "Premi belum sesuai anggaran",
@@ -386,7 +397,7 @@ function shortObjectLabel(type) {
 }
 
 function requiresObjectNote(type) {
-  return type === "Stok";
+  return false;
 }
 
 function isFloorRelevant(propertyType, occupancy) {
@@ -1117,13 +1128,12 @@ function UnderwritingSections({
   form,
   customerType,
   selectedCustomer,
+  objectRows = [],
   uwForm,
   setUwField,
   uploads,
   setUploads,
   setEvidence,
-  expandedRows,
-  setExpandedRows,
   external = false,
 }) {
   const identityLabel = customerType === "Badan Usaha" ? "NPWP" : "NIK";
@@ -1137,6 +1147,8 @@ function UnderwritingSections({
     : "Wajib diisi oleh petugas internal.";
   const fireProtectionChoice = uwForm.fireProtectionChoice || (uwForm.fireProtection && uwForm.fireProtection !== "Tidak Ada" ? "Ada" : "Tidak Ada");
   const fireProtectionItems = selectedFireProtectionItems(uwForm);
+  const hasStockObject = objectRows.some((row) => row.type === "Stok");
+  const selectedStockTypeMeta = STOCK_TYPE_OPTIONS.find((item) => item.label === uwForm.stockType);
   const setFireProtectionChoice = (value) => {
     setUwField("fireProtectionChoice", value);
     if (value === "Tidak Ada") {
@@ -1166,10 +1178,20 @@ function UnderwritingSections({
 
       <SectionCard title={propertySectionTitle}>
         <div className="grid gap-4 md:grid-cols-2">
-          <div><FieldLabel label="Status kepemilikan bangunan / isi properti" required /><SelectInput value={uwForm.ownership} onChange={(value) => setUwField("ownership", value)} options={OWNERSHIP_TYPES} placeholder="Properti ini milik sendiri, sewa, atau lainnya?" /></div>
           <div><FieldLabel label="Riwayat klaim 3 tahun terakhir" required /><SelectInput value={uwForm.claimHistory} onChange={(value) => setUwField("claimHistory", value)} options={CLAIM_HISTORY_OPTIONS} placeholder="Bagaimana riwayat klaim properti ini?" /></div>
         <div><FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" required /><TextInput type="date" value={uwForm.coverageStartDate} onChange={(value) => setUwField("coverageStartDate", value)} /></div>
         <div><FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" /><TextInput value={coverageEndDate} onChange={() => {}} placeholder="Otomatis 1 tahun" readOnly={true} /></div>
+          {hasStockObject ? (
+            <div>
+              <FieldLabel label="Jenis Stok" required helpText="Wajib diisi bila ada objek pertanggungan jenis stok." />
+              <SelectInput value={uwForm.stockType || ""} onChange={(value) => setUwField("stockType", value)} options={STOCK_TYPE_OPTIONS.map((item) => item.label)} placeholder="Pilih jenis stok" />
+              {!external && selectedStockTypeMeta ? (
+                <div className="mt-2 rounded-xl border border-[#D8E1EA] bg-white px-3 py-2 text-sm text-slate-700">
+                  Kategori stok ini termasuk <span className="font-semibold text-slate-900">{selectedStockTypeMeta.risk.toLowerCase()}</span>.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="md:col-span-2">
             <FieldLabel label="Perlindungan kebakaran yang tersedia" required />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1210,7 +1232,6 @@ function UnderwritingSections({
               </div>
             ) : null}
           </div>
-        <div className="md:col-span-2"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, optionalUw: !prev.optionalUw }))} className="flex w-full items-center justify-between rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-4 py-3 text-left"><div><div className="text-[15px] font-semibold text-slate-900">Informasi Tambahan Properti</div><div className="text-sm text-slate-500">Opsional, tetapi membantu penilaian risiko.</div></div><ChevronDown className={cls("h-4 w-4 text-slate-500 transition", expandedRows.optionalUw && "rotate-180")} /></button>{expandedRows.optionalUw ? <div className="mt-3 grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><FieldLabel label="Risiko di Sekitar Lokasi" /><TextAreaInput value={uwForm.surroundingRisk} onChange={(value) => setUwField("surroundingRisk", value)} placeholder="Contoh: berdekatan dengan pasar, bengkel, gudang bahan mudah terbakar, atau area padat penduduk" rows={3} /></div><div className="md:col-span-2"><FieldLabel label="Catatan Tambahan" /><TextAreaInput value={uwForm.additionalNotes} onChange={(value) => setUwField("additionalNotes", value)} placeholder="Tambahkan informasi penting lain yang perlu diketahui tim peninjau" rows={3} /></div></div> : null}</div>
         </div>
       </SectionCard>
 
@@ -1259,12 +1280,10 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
   const hasAnyAdvancedData = Boolean(
     uwForm.idNumber ||
       uwForm.picName ||
-      uwForm.ownership ||
       fireProtectionSummary ||
       uwForm.coverageStartDate ||
       uwForm.claimHistory ||
-      uwForm.surroundingRisk ||
-      uwForm.additionalNotes
+      uwForm.stockType
   );
   const hasInsuredSummaryData = Boolean(
     (customerName && customerName !== "-") ||
@@ -1291,6 +1310,9 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
     deductible: item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible,
   }));
   const constructionSummaryLabel = constructionClass || "Belum dipilih";
+  const hasStockObject = objectRows.some((row) => row.type === "Stok");
+  const selectedStockTypeMeta = STOCK_TYPE_OPTIONS.find((item) => item.label === uwForm.stockType);
+  const stockTypeSummary = selectedStockTypeMeta ? `${selectedStockTypeMeta.label} (${selectedStockTypeMeta.risk})` : uwForm.stockType || "-";
   const showAdvancedAccordions = !isIndicative && (hasAnyAdvancedData || uploads.frontView || uploads.sideRightView || uploads.sideLeftView);
   const guaranteeSectionSubtitle = isIndicative
     ? "Buka untuk melihat jaminan yang sudah termasuk dan memilih perluasan yang diinginkan."
@@ -1546,6 +1568,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
                           )
                         }
                       />
+                      {!isIndicative && hasStockObject ? <OfferSummaryKeyValue label="Jenis Stok" value={stockTypeSummary} /> : null}
                       <OfferSummaryKeyValue
                         label="Kelas Konstruksi"
                         value={constructionInfo ? `${constructionSummaryLabel}: ${constructionInfo.desc}` : constructionSummaryLabel}
@@ -1840,12 +1863,12 @@ export default function PropertyStepOneFrontendCompact({
     idNumber: "",
     sameAsInsured: true,
     picName: "",
-    ownership: "Milik Sendiri",
     coverageStartDate: today,
     fireProtection: "Tidak Ada",
     fireProtectionChoice: "Tidak Ada",
     fireProtectionItems: [],
     claimHistory: "Tidak Ada",
+    stockType: "",
     surroundingRisk: "",
     additionalNotes: "",
   });
@@ -2049,12 +2072,13 @@ export default function PropertyStepOneFrontendCompact({
   const hasValidStepOneContact = hasValidPhoneContact && hasValidEmailContact;
   const hasValidStepOneLocation = Boolean(form.locationSearch.trim());
   const hasValidObjects = totalValue > 0 && objectRows.every((row) => parseNumber(row.amount) > 0);
-  const hasRequiredObjectNotes = objectRows.every((row) => !requiresObjectNote(row.type) || Boolean(String(row.note || "").trim()));
+  const hasStockObject = objectRows.some((row) => row.type === "Stok");
   const hasRequiredFloorCount = !showFloorInput || Number(floorCount) > 0;
-  const canAdvanceInternalStepOne = hasValidStepOneIdentity && hasValidStepOneContact && hasValidStepOneLocation && hasValidObjects && hasRequiredObjectNotes && hasRequiredFloorCount;
+  const canAdvanceInternalStepOne = hasValidStepOneIdentity && hasValidStepOneContact && hasValidStepOneLocation && hasValidObjects && hasRequiredFloorCount;
   const hasValidUwIdentity = !uwForm.idNumber.trim() || isValidIdNumber(form.customerType, uwForm.idNumber);
   const hasValidPicName = form.customerType !== "Badan Usaha" || Boolean(uwForm.picName.trim());
-  const hasValidUnderwriting = Boolean(uwForm.coverageStartDate) && Boolean(uwForm.ownership) && hasValidFireProtection(uwForm) && Boolean(uwForm.claimHistory);
+  const hasValidStockType = !hasStockObject || Boolean(String(uwForm.stockType || "").trim());
+  const hasValidUnderwriting = Boolean(uwForm.coverageStartDate) && hasValidFireProtection(uwForm) && Boolean(uwForm.claimHistory) && hasValidStockType;
   const hasCompleteUploads = hasRequiredUploads(uploads);
   const canAdvanceUnderwriting = hasValidUwIdentity && hasValidPicName && hasValidUnderwriting && hasCompleteUploads;
   const stepOnePendingItems = [];
@@ -2063,12 +2087,12 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
   if (!hasValidStepOneLocation) stepOnePendingItems.push("Isi lokasi properti atau gunakan tombol lokasi cepat.");
   if (!form.constructionClass) stepOnePendingItems.push("Lengkapi material bangunan untuk menentukan kelas konstruksi.");
   if (!hasValidObjects) stepOnePendingItems.push("Setiap objek harus punya nilai yang ingin dilindungi.");
-  if (!hasRequiredObjectNotes) stepOnePendingItems.push("Objek jenis stok wajib dilengkapi dengan keterangan.");
   if (!hasRequiredFloorCount) stepOnePendingItems.push("Lengkapi jumlah lantai pada perluasan Risiko Gempa Bumi.");
   const underwritingPendingItems = [];
   if (uwForm.idNumber.trim() && !hasValidUwIdentity) underwritingPendingItems.push(form.customerType === "Badan Usaha" ? "NPWP yang diisi minimal 15 digit." : "NIK yang diisi harus 16 digit.");
   if (!hasValidPicName) underwritingPendingItems.push("Lengkapi kontak di lokasi.");
   if (!hasValidUnderwriting) underwritingPendingItems.push("Lengkapi data tambahan yang wajib.");
+  if (!hasValidStockType) underwritingPendingItems.push("Pilih jenis stok agar sistem bisa mengkategorikan stok mudah terbakar atau tidak mudah terbakar.");
   if (!hasCompleteUploads) underwritingPendingItems.push("Unggah tiga foto properti: depan, samping kanan, dan samping kiri.");
   const shouldShowQuotedPricing = quoted && hasQuoteBasis;
   const shouldShowSidebarPricing = (quoted || internalStep > 1 || externalView === "offer-indicative" || externalView === "offer-final" || externalView === "payment") && hasQuoteBasis;
@@ -2155,12 +2179,12 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
       idNumber: "3173010101010001",
       sameAsInsured: true,
       picName: demoCustomer.name,
-      ownership: "Milik Sendiri",
       coverageStartDate: selectedCoverageDate,
       fireProtection: "APAR + Hydrant",
       fireProtectionChoice: "Ada",
       fireProtectionItems: ["APAR", "Hydrant"],
       claimHistory: "Tidak Ada",
+      stockType: "",
       surroundingRisk: "",
       additionalNotes: "Isi otomatis prototype untuk verifikasi proses.",
     });
@@ -2380,8 +2404,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           uploads={uploads}
           setUploads={setUploads}
           setEvidence={setEvidence}
-          expandedRows={expandedRows}
-          setExpandedRows={setExpandedRows}
+          objectRows={objectRows}
           external={true}
         />
       </CustomerDataJourneyShell>
@@ -2657,7 +2680,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           ) : (
             <div className="mx-auto mt-6 max-w-4xl px-4 md:px-6">
               <div className="space-y-5">
-                <UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} uwForm={uwForm} setUwField={setUwField} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} expandedRows={expandedRows} setExpandedRows={setExpandedRows} />
+                <UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} objectRows={objectRows} uwForm={uwForm} setUwField={setUwField} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} />
                 <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">
                   <div className="grid gap-3 md:grid-cols-2">
                     <button
