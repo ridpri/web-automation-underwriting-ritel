@@ -105,17 +105,19 @@ export function buildPropertyCatalog(propertyItems) {
   }));
 }
 
-export function buildVehicleCatalog({ motorItem, carTloItem, carCompItem }) {
-  return VEHICLE_PRODUCTS.map((item) => ({
-    ...item,
-    active: item.active,
-    key:
-      item.key === "motor-tlo"
-        ? motorItem
-        : item.key === "mobil-tlo"
-          ? carTloItem
-          : item.key === "mobil-comp"
-            ? carCompItem
-            : item.key,
-  }));
+export function buildVehicleCatalog({ motorItem, carTloItem, carCompItem, sessionRole }) {
+  return VEHICLE_PRODUCTS
+    .filter((item) => sessionRole === "internal" || item.key !== "mobil-comp")
+    .map((item) => ({
+      ...item,
+      active: item.active,
+      key:
+        item.key === "motor-tlo"
+          ? motorItem
+          : item.key === "mobil-tlo"
+            ? carTloItem
+            : item.key === "mobil-comp"
+              ? carCompItem
+              : item.key,
+    }));
 }

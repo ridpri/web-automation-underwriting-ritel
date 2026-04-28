@@ -2960,7 +2960,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             }}
             className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-center text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]"
           >
-            Kembali ke Tinjau Penawaran
+            {hasSharedOfferJourney ? "Kembali ke Tinjau Penawaran" : "Kembali ke Simulasi Premi"}
           </button>
           <button
             onClick={() => {
@@ -2975,22 +2975,24 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             Lanjut ke Pembayaran
           </button>
         </div>
-        <div className="mt-3 flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setJourneyStatus("Tim asuransi akan membantu melengkapi data lanjutan kendaraan ini.")}
-            className="text-sm font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
-          >
-            Minta Bantuan Isi Data Lanjutan
-          </button>
-          <button
-            type="button"
-            onClick={() => setJourneyStatus("Penawaran kendaraan ini ditandai untuk tidak dilanjutkan.")}
-            className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
-          >
-            Tidak mau melanjutkan penawaran
-          </button>
-        </div>
+        {hasSharedOfferJourney ? (
+          <div className="mt-3 flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setJourneyStatus("Tim asuransi akan membantu melengkapi data lanjutan kendaraan ini.")}
+              className="text-sm font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+            >
+              Minta Bantuan Isi Data Lanjutan
+            </button>
+            <button
+              type="button"
+              onClick={() => setJourneyStatus("Penawaran kendaraan ini ditandai untuk tidak dilanjutkan.")}
+              className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+            >
+              Tidak mau melanjutkan penawaran
+            </button>
+          </div>
+        ) : null}
       </div>
     </ActionCard>
   );
@@ -4046,7 +4048,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                     >
                       {isInternalMode ? "Kirim Penawaran" : "Lanjut ke Pembayaran"}
                     </button>
-                    {!isInternalMode ? (
+                    {!isInternalMode && hasSharedOfferJourney ? (
                       <button
                         type="button"
                         onClick={() => setJourneyStatus("Tim asuransi akan membantu melengkapi data lanjutan kendaraan ini.")}
@@ -4055,8 +4057,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         Minta Bantuan Isi Data Lanjutan
                       </button>
                     ) : null}
-                    <button onClick={() => { setJourneyStatus(""); setStep(1); }} className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]">Kembali ke Simulasi Premi</button>
-                    {!isInternalMode ? (
+                    <button onClick={() => { setJourneyStatus(""); setStep(1); }} className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]">{isInternalMode ? "Kembali ke Data Awal" : hasSharedOfferJourney ? "Kembali ke Tinjau Penawaran" : "Kembali ke Simulasi Premi"}</button>
+                    {!isInternalMode && hasSharedOfferJourney ? (
                       <div className="text-center">
                         <button
                           type="button"

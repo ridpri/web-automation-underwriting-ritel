@@ -41,10 +41,10 @@ const PUBLIC_GUEST_JOURNEYS = new Set([
   "property-all-risk-external",
   "motor-external",
   "car-tlo-external",
-  "mobil-comp",
   "self-care-portal",
   "self-care-lookup",
 ]);
+const DISABLED_PUBLIC_JOURNEYS = new Set(["mobil-comp"]);
 
 function readStoredSessionRole() {
   if (typeof window === "undefined") return null;
@@ -85,6 +85,7 @@ function inferSessionRoleFromJourney(journey) {
 
 function sanitizeJourneyForRole(journey, sessionRole) {
   if (!journey) return "";
+  if (DISABLED_PUBLIC_JOURNEYS.has(journey)) return "";
   if (INTERNAL_ONLY_JOURNEYS.has(journey) && sessionRole !== "internal") return "";
   if (journey === "self-care-portal" && sessionRole === "guest") return "self-care-lookup";
   return journey;
@@ -232,7 +233,7 @@ export default function App() {
   );
   const motorItem = useMemo(() => (sessionRole === "internal" ? "motor-internal" : "motor-external"), [sessionRole]);
   const carTloItem = useMemo(() => (sessionRole === "internal" ? "car-tlo-internal" : "car-tlo-external"), [sessionRole]);
-  const carCompItem = useMemo(() => (sessionRole === "internal" ? "car-comp-internal" : "mobil-comp"), [sessionRole]);
+  const carCompItem = useMemo(() => (sessionRole === "internal" ? "car-comp-internal" : ""), [sessionRole]);
   const ownedOperatingRecords = useMemo(
     () => operatingRecords.filter((item) => item.owner === activeSessionName),
     [activeSessionName, operatingRecords],
