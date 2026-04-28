@@ -2136,9 +2136,10 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
       ? visibleUploadNames.filter((name) => name !== CAR_COMP_EXISTING_DAMAGE_UPLOAD)
       : visibleUploadNames;
   const uploadsComplete = selected ? requiredUploadNames.every((name) => Boolean(selected.uploads[name])) && existingDamageRequirementMet : false;
+  const stnkPhotoComplete = flowType !== "carComp" || Boolean(selected?.stnkRead);
   const dataComplete = selected ? !!(selected.insured.customerType && selected.insured.fullName && selected.insured.address && selected.insured.email && selected.insured.phone && selected.vehicle.plateNumber && selected.vehicle.chassisNumber && selected.vehicle.engineNumber) : false;
   const periodComplete = selected ? !!(selected.quote.coverageStart && selected.quote.coverageEnd) : false;
-  const readyForNextStage = !!(selected && calc && uploadsComplete && dataComplete && periodComplete && calc.status !== "Need Review");
+  const readyForNextStage = !!(selected && calc && uploadsComplete && stnkPhotoComplete && dataComplete && periodComplete && calc.status !== "Need Review");
   const canIssue = !!(readyForNextStage && selected.agree && selected.paymentMethod);
   const coverageEndDate = selected?.quote?.coverageStart ? addOneYear(selected.quote.coverageStart) : "";
   const coverageStartDisplay = selected?.quote?.coverageStart ? formatDisplayDate(new Date(`${selected.quote.coverageStart}T00:00:00`)) : "-";
@@ -2469,7 +2470,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         : "Foto kendaraan belum lengkap."
       : null,
     selected.ui.dataMode === "scan" && !selected.ktpRead ? "Foto KTP belum terbaca." : null,
-    selected.ui.stnkMode === "scan" && !selected.stnkRead ? "Foto STNK belum terbaca." : null,
+    !stnkPhotoComplete ? "Foto STNK wajib diunggah dan terbaca untuk Mobil Comprehensive." : null,
+    flowType !== "carComp" && selected.ui.stnkMode === "scan" && !selected.stnkRead ? "Foto STNK belum terbaca." : null,
     calc?.status === "Need Review" ? "Profil risiko kendaraan masih perlu kami cek lebih lanjut." : null,
   ].filter(Boolean) as string[];
 
@@ -3003,7 +3005,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     <ActionCard>
       <div className="space-y-4">
         {journeyStatus ? <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{journeyStatus}</div> : null}
-        {(selected.ui.dataMode === "scan" && !selected.ktpRead) || (selected.ui.stnkMode === "scan" && !selected.stnkRead) ? (
+        {(selected.ui.dataMode === "scan" && !selected.ktpRead) || ((selected.ui.stnkMode === "scan" || flowType === "carComp") && !selected.stnkRead) ? (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
             <div className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 h-4 w-4" />
@@ -3061,7 +3063,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     <ActionCard>
       <div className="space-y-4">
         {journeyStatus ? <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{journeyStatus}</div> : null}
-        {step === 2 && ((selected.ui.dataMode === "scan" && !selected.ktpRead) || (selected.ui.stnkMode === "scan" && !selected.stnkRead)) ? (
+        {step === 2 && ((selected.ui.dataMode === "scan" && !selected.ktpRead) || ((selected.ui.stnkMode === "scan" || flowType === "carComp") && !selected.stnkRead)) ? (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
             <div className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 h-4 w-4" />
@@ -3243,7 +3245,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
               <div className="space-y-4">
                 <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Kendaraan Lanjutan</div>
-                <div className="grid gap-2.5 md:grid-cols-2">
+                <div className={cls("grid gap-2.5", flowType === "carComp" ? "md:grid-cols-1" : "md:grid-cols-2")}>
                   <button
                     type="button"
                     onClick={() => setAt(flowType, "ui.stnkMode", "scan")}
@@ -3254,16 +3256,18 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                   >
                     <div className="text-[14px] font-semibold text-[#0A4D82]">Gunakan Foto STNK</div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setAt(flowType, "ui.stnkMode", "manual")}
-                    className={cls(
-                      "rounded-[14px] border px-4 py-2.5 text-left transition",
-                      selected.ui.stnkMode === "manual" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
-                    )}
-                  >
-                    <div className="text-[14px] font-semibold text-[#0A4D82]">Isi Manual</div>
-                  </button>
+                  {flowType !== "carComp" ? (
+                    <button
+                      type="button"
+                      onClick={() => setAt(flowType, "ui.stnkMode", "manual")}
+                      className={cls(
+                        "rounded-[14px] border px-4 py-2.5 text-left transition",
+                        selected.ui.stnkMode === "manual" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
+                      )}
+                    >
+                      <div className="text-[14px] font-semibold text-[#0A4D82]">Isi Manual</div>
+                    </button>
+                  ) : null}
                 </div>
                 {selected.ui.stnkMode === "scan" ? (
                   <div className="rounded-[16px] border border-[#D8E1EA] bg-white px-4 py-3">
@@ -3495,7 +3499,10 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                 ) : null}
               </div>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-              {visibleUploadNames.map((name) => {
+              {(flowType === "carComp" && selected.underwriting.noExistingDamage
+                ? visibleUploadNames.filter((name) => name !== CAR_COMP_EXISTING_DAMAGE_UPLOAD)
+                : visibleUploadNames
+              ).map((name) => {
                 const uploaded = selected.uploads[name];
                 const photoTitle = getVehiclePhotoTitle(name);
                 const helperText = getVehiclePhotoHelper(name, Boolean(selected.underwriting.noExistingDamage));
@@ -4167,7 +4174,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                     ) : null}
                   </div>
                 ) : null}
-                {step === 2 && ((selected.ui.dataMode === "scan" && !selected.ktpRead) || (selected.ui.stnkMode === "scan" && !selected.stnkRead)) ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>Dokumen yang dipilih untuk isi otomatis belum terbaca penuh. Anda masih bisa lanjut dengan pengisian manual bila diperlukan.</div></div></div> : null}
+                {step === 2 && ((selected.ui.dataMode === "scan" && !selected.ktpRead) || ((selected.ui.stnkMode === "scan" || flowType === "carComp") && !selected.stnkRead)) ? <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4" /><div>Dokumen yang dipilih untuk isi otomatis belum terbaca penuh. Anda masih bisa lanjut dengan pengisian manual bila diperlukan.</div></div></div> : null}
               </aside>
               ) : null}
             </div>
