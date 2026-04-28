@@ -116,7 +116,7 @@ const CAR_UPLOAD_FIELDS = [
   "Ambil foto bagian samping kiri",
   "Ambil foto bagian belakang",
 ] as const;
-const CAR_COMP_EXISTING_DAMAGE_PREFIX = "Foto kerusakan existing";
+const CAR_COMP_EXISTING_DAMAGE_PREFIX = "Foto kerusakan sebelum polis";
 const CAR_EQUIPMENT_PHOTO_PREFIX = "Foto perlengkapan tambahan";
 const CAR_COMP_UPLOAD_FIELDS = [
   "Ambil foto bagian depan",
@@ -2538,8 +2538,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     !uploadsComplete
       ? flowType === "carComp" && !existingDamageRequirementMet
         ? existingDamageStatus === "yes"
-          ? "Unggah minimal satu foto kerusakan existing."
-          : "Pilih kondisi kerusakan existing kendaraan."
+          ? "Unggah minimal satu foto kerusakan sebelum polis aktif."
+          : "Pilih kondisi kendaraan sebelum polis aktif."
         : "Foto kendaraan belum lengkap."
       : null,
     selected.ui.dataMode === "scan" && !selected.ktpRead ? "Foto KTP belum terbaca." : null,
@@ -3766,7 +3766,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                 <div className="text-[18px] font-bold tracking-tight text-slate-900">Foto Kendaraan</div>
                 {flowType === "carComp" ? (
                   <div className="mt-1 text-xs leading-5 text-slate-500">
-                    Foto standar untuk memastikan kondisi kendaraan sebelum polis aktif. Kerusakan existing diisi di section terpisah.
+                    Foto standar untuk memastikan kondisi kendaraan sebelum polis aktif. Kerusakan sebelum polis diisi di section terpisah.
                   </div>
                 ) : null}
               </div>
@@ -3845,15 +3845,15 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             </div>
           </div>
           {flowType === "carComp" ? (
-            <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
-              <div className="space-y-4">
+            <div className="rounded-xl border border-[#D8E1EA] bg-white p-3">
+              <div className="space-y-2.5">
                 <div>
-                  <div className="text-[18px] font-bold tracking-tight text-slate-900">Kerusakan Existing</div>
-                  <div className="mt-1 text-xs leading-5 text-slate-500">
-                    Deklarasikan kondisi kerusakan sebelum polis aktif. Jika ada kerusakan, unggah satu atau lebih foto area kerusakan.
+                  <div className="text-[14px] font-bold text-slate-900">Kondisi Kendaraan Sebelum Polis</div>
+                  <div className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                    Pilih apakah kendaraan sudah memiliki kerusakan sebelum polis aktif. Jika ada, unggah satu atau lebih foto area kerusakan.
                   </div>
                 </div>
-                <div className="grid gap-2.5 md:grid-cols-2">
+                <div className="grid gap-2 md:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -3875,12 +3875,17 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       });
                     }}
                     className={cls(
-                      "rounded-[14px] border px-4 py-3 text-left transition",
-                      existingDamageStatus === "none" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                      "flex min-h-[58px] items-start gap-2.5 rounded-xl border px-3 py-2 text-left transition",
+                      existingDamageStatus === "none" ? "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]" : "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]",
                     )}
                   >
-                    <div className="text-sm font-semibold text-[#0A4D82]">Tidak ada kerusakan existing</div>
-                    <div className="mt-1 text-xs leading-5 text-slate-500">Tidak perlu unggah foto kerusakan.</div>
+                    <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", existingDamageStatus === "none" ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300")}>
+                      {existingDamageStatus === "none" ? <Check className="h-3 w-3" /> : null}
+                    </span>
+                    <span>
+                      <span className="block text-[13px] font-bold">Tidak ada kerusakan sebelum polis</span>
+                      <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Tidak perlu unggah foto kerusakan.</span>
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -3894,12 +3899,17 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       });
                     }}
                     className={cls(
-                      "rounded-[14px] border px-4 py-3 text-left transition",
-                      existingDamageStatus === "yes" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                      "flex min-h-[58px] items-start gap-2.5 rounded-xl border px-3 py-2 text-left transition",
+                      existingDamageStatus === "yes" ? "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]" : "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]",
                     )}
                   >
-                    <div className="text-sm font-semibold text-[#0A4D82]">Ada kerusakan existing</div>
-                    <div className="mt-1 text-xs leading-5 text-slate-500">Unggah minimal satu foto, bisa lebih dari satu.</div>
+                    <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", existingDamageStatus === "yes" ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300")}>
+                      {existingDamageStatus === "yes" ? <Check className="h-3 w-3" /> : null}
+                    </span>
+                    <span>
+                      <span className="block text-[13px] font-bold">Ada kerusakan sebelum polis</span>
+                      <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Unggah minimal satu foto, bisa lebih dari satu.</span>
+                    </span>
                   </button>
                 </div>
                 {existingDamageStatus === "yes" ? (
@@ -4206,7 +4216,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                               ) : null}
                             </div>
                             {allowCustomerLookup && selectedCustomer ? (
-                              <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div>
+                              <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah yang sudah terdaftar.</div>
                             ) : allowCustomerLookup && selected.insured.lookup ? (
                               <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div>
                             ) : null}
