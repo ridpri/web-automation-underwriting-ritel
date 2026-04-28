@@ -46,12 +46,6 @@ export function CustomerDataJourneyShell({
   heroDescription,
   contentDescription,
   customerName,
-  objectLabel,
-  objectValue,
-  sumInsuredLabel,
-  sumInsuredValue,
-  premiumLabel,
-  premiumValue,
   badgeLabel = "Data Lanjutan",
   offerReference,
   version,
@@ -204,7 +198,7 @@ export function CustomerDataJourneyShell({
                   <div className="min-w-0 flex-1 text-center">
                     <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Data Lanjutan</div>
                     <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
-                      {contentDescription || "Informasi berikut diperlukan agar penawaran dapat dilanjutkan ke tahap pembayaran."}
+                      {contentDescription || "Data yang Anda isi pada halaman ini merupakan bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar ringkasan final sebelum pembayaran serta penerbitan polis."}
                     </div>
                   </div>
                 </div>

@@ -2738,7 +2738,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const renderSharedPreviewSummaryCard = () => (
     <SectionCard
       title="Ringkasan Penawaran Anda"
-      subtitle="Rangkuman utama penawaran yang sedang Anda tinjau."
+      subtitle={`Ringkasan ini disusun dari data SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada ${policySummaryTitle}.`}
       headerAlign="center"
     >
       <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
@@ -4347,7 +4347,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                   <>
                     <SectionCard
                       title="Ringkasan Sebelum Pembayaran"
-                      subtitle={`Tinjau kembali ringkasan Anda sebelum melanjutkan ke pembayaran. Ringkasan ini disusun dari data yang Anda isi dan lengkapi dalam SPAU elektronik, serta mengacu pada ${policySummaryTitle}.`}
+                      subtitle={`Tinjau kembali ringkasan Anda sebelum melanjutkan ke pembayaran. Ringkasan ini disusun dari data SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada ${policySummaryTitle}.`}
                       headerAlign="center"
                       heroHeader
                     >
