@@ -1276,6 +1276,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
   const isIndicative = mode === "indicative";
   const isInternalPreview = viewerMode === "internal";
   const activeVariant = productConfig || getPropertyVariant("property-safe");
+  const PrimaryCoverageIcon = activeVariant.key === "property-all-risk" ? Shield : Flame;
   const operatingStatusValue = operatingRecord?.status;
   const operatingVersion = operatingRecord?.version;
   const operatingValidUntil = operatingRecord?.validUntil;
@@ -1614,7 +1615,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
                       <div className="text-[14px] font-medium text-slate-600">Risiko yang dijamin</div>
                       <PropertyGuaranteeDetailCard
                         title={activeVariant.primaryCoverageTitle}
-                        icon={Flame}
+                        icon={PrimaryCoverageIcon}
                         premium={"Rp " + formatRupiah(basePremium)}
                         detail={activeVariant.primaryCoverageDescription}
                         deductible={mainCoverageDeductible}
@@ -1816,6 +1817,7 @@ export default function PropertyStepOneFrontendCompact({
   );
   const [currentProductVariant, setCurrentProductVariant] = useState(productVariant);
   const activeVariant = getPropertyVariant(currentProductVariant);
+  const PrimaryCoverageIcon = activeVariant.key === "property-all-risk" ? Shield : Flame;
   const isInternalMode = entryMode === "internal";
   const activeGuarantees = useMemo(
     () =>
@@ -2589,7 +2591,7 @@ export default function PropertyStepOneFrontendCompact({
                           <div>
                             <div className="text-[15px] font-semibold tracking-tight text-slate-900">{activeVariant.insuredRisksSectionTitle}</div>
                             <div className="mt-3">
-                              <AccordionRiskRow title={activeVariant.primaryCoverageTitle} icon={Flame} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(basePremiumNumber) : "-"} detail={activeVariant.primaryCoverageDescription} deductible={form.constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther} alwaysIncluded={true} expanded={expandedRows.fire} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, fire: !prev.fire }))} />
+                              <AccordionRiskRow title={activeVariant.primaryCoverageTitle} icon={PrimaryCoverageIcon} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(basePremiumNumber) : "-"} detail={activeVariant.primaryCoverageDescription} deductible={form.constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther} alwaysIncluded={true} expanded={expandedRows.fire} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, fire: !prev.fire }))} />
                             </div>
                           </div>
                           {activeVariant.importantExclusions.length ? (
@@ -2650,7 +2652,7 @@ export default function PropertyStepOneFrontendCompact({
                           }}
                           className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                         >
-                          Kirim Penawaran
+                          Kirim Penawaran Awal
                         </button>
                       ) : null}
                       <button
@@ -2686,7 +2688,7 @@ export default function PropertyStepOneFrontendCompact({
                         }}
                         className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                       >
-                        Kirim Indikasi
+                        Kirim Penawaran Awal
                       </button>
                     ) : null}
                     <button
@@ -2731,7 +2733,7 @@ export default function PropertyStepOneFrontendCompact({
                         canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
                       )}
                     >
-                      {isInternalMode ? "Kirim Penawaran" : "Lanjut ke Pembayaran"}
+                      {isInternalMode ? "Kirim Penawaran Final" : "Lanjut ke Pembayaran"}
                     </button>
                   </div>
                 </div>
