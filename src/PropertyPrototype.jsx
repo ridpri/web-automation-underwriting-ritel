@@ -56,7 +56,6 @@ const ROOF_MATERIAL_OPTIONS = [
 const FLAMMABLE_MATERIAL_OPTIONS = ["Tidak ada", "Ada"];
 const FIRE_PROTECTION_CHOICES = ["Tidak Ada", "Ada"];
 const FIRE_PROTECTION_ITEMS = ["APAR", "Hydrant", "Sprinkler"];
-const FIRE_STATION_DISTANCE_OPTIONS = ["Kurang dari 5 km", "Lebih dari 5 km", "Tidak diketahui"];
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
 const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
 const ICON_MAP = { shield: Shield, waves: Waves, sparkles: Sparkles };
@@ -161,7 +160,7 @@ const PROPERTY_PRODUCTS = [
     variantKey: "property-safe",
   },
   {
-    title: "Property All Risk",
+    title: "Asuransi Property All Risk",
     category: "Harta Benda",
     subtitle: "Perlindungan all risk untuk bangunan dan isi properti.",
     image: "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=900&q=80",
@@ -1208,7 +1207,6 @@ function UnderwritingSections({
               </div>
             ) : null}
           </div>
-          <div><FieldLabel label="Jarak kantor PMK terdekat" /><SelectInput value={uwForm.fireStationDistance} onChange={(value) => setUwField("fireStationDistance", value)} options={FIRE_STATION_DISTANCE_OPTIONS} placeholder="Pilih jarak kantor PMK terdekat." /></div>
         <div className="md:col-span-2"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, optionalUw: !prev.optionalUw }))} className="flex w-full items-center justify-between rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-4 py-3 text-left"><div><div className="text-[15px] font-semibold text-slate-900">Informasi Tambahan Properti</div><div className="text-sm text-slate-500">Opsional, tetapi membantu penilaian risiko.</div></div><ChevronDown className={cls("h-4 w-4 text-slate-500 transition", expandedRows.optionalUw && "rotate-180")} /></button>{expandedRows.optionalUw ? <div className="mt-3 grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><FieldLabel label="Risiko di Sekitar Lokasi" /><TextAreaInput value={uwForm.surroundingRisk} onChange={(value) => setUwField("surroundingRisk", value)} placeholder="Contoh: berdekatan dengan pasar, bengkel, gudang bahan mudah terbakar, atau area padat penduduk" rows={3} /></div><div className="md:col-span-2"><FieldLabel label="Catatan Tambahan" /><TextAreaInput value={uwForm.additionalNotes} onChange={(value) => setUwField("additionalNotes", value)} placeholder="Tambahkan informasi penting lain yang perlu diketahui tim peninjau" rows={3} /></div></div> : null}</div>
         </div>
       </SectionCard>
@@ -1262,7 +1260,6 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
       fireProtectionSummary ||
       uwForm.coverageStartDate ||
       uwForm.claimHistory ||
-      uwForm.fireStationDistance ||
       uwForm.surroundingRisk ||
       uwForm.additionalNotes
   );
@@ -1845,7 +1842,6 @@ export default function PropertyStepOneFrontendCompact({
     fireProtection: "Tidak Ada",
     fireProtectionChoice: "Tidak Ada",
     fireProtectionItems: [],
-    fireStationDistance: "",
     claimHistory: "Tidak Ada",
     surroundingRisk: "",
     additionalNotes: "",
@@ -2161,7 +2157,6 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
       fireProtection: "APAR + Hydrant",
       fireProtectionChoice: "Ada",
       fireProtectionItems: ["APAR", "Hydrant"],
-      fireStationDistance: "Kurang dari 5 km",
       claimHistory: "Tidak Ada",
       surroundingRisk: "",
       additionalNotes: "Isi otomatis prototype untuk verifikasi proses.",
