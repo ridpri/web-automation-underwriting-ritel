@@ -1573,7 +1573,18 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
                       />
                     </div>
                     <div className="space-y-2">
-                      <div className="text-[14px] font-medium text-slate-600">Perluasan Jaminan</div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-[14px] font-medium text-slate-600">Perluasan Jaminan</div>
+                        {!isIndicative && !isInternalPreview ? (
+                          <button
+                            type="button"
+                            onClick={onSecondary}
+                            className="text-[12px] font-medium text-[#0A4D82] underline underline-offset-2 hover:text-[#0D5B98]"
+                          >
+                            {selectedExtensionDetailItems.length ? "Ubah Perluasan Jaminan" : "Tambahkan Perluasan Jaminan"}
+                          </button>
+                        ) : null}
+                      </div>
                       {isIndicative ? (
                         <div className="space-y-2">
                           {extensionOptions.map((item) => {
