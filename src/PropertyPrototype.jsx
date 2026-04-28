@@ -34,11 +34,28 @@ import { OfferShareModal } from "./components/OfferShareModal.jsx";
 import { PremiumBreakdown, PremiumPriceHero } from "./components/PremiumSummaryBlocks.jsx";
 
 const PROPERTY_TYPES = ["Rumah Tinggal", "Ruko", "Toko", "Kantor", "Kos-kosan"];
-const CONSTRUCTION_CLASSES = ["Kelas 1", "Kelas 2", "Kelas 3"];
 const OBJECT_TYPES = ["Bangunan", "Inventaris / Isi", "Stok", "Mesin / Peralatan"];
 const CUSTOMER_TYPES = ["Nasabah Perorangan", "Badan Usaha"];
 const OWNERSHIP_TYPES = ["Milik Sendiri", "Sewa", "Kontrak", "Lainnya"];
-const PROTECTION_OPTIONS = ["Tidak Ada", "APAR", "Hydrant", "Sprinkler", "APAR + Hydrant", "Lengkap"];
+const WALL_MATERIAL_OPTIONS = [
+  "Seluruhnya dari beton, bata, hebel, atau bahan tidak mudah terbakar",
+  "Ada bagian bahan mudah terbakar, maksimal sekitar 20% dari luas dinding",
+  "Bagian bahan mudah terbakar melebihi 20% dari luas dinding",
+];
+const STRUCTURE_MATERIAL_OPTIONS = [
+  "Beton, baja, atau bahan tidak mudah terbakar",
+  "Kayu",
+  "Material lain di luar ketentuan kelas 1 dan 2",
+];
+const ROOF_MATERIAL_OPTIONS = [
+  "Beton, metal, genteng, atau bahan tidak mudah terbakar",
+  "Sirap kayu keras",
+  "Bahan mudah terbakar lainnya",
+];
+const FLAMMABLE_MATERIAL_OPTIONS = ["Tidak ada", "Ada"];
+const FIRE_PROTECTION_CHOICES = ["Tidak Ada", "Ada"];
+const FIRE_PROTECTION_ITEMS = ["APAR", "Hydrant", "Sprinkler"];
+const FIRE_STATION_DISTANCE_OPTIONS = ["Kurang dari 5 km", "Lebih dari 5 km", "Tidak diketahui"];
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
 const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
 const ICON_MAP = { shield: Shield, waves: Waves, sparkles: Sparkles };
@@ -83,6 +100,27 @@ const OCCUPANCY_MAP = {
   Toko: ["Ritel / Toko", "Warung / Kelontong", "Minimarket", "Kantor"],
   Kantor: ["Kantor", "Ritel / Toko", "Hunian"],
   "Kos-kosan": ["Hunian", "Kos-kosan", "Kantor"],
+};
+const OCCUPANCY_CODE_MAP = {
+  "Rumah Tinggal|Hunian": "2971",
+  "Rumah Tinggal|Kantor": "2932",
+  "Rumah Tinggal|Ritel / Toko": "2941",
+  "Rumah Tinggal|Warung / Kelontong": "2941",
+  "Ruko|Hunian": "2971",
+  "Ruko|Ritel / Toko": "2941",
+  "Ruko|Kantor": "2932",
+  "Ruko|Warung / Kelontong": "2941",
+  "Ruko|Kos-kosan": "2971",
+  "Toko|Ritel / Toko": "2941",
+  "Toko|Warung / Kelontong": "2941",
+  "Toko|Minimarket": "2941",
+  "Toko|Kantor": "2932",
+  "Kantor|Kantor": "2932",
+  "Kantor|Ritel / Toko": "2941",
+  "Kantor|Hunian": "2971",
+  "Kos-kosan|Hunian": "2971",
+  "Kos-kosan|Kos-kosan": "2971",
+  "Kos-kosan|Kantor": "2932",
 };
 
 const PERSONAL_PRODUCTS = [
@@ -352,6 +390,56 @@ function isFloorRelevant(propertyType, occupancy) {
   if (propertyType === "Rumah Tinggal" || propertyType === "Kos-kosan") return false;
   if (occupancy === "Warung / Kelontong") return false;
   return propertyType === "Ruko" || propertyType === "Toko" || propertyType === "Kantor";
+}
+
+function deriveConstructionClass(form) {
+  const wall = form.wallMaterial || form.wall || "";
+  const structure = form.structureMaterial || form.structure || "";
+  const roof = form.roofMaterial || form.roof || "";
+  const flammable = form.flammableMaterial || form.flammable || "";
+  if (!wall || !structure || !roof || !flammable) return "";
+  if (
+    wall === "Bagian bahan mudah terbakar melebihi 20% dari luas dinding" ||
+    structure === "Material lain di luar ketentuan kelas 1 dan 2" ||
+    roof === "Bahan mudah terbakar lainnya" ||
+    flammable === "Ada"
+  ) {
+    return "Kelas 3";
+  }
+  if (
+    wall === "Ada bagian bahan mudah terbakar, maksimal sekitar 20% dari luas dinding" ||
+    structure === "Kayu" ||
+    roof === "Sirap kayu keras"
+  ) {
+    return "Kelas 2";
+  }
+  return "Kelas 1";
+}
+
+function getOccupancyCode(propertyType, occupancy) {
+  return OCCUPANCY_CODE_MAP[[propertyType, occupancy].filter(Boolean).join("|")] || "";
+}
+
+function selectedFireProtectionItems(uwForm) {
+  if (Array.isArray(uwForm.fireProtectionItems)) return uwForm.fireProtectionItems.filter((item) => FIRE_PROTECTION_ITEMS.includes(item));
+  if (uwForm.fireProtection === "Lengkap") return FIRE_PROTECTION_ITEMS;
+  if (uwForm.fireProtection === "APAR + Hydrant") return ["APAR", "Hydrant"];
+  if (FIRE_PROTECTION_ITEMS.includes(uwForm.fireProtection)) return [uwForm.fireProtection];
+  return [];
+}
+
+function formatFireProtection(uwForm) {
+  const choice = uwForm.fireProtectionChoice || (uwForm.fireProtection && uwForm.fireProtection !== "Tidak Ada" ? "Ada" : uwForm.fireProtection);
+  if (choice === "Tidak Ada") return "Tidak Ada";
+  const selectedItems = selectedFireProtectionItems(uwForm);
+  return selectedItems.length ? selectedItems.join(" + ") : "";
+}
+
+function hasValidFireProtection(uwForm) {
+  const choice = uwForm.fireProtectionChoice || (uwForm.fireProtection && uwForm.fireProtection !== "Tidak Ada" ? "Ada" : uwForm.fireProtection);
+  if (choice === "Tidak Ada") return true;
+  if (choice === "Ada") return selectedFireProtectionItems(uwForm).length > 0;
+  return false;
 }
 
 function formatDateInput(date) {
@@ -937,6 +1025,25 @@ function UnderwritingSections({
   const photoSectionSubtitle = external
     ? "Tambahkan foto properti agar penawaran dapat dilanjutkan ke versi final."
     : "Wajib diisi oleh petugas internal.";
+  const fireProtectionChoice = uwForm.fireProtectionChoice || (uwForm.fireProtection && uwForm.fireProtection !== "Tidak Ada" ? "Ada" : "Tidak Ada");
+  const fireProtectionItems = selectedFireProtectionItems(uwForm);
+  const setFireProtectionChoice = (value) => {
+    setUwField("fireProtectionChoice", value);
+    if (value === "Tidak Ada") {
+      setUwField("fireProtectionItems", []);
+      setUwField("fireProtection", "Tidak Ada");
+    } else {
+      setUwField("fireProtection", fireProtectionItems.length ? fireProtectionItems.join(" + ") : "");
+    }
+  };
+  const toggleFireProtectionItem = (item) => {
+    const nextItems = fireProtectionItems.includes(item)
+      ? fireProtectionItems.filter((value) => value !== item)
+      : fireProtectionItems.concat(item);
+    setUwField("fireProtectionChoice", "Ada");
+    setUwField("fireProtectionItems", nextItems);
+    setUwField("fireProtection", nextItems.join(" + "));
+  };
 
   return (
     <div className="space-y-5">
@@ -950,10 +1057,50 @@ function UnderwritingSections({
       <SectionCard title={propertySectionTitle}>
         <div className="grid gap-4 md:grid-cols-2">
           <div><FieldLabel label="Status kepemilikan bangunan / isi properti" required /><SelectInput value={uwForm.ownership} onChange={(value) => setUwField("ownership", value)} options={OWNERSHIP_TYPES} placeholder="Properti ini milik sendiri, sewa, atau lainnya?" /></div>
-          <div><FieldLabel label="Perlindungan kebakaran yang tersedia" required /><SelectInput value={uwForm.fireProtection} onChange={(value) => setUwField("fireProtection", value)} options={PROTECTION_OPTIONS} placeholder="Perlindungan kebakaran apa yang tersedia di lokasi?" /></div>
+          <div><FieldLabel label="Riwayat klaim 3 tahun terakhir" required /><SelectInput value={uwForm.claimHistory} onChange={(value) => setUwField("claimHistory", value)} options={CLAIM_HISTORY_OPTIONS} placeholder="Bagaimana riwayat klaim properti ini?" /></div>
         <div><FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" required /><TextInput type="date" value={uwForm.coverageStartDate} onChange={(value) => setUwField("coverageStartDate", value)} /></div>
         <div><FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" /><TextInput value={coverageEndDate} onChange={() => {}} placeholder="Otomatis 1 tahun" readOnly={true} /></div>
-          <div><FieldLabel label="Riwayat klaim 3 tahun terakhir" required /><SelectInput value={uwForm.claimHistory} onChange={(value) => setUwField("claimHistory", value)} options={CLAIM_HISTORY_OPTIONS} placeholder="Bagaimana riwayat klaim properti ini?" /></div>
+          <div className="md:col-span-2">
+            <FieldLabel label="Perlindungan kebakaran yang tersedia" required />
+            <div className="grid gap-3 sm:grid-cols-2">
+              {FIRE_PROTECTION_CHOICES.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setFireProtectionChoice(item)}
+                  className={cls(
+                    "flex min-h-[46px] items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition",
+                    fireProtectionChoice === item ? "border-[#0A4D82] bg-[#F8FBFE] text-[#0A4D82]" : "border-[#D5DDE6] bg-white text-slate-700 hover:bg-slate-50",
+                  )}
+                >
+                  <span>{item}</span>
+                  <span className={cls("flex h-5 w-5 items-center justify-center rounded border", fireProtectionChoice === item ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300 bg-white text-transparent")}>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  </span>
+                </button>
+              ))}
+            </div>
+            {fireProtectionChoice === "Ada" ? (
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                {FIRE_PROTECTION_ITEMS.map((item) => {
+                  const checked = fireProtectionItems.includes(item);
+                  return (
+                    <label
+                      key={item}
+                      className={cls(
+                        "flex min-h-[46px] cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 text-sm font-semibold",
+                        checked ? "border-[#0A4D82] bg-[#F8FBFE] text-[#0A4D82]" : "border-[#D5DDE6] bg-white text-slate-700",
+                      )}
+                    >
+                      <input type="checkbox" checked={checked} onChange={() => toggleFireProtectionItem(item)} className="h-5 w-5 rounded border-slate-300 text-[#0A4D82] focus:ring-[#0A4D82]" />
+                      <span>{item}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+          <div><FieldLabel label="Jarak kantor PMK terdekat" /><SelectInput value={uwForm.fireStationDistance} onChange={(value) => setUwField("fireStationDistance", value)} options={FIRE_STATION_DISTANCE_OPTIONS} placeholder="Pilih jarak kantor PMK terdekat." /></div>
         <div className="md:col-span-2"><button type="button" onClick={() => setExpandedRows((prev) => ({ ...prev, optionalUw: !prev.optionalUw }))} className="flex w-full items-center justify-between rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-4 py-3 text-left"><div><div className="text-[15px] font-semibold text-slate-900">Informasi Tambahan Properti</div><div className="text-sm text-slate-500">Opsional, tetapi membantu penilaian risiko.</div></div><ChevronDown className={cls("h-4 w-4 text-slate-500 transition", expandedRows.optionalUw && "rotate-180")} /></button>{expandedRows.optionalUw ? <div className="mt-3 grid gap-4 md:grid-cols-2"><div className="md:col-span-2"><FieldLabel label="Risiko di Sekitar Lokasi" /><TextAreaInput value={uwForm.surroundingRisk} onChange={(value) => setUwField("surroundingRisk", value)} placeholder="Contoh: berdekatan dengan pasar, bengkel, gudang bahan mudah terbakar, atau area padat penduduk" rows={3} /></div><div className="md:col-span-2"><FieldLabel label="Catatan Tambahan" /><TextAreaInput value={uwForm.additionalNotes} onChange={(value) => setUwField("additionalNotes", value)} placeholder="Tambahkan informasi penting lain yang perlu diketahui tim peninjau" rows={3} /></div></div> : null}</div>
         </div>
       </SectionCard>
@@ -998,13 +1145,15 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
   const phoneDisplay = form.phone || "-";
   const emailDisplay = form.email || "-";
+  const fireProtectionSummary = formatFireProtection(uwForm);
   const hasAnyAdvancedData = Boolean(
     uwForm.idNumber ||
       uwForm.picName ||
       uwForm.ownership ||
-      uwForm.fireProtection ||
+      fireProtectionSummary ||
       uwForm.coverageStartDate ||
       uwForm.claimHistory ||
+      uwForm.fireStationDistance ||
       uwForm.surroundingRisk ||
       uwForm.additionalNotes
   );
@@ -1345,10 +1494,11 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                     {hasAnyAdvancedData ? (
                       <div className="space-y-1">
                         <ProposalRow label="Status Kepemilikan Properti" value={uwForm.ownership || "-"} />
-                        <ProposalRow label="Proteksi Kebakaran" value={uwForm.fireProtection || "-"} />
+                        <ProposalRow label="Proteksi Kebakaran" value={fireProtectionSummary || "-"} />
                         <ProposalRow label="Jangka Waktu Pertanggungan (Mulai)" value={uwForm.coverageStartDate || "-"} />
                         <ProposalRow label="Jangka Waktu Pertanggungan (Akhir)" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
                         <ProposalRow label="Riwayat Klaim 3 Tahun Terakhir" value={uwForm.claimHistory || "-"} />
+                        <ProposalRow label="Jarak Kantor PMK Terdekat" value={uwForm.fireStationDistance || "-"} />
                         <ProposalRow label="Risiko di Sekitar Lokasi" value={uwForm.surroundingRisk || "-"} />
                         <ProposalRow label="Catatan Tambahan" value={uwForm.additionalNotes || "-"} />
                       </div>
@@ -1491,7 +1641,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   );
 }
 
-function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSelectMethod, onBack, onProceedPayment, paymentStatus, operatingRecord, isExpired, onSimulate, stepOneTitle = "Tinjau Penawaran" }) {
+function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSelectMethod, onBack, onProceedPayment, paymentStatus, operatingRecord, isExpired, onSimulate }) {
   const operatingBlockedMessage = paymentBlockMessage(operatingRecord);
   const canProceedPayment = canProceedToPaymentFromOperating(operatingRecord);
   return (
@@ -1509,7 +1659,7 @@ function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSe
         <div className="mx-auto max-w-[960px] px-4 pt-6 md:px-6">
           <div className="mx-auto rounded-[28px] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-6 rounded-[18px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-5 md:flex-row md:items-center md:gap-4 md:px-6">
-              <StepNode step="Langkah 1" title={stepOneTitle} subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
+              <StepNode step="Langkah 1" title="Tinjau Penawaran" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
               <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
               <StepNode step="Langkah 2" title="Data Lanjutan" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
               <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
@@ -1623,6 +1773,10 @@ export default function PropertyStepOneFrontendCompact({
     occupancy: "",
     locationSearch: "",
     constructionClass: "",
+    wallMaterial: "",
+    structureMaterial: "",
+    roofMaterial: "",
+    flammableMaterial: "",
     customerType: "Nasabah Perorangan",
   });
   useEffect(() => {
@@ -1654,6 +1808,9 @@ export default function PropertyStepOneFrontendCompact({
     ownership: "Milik Sendiri",
     coverageStartDate: today,
     fireProtection: "Tidak Ada",
+    fireProtectionChoice: "Tidak Ada",
+    fireProtectionItems: [],
+    fireStationDistance: "",
     claimHistory: "Tidak Ada",
     surroundingRisk: "",
     additionalNotes: "",
@@ -1759,6 +1916,10 @@ export default function PropertyStepOneFrontendCompact({
       propertyType: sharedOfferSnapshot.propertyType || prev.propertyType,
       occupancy: sharedOfferSnapshot.occupancy || prev.occupancy,
       constructionClass: sharedOfferSnapshot.constructionClass || prev.constructionClass,
+      wallMaterial: sharedOfferSnapshot.wallMaterial || prev.wallMaterial,
+      structureMaterial: sharedOfferSnapshot.structureMaterial || prev.structureMaterial,
+      roofMaterial: sharedOfferSnapshot.roofMaterial || prev.roofMaterial,
+      flammableMaterial: sharedOfferSnapshot.flammableMaterial || prev.flammableMaterial,
       locationSearch: sharedOfferSnapshot.locationSearch || prev.locationSearch,
     }));
     if (Array.isArray(sharedOfferSnapshot.objectRows) && sharedOfferSnapshot.objectRows.length) {
@@ -1789,7 +1950,14 @@ export default function PropertyStepOneFrontendCompact({
     if (!shouldShowFloorField) previousFloorFieldVisibleRef.current = false;
   }, [selectedGuarantees.earthquake, showFloorInput, quoted, externalView, form.propertyType, form.occupancy]);
 
-  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const setField = (key, value) =>
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (["wallMaterial", "structureMaterial", "roofMaterial", "flammableMaterial"].includes(key)) {
+        next.constructionClass = deriveConstructionClass(next);
+      }
+      return next;
+    });
   const setUwField = (key, value) => setUwForm((prev) => ({ ...prev, [key]: value }));
   const updateObjectRow = (id, patch) => setObjectRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   const addObjectRow = () => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }));
@@ -1804,6 +1972,8 @@ export default function PropertyStepOneFrontendCompact({
   const estimatedTotalNumber = hasQuoteBasis ? basePremiumNumber + additionalPremiumNumber + stampDutyNumber : 0;
   const customerName = selectedCustomer ? selectedCustomer.name : form.identity;
   const effectiveCustomerName = customerName || sharedCustomerName;
+  const occupancyCode = getOccupancyCode(form.propertyType, form.occupancy);
+  const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === form.constructionClass);
   const currentExternalTarget = internalStep === 2 ? "offer-final" : "offer-indicative";
   const referralCode = createReferralCode(sessionName, transactionAuthority.transactionId);
   const shareSnapshot = encodeShareSnapshot({
@@ -1814,6 +1984,10 @@ export default function PropertyStepOneFrontendCompact({
     propertyType: form.propertyType,
     occupancy: form.occupancy,
     constructionClass: form.constructionClass,
+    wallMaterial: form.wallMaterial,
+    structureMaterial: form.structureMaterial,
+    roofMaterial: form.roofMaterial,
+    flammableMaterial: form.flammableMaterial,
     locationSearch: form.locationSearch,
     objectRows,
     selectedGuarantees,
@@ -1846,13 +2020,14 @@ export default function PropertyStepOneFrontendCompact({
   const canAdvanceInternalStepOne = hasValidStepOneIdentity && hasValidStepOneContact && hasValidStepOneLocation && hasValidObjects && hasRequiredObjectNotes && hasRequiredFloorCount;
   const hasValidUwIdentity = !uwForm.idNumber.trim() || isValidIdNumber(form.customerType, uwForm.idNumber);
   const hasValidPicName = form.customerType !== "Badan Usaha" || Boolean(uwForm.picName.trim());
-  const hasValidUnderwriting = Boolean(uwForm.coverageStartDate) && Boolean(uwForm.ownership) && Boolean(uwForm.fireProtection) && Boolean(uwForm.claimHistory);
+  const hasValidUnderwriting = Boolean(uwForm.coverageStartDate) && Boolean(uwForm.ownership) && hasValidFireProtection(uwForm) && Boolean(uwForm.claimHistory);
   const hasCompleteUploads = hasRequiredUploads(uploads);
   const canAdvanceUnderwriting = hasValidUwIdentity && hasValidPicName && hasValidUnderwriting && hasCompleteUploads;
   const stepOnePendingItems = [];
   if (!hasValidStepOneIdentity) stepOnePendingItems.push("Isi nama nasabah atau pilih CIF.");
 if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone dan alamat email yang valid.");
   if (!hasValidStepOneLocation) stepOnePendingItems.push("Isi lokasi properti atau gunakan tombol lokasi cepat.");
+  if (!form.constructionClass) stepOnePendingItems.push("Lengkapi material bangunan untuk menentukan kelas konstruksi.");
   if (!hasValidObjects) stepOnePendingItems.push("Setiap objek harus punya nilai yang ingin dilindungi.");
   if (!hasRequiredObjectNotes) stepOnePendingItems.push("Objek jenis stok wajib dilengkapi dengan keterangan.");
   if (!hasRequiredFloorCount) stepOnePendingItems.push("Lengkapi jumlah lantai pada perluasan Risiko Gempa Bumi.");
@@ -1912,7 +2087,10 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
     setField("email", demoCustomer.email);
     setField("propertyType", PROPERTY_TYPES.includes("Rumah Tinggal") ? "Rumah Tinggal" : PROPERTY_TYPES[0]);
     setField("occupancy", "Hunian");
-    setField("constructionClass", "Kelas 1");
+    setField("wallMaterial", WALL_MATERIAL_OPTIONS[0]);
+    setField("structureMaterial", STRUCTURE_MATERIAL_OPTIONS[0]);
+    setField("roofMaterial", ROOF_MATERIAL_OPTIONS[0]);
+    setField("flammableMaterial", FLAMMABLE_MATERIAL_OPTIONS[0]);
     setField("locationSearch", demoAddress);
     setField("customerType", demoCustomer.type);
     setObjectRows([
@@ -1946,6 +2124,9 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
       ownership: "Milik Sendiri",
       coverageStartDate: selectedCoverageDate,
       fireProtection: "APAR + Hydrant",
+      fireProtectionChoice: "Ada",
+      fireProtectionItems: ["APAR", "Hydrant"],
+      fireStationDistance: "Kurang dari 5 km",
       claimHistory: "Tidak Ada",
       surroundingRisk: "",
       additionalNotes: "Isi otomatis prototype untuk verifikasi proses.",
@@ -2138,7 +2319,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
         version={externalDataOfferMeta.version}
         validUntil={externalDataOfferMeta.validUntil}
         statusLabel={externalDataOfferMeta.statusLabel}
-        guidanceText="Informasi yang Anda isi di halaman ini akan dipakai untuk menyiapkan tahap pembayaran."
+        guidanceText="Informasi yang Anda isi di halaman ini akan dipakai untuk menyiapkan penawaran final dan tahap pembayaran."
         summaryRows={[
           { label: activeVariant.primaryCoveragePremiumLabel, value: `Rp ${formatRupiah(basePremiumNumber)}` },
           ...(additionalPremiumNumber > 0 ? [{ label: "Premi Perluasan", value: `Rp ${formatRupiah(additionalPremiumNumber)}` }] : []),
@@ -2148,10 +2329,10 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
         canContinue={canAdvanceUnderwriting}
         continueLabel="Lanjut ke Pembayaran"
         onContinue={() => setExternalView("payment")}
-        onBack={() => setExternalView(sharedOfferSnapshot ? "offer-indicative" : "")}
+        onBack={() => setExternalView("offer-indicative")}
+        showSidebar={false}
         stepOneTitle={sharedOfferSnapshot ? "Tinjau Penawaran" : "Simulasi Premi"}
         bottomBackLabel={sharedOfferSnapshot ? "Kembali ke Tinjau Penawaran" : "Kembali ke Simulasi Premi"}
-        showSidebar={false}
         topActionLabel="Simulasi"
         onTopAction={fillStepTwoDemoData}
       >
@@ -2239,7 +2420,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                   <div className="flex flex-col gap-5 md:flex-row md:gap-5">
                     <StepNode step="Langkah 1" title="Simulasi Premi" subtitle={internalStep === 1 ? "Sedang diisi" : "Selesai"} active={internalStep === 1} done={internalStep > 1} icon={<Wallet className="h-4 w-4" />} onClick={() => { if (internalStep !== 1) setInternalStep(1); }} />
                     <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-                    <StepNode step="Langkah 2" title="Data Lanjutan" subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={!isInternalMode && internalStep > 2} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted) { if (isInternalMode) setInternalStep(2); else setExternalView("external-underwriting"); } }} />
+                    <StepNode step="Langkah 2" title="Data Lanjutan" subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={!isInternalMode && internalStep > 2} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted) setInternalStep(2); }} />
                     {!isInternalMode ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
                     {!isInternalMode ? (
                       <StepNode step="Langkah 3" title="Pembayaran" subtitle="Menunggu" active={false} done={false} icon={<Wallet className="h-4 w-4" />} />
@@ -2268,9 +2449,41 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                   <SectionCard title="Informasi Properti">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div><FieldLabel label="Jenis Bangunan" required /><SelectInput value={form.propertyType} onChange={(value) => setField("propertyType", value)} options={availablePropertyTypes} placeholder="Contoh: rumah tinggal, ruko, toko, atau kantor." /></div>
-                      <div><FieldLabel label="Penggunaan bangunan" required /><SelectInput value={form.occupancy} onChange={(value) => setField("occupancy", value)} options={OCCUPANCY_MAP[form.propertyType] || []} placeholder="Contoh: hunian, kantor, toko, atau kos-kosan." /></div>
-                      <div><FieldLabel label="Kelas Konstruksi" required /><div className="space-y-2"><SelectInput value={form.constructionClass} onChange={(value) => setField("constructionClass", value)} options={CONSTRUCTION_CLASSES} placeholder="Pilih sesuai material utama bangunan." /><button type="button" onClick={() => setShowConstructionGuide((prev) => !prev)} className="text-sm font-medium text-[#0A4D82] hover:underline">{showConstructionGuide ? "Sembunyikan panduan kelas konstruksi" : "Lihat panduan kelas konstruksi"}</button>{showConstructionGuide ? <div className="grid gap-2 rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] p-3">{CONSTRUCTION_GUIDE.map((item) => <div key={item.title} className="rounded-lg bg-white p-3 ring-1 ring-slate-200"><div className="text-[13px] font-semibold text-[#0A4D82]">{item.title}</div><div className="mt-1 text-[12px] leading-5 text-slate-600">{item.desc}</div></div>)}</div> : null}</div></div>
-                      <div><FieldLabel label="Alamat / Lokasi Properti" required /><TextInput value={form.locationSearch} onChange={(value) => setField("locationSearch", value)} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} /><div className="mt-2 flex flex-wrap gap-2.5"><button type="button" onClick={() => { setField("locationSearch", "Lokasi GPS tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Jl. Sudirman Kav. 44, Jakarta Selatan", source: "gps" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Ambil Lokasi Sekarang</button><button type="button" onClick={() => { setField("locationSearch", "Pin peta tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading", source: "map" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Pilih di Peta</button></div></div>
+                      <div className="md:col-span-2 md:max-w-[760px]">
+                        <div className={cls("grid gap-3", occupancyCode ? "md:grid-cols-[minmax(0,1fr)_180px]" : "md:grid-cols-1")}>
+                          <div className="min-w-0">
+                            <FieldLabel label="Penggunaan Properti yang Diasuransikan" required helpText="Pilih penggunaan untuk properti yang akan diasuransikan pada pengajuan ini." />
+                            <SelectInput value={form.occupancy} onChange={(value) => setField("occupancy", value)} options={OCCUPANCY_MAP[form.propertyType] || []} placeholder="Pilih penggunaan properti yang diasuransikan" />
+                          </div>
+                          {occupancyCode ? (
+                            <div className="self-end rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2.5">
+                              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">Kode Okupasi</div>
+                              <div className="mt-1 text-sm font-semibold text-[#0A4D82]">{occupancyCode}</div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="md:col-span-2">
+                        <div className="rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <div className="text-[15px] font-bold text-slate-900">Material Bangunan</div>
+                              <div className="mt-1 text-sm text-slate-500">Kelas konstruksi dihitung otomatis dari material utama bangunan.</div>
+                            </div>
+                            {form.constructionClass ? <div className="rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#0A4D82] ring-1 ring-[#D5DDE6]">{form.constructionClass}</div> : null}
+                          </div>
+                          <div className="mt-3 grid gap-3 md:grid-cols-2">
+                            <div><FieldLabel label="Dinding utama" required /><SelectInput value={form.wallMaterial} onChange={(value) => setField("wallMaterial", value)} options={WALL_MATERIAL_OPTIONS} placeholder="Dinding utamanya terbuat dari apa?" /></div>
+                            <div><FieldLabel label="Struktur / lantai utama" required /><SelectInput value={form.structureMaterial} onChange={(value) => setField("structureMaterial", value)} options={STRUCTURE_MATERIAL_OPTIONS} placeholder="Struktur atau lantai utamanya terbuat dari apa?" /></div>
+                            <div><FieldLabel label="Atap" required /><SelectInput value={form.roofMaterial} onChange={(value) => setField("roofMaterial", value)} options={ROOF_MATERIAL_OPTIONS} placeholder="Penutup atapnya terbuat dari apa?" /></div>
+                            <div><FieldLabel label="Bagian mudah terbakar lainnya?" required /><SelectInput value={form.flammableMaterial} onChange={(value) => setField("flammableMaterial", value)} options={FLAMMABLE_MATERIAL_OPTIONS} placeholder="Apakah ada bagian utama bangunan lain yang mudah terbakar?" /></div>
+                          </div>
+                          {constructionInfo ? <div className="mt-3 rounded-[12px] border border-[#D5DDE6] bg-white px-3 py-2.5 text-[12px] leading-5 text-slate-600"><span className="font-semibold text-slate-900">{constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
+                          <button type="button" onClick={() => setShowConstructionGuide((prev) => !prev)} className="mt-3 text-sm font-medium text-[#0A4D82] hover:underline">{showConstructionGuide ? "Sembunyikan panduan kelas konstruksi" : "Lihat panduan kelas konstruksi"}</button>
+                          {showConstructionGuide ? <div className="mt-3 grid gap-2 rounded-xl border border-[#D5DDE6] bg-white p-3">{CONSTRUCTION_GUIDE.map((item) => <div key={item.title} className="rounded-lg bg-[#F8FBFE] p-3 ring-1 ring-slate-200"><div className="text-[13px] font-semibold text-[#0A4D82]">{item.title}</div><div className="mt-1 text-[12px] leading-5 text-slate-600">{item.desc}</div></div>)}</div> : null}
+                        </div>
+                      </div>
+                      <div className="md:col-span-2"><FieldLabel label="Alamat / Lokasi Properti" required /><TextInput value={form.locationSearch} onChange={(value) => setField("locationSearch", value)} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} /><div className="mt-2 flex flex-wrap gap-2.5"><button type="button" onClick={() => { setField("locationSearch", "Lokasi GPS tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Jl. Sudirman Kav. 44, Jakarta Selatan", source: "gps" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Ambil Lokasi Sekarang</button><button type="button" onClick={() => { setField("locationSearch", "Pin peta tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading", source: "map" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Pilih di Peta</button></div></div>
                     </div>
                     <div className="mt-4 rounded-xl border border-[#D5DDE6] bg-[#FAFBFC] p-4"><div className="flex items-center justify-between gap-3"><div className="text-[15px] font-bold text-slate-900">Rincian Properti</div><button type="button" onClick={() => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }))} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-4 w-4" />Tambah Objek</button></div><div className="mt-3 space-y-2.5">{objectRows.map((row) => <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3"><div className="grid gap-2.5 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-center"><SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" /><CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" /><TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} /><button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek"><Trash2 className="h-4 w-4" /></button></div></div>)}</div><div className="mt-3 rounded-[10px] bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200"><div className="flex flex-col gap-1.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><span>Total Nilai yang Dilindungi</span><span className="break-words text-left text-[18px] font-bold text-[#E8A436] sm:text-right">Rp {formatRupiah(totalValue)}</span></div></div></div>
                   </SectionCard>
@@ -2355,11 +2568,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                       <button
                         type="button"
                         disabled={!canAdvanceInternalStepOne}
-                        onClick={() => {
-                          if (isInternalMode) setInternalStep(2);
-                          else setExternalView("external-underwriting");
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }}
+                        onClick={() => { setInternalStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                         className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                       >
                         Isi Data Lanjutan
