@@ -1415,7 +1415,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
         <div className="space-y-3">
           <SectionCard
             title="Ringkasan Penawaran Anda"
-            subtitle="Rangkuman utama penawaran yang sedang Anda tinjau."
+            subtitle={`Ringkasan ini disusun dari data SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada ${activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}.`}
             headerAlign="center"
           >
             <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
