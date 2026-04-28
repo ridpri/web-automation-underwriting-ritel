@@ -2874,7 +2874,7 @@ export default function PropertyStepOneFrontendCompact({
                   {!isInternalMode ? (
                     <SectionCard
                       title="Simulasi Premi"
-                      subtitle="Data yang Anda isi pada tahap simulasi ini merupakan bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar simulasi premi serta langkah berikutnya."
+                      subtitle="Data simulasi ini disusun sebagai bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta menjadi dasar simulasi premi dan langkah berikutnya."
                       headerAlign="center"
                       heroHeader
                     />
@@ -3061,7 +3061,7 @@ export default function PropertyStepOneFrontendCompact({
                 {!isInternalMode ? (
                   <SectionCard
                     title="Data Lanjutan"
-                    subtitle="Data yang Anda isi pada halaman ini merupakan bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar ringkasan final sebelum pembayaran serta penerbitan polis."
+                    subtitle="Data lanjutan ini disusun sebagai bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta menjadi dasar ringkasan final sebelum pembayaran dan penerbitan polis."
                     headerAlign="center"
                     heroHeader
                   />

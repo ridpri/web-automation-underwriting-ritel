@@ -3190,8 +3190,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               <div className="min-w-0 flex-1 text-center">
                 <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Data Lanjutan</div>
                 <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
-                  Data yang Anda isi pada halaman ini merupakan bagian dari SPAU (Surat Permohonan Asuransi
-                  Umum) elektronik dan menjadi dasar ringkasan final sebelum pembayaran serta penerbitan polis.
+                  Data lanjutan ini disusun sebagai bagian dari SPAU (Surat Permohonan Asuransi
+                  Umum) elektronik yang Anda isi dan lengkapi, serta menjadi dasar ringkasan final sebelum pembayaran dan penerbitan polis.
                 </div>
               </div>
             </div>
@@ -4260,7 +4260,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         <div className="text-center">
                           <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Simulasi Premi</div>
                           <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
-                            Data yang Anda isi pada tahap simulasi ini merupakan bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar simulasi premi serta langkah berikutnya.
+                            Data simulasi ini disusun sebagai bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta menjadi dasar simulasi premi dan langkah berikutnya.
                           </div>
                         </div>
                       </ActionCard>

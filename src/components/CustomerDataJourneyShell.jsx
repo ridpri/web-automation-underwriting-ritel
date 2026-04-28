@@ -198,7 +198,7 @@ export function CustomerDataJourneyShell({
                   <div className="min-w-0 flex-1 text-center">
                     <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Data Lanjutan</div>
                     <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
-                      {contentDescription || "Data yang Anda isi pada halaman ini merupakan bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar ringkasan final sebelum pembayaran serta penerbitan polis."}
+                      {contentDescription || "Data lanjutan ini disusun sebagai bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta menjadi dasar ringkasan final sebelum pembayaran dan penerbitan polis."}
                     </div>
                   </div>
                 </div>
