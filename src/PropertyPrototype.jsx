@@ -2871,6 +2871,15 @@ export default function PropertyStepOneFrontendCompact({
             <div className={cls("mx-auto px-4 md:px-6", showStepOneSummarySidebar ? "max-w-[1280px]" : "max-w-4xl")}>
               <div className={cls("mt-6 grid items-start gap-5", showStepOneSummarySidebar ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
                 <div className="space-y-5">
+                  {!isInternalMode ? (
+                    <SectionCard
+                      title="Simulasi Premi"
+                      subtitle="Data yang Anda isi pada tahap simulasi ini merupakan bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar simulasi premi serta langkah berikutnya."
+                      headerAlign="center"
+                      heroHeader
+                    />
+                  ) : null}
+
                   <SectionCard title="Informasi Calon Pemegang Polis">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="md:col-span-2"><FieldLabel label="Nama Calon Pemegang Polis" required /><div className="relative"><TextInput value={form.identity} onChange={(value) => { setSelectedCustomer(null); setField("identity", value); }} placeholder="Masukkan nama calon pemegang polis atau kode CIF" icon={<User className="h-4 w-4" />} />{form.identity && customerSuggestions.length > 0 && !selectedCustomer ? <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">{customerSuggestions.map((item) => <button key={item.cif} type="button" onClick={() => { setSelectedCustomer(item); setForm((prev) => ({ ...prev, identity: item.name + " - " + item.cif, customerType: item.type, phone: item.phone || prev.phone, email: item.email || prev.email })); }} className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"><div><div className="font-semibold text-slate-900">{item.name}</div><div className="text-xs text-slate-500">{item.type}</div></div><div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div></button>)}</div> : null}</div>{selectedCustomer ? <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div> : form.identity ? <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div> : null}</div>
@@ -3049,6 +3058,15 @@ export default function PropertyStepOneFrontendCompact({
           ) : (
             <div className="mx-auto mt-6 max-w-4xl px-4 md:px-6">
               <div className="space-y-5">
+                {!isInternalMode ? (
+                  <SectionCard
+                    title="Data Lanjutan"
+                    subtitle="Data yang Anda isi pada halaman ini merupakan bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik dan menjadi dasar ringkasan final sebelum pembayaran serta penerbitan polis."
+                    headerAlign="center"
+                    heroHeader
+                  />
+                ) : null}
+
                 <UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} objectRows={objectRows} uwForm={uwForm} setUwField={setUwField} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} />
                 <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">
                   <div className="grid gap-3 md:grid-cols-2">
