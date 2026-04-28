@@ -1130,7 +1130,7 @@ function UnderwritingSections({
   const insuredName = selectedCustomer ? selectedCustomer.name : form.identity;
   const coverageEndDate = calculateCoverageEnd(uwForm.coverageStartDate);
   const customerSectionTitle = "Informasi Calon Pemegang Polis";
-  const propertySectionTitle = external ? "Lengkapi Informasi Properti" : "Informasi Properti Lanjutan";
+  const propertySectionTitle = "Informasi Properti";
   const photoSectionTitle = external ? "Lampiran Foto Properti" : "Foto Properti";
   const photoSectionSubtitle = external
     ? "Tambahkan foto properti agar penawaran dapat dilanjutkan ke versi final."
@@ -1474,15 +1474,15 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
                           <SelectInput value={occupancy} onChange={setOccupancy} options={OCCUPANCY_MAP[propertyType] || []} placeholder="Pilih penggunaan properti" />
                         </div>
                         <div>
-                          <FieldLabel label="Dinding utama" required />
+                          <FieldLabel label="Dinding Utama" required />
                           <SelectInput value={form.wallMaterial} onChange={(value) => setFormField("wallMaterial", value)} options={WALL_MATERIAL_OPTIONS} placeholder="Pilih material dinding" />
                         </div>
                         <div>
-                          <FieldLabel label="Struktur / lantai utama" required />
+                          <FieldLabel label="Struktur / Lantai Utama" required />
                           <SelectInput value={form.structureMaterial} onChange={(value) => setFormField("structureMaterial", value)} options={STRUCTURE_MATERIAL_OPTIONS} placeholder="Pilih material struktur" />
                         </div>
                         <div>
-                          <FieldLabel label="Atap" required />
+                          <FieldLabel label="Atap Bangunan" required />
                           <SelectInput value={form.roofMaterial} onChange={(value) => setFormField("roofMaterial", value)} options={ROOF_MATERIAL_OPTIONS} placeholder="Pilih material atap" />
                         </div>
                         <div>
@@ -1526,7 +1526,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
                   ) : (
                     <div className="space-y-2.5">
                       <OfferSummaryKeyValue label="Jenis Bangunan" value={propertyType} />
-                      <OfferSummaryKeyValue label="Penggunaan Bangunan" value={occupancy} />
+                      <OfferSummaryKeyValue label="Penggunaan Properti yang Diasuransikan" value={occupancy} />
                       <OfferSummaryKeyValue
                         label="Objek yang Dijamin"
                         emphasize
@@ -2508,9 +2508,9 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                             {form.constructionClass ? <div className="rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#0A4D82] ring-1 ring-[#D5DDE6]">{form.constructionClass}</div> : null}
                           </div>
                           <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            <div><FieldLabel label="Dinding utama" required /><SelectInput value={form.wallMaterial} onChange={(value) => setField("wallMaterial", value)} options={WALL_MATERIAL_OPTIONS} placeholder="Dinding utamanya terbuat dari apa?" /></div>
-                            <div><FieldLabel label="Struktur / lantai utama" required /><SelectInput value={form.structureMaterial} onChange={(value) => setField("structureMaterial", value)} options={STRUCTURE_MATERIAL_OPTIONS} placeholder="Struktur atau lantai utamanya terbuat dari apa?" /></div>
-                            <div><FieldLabel label="Atap" required /><SelectInput value={form.roofMaterial} onChange={(value) => setField("roofMaterial", value)} options={ROOF_MATERIAL_OPTIONS} placeholder="Penutup atapnya terbuat dari apa?" /></div>
+                            <div><FieldLabel label="Dinding Utama" required /><SelectInput value={form.wallMaterial} onChange={(value) => setField("wallMaterial", value)} options={WALL_MATERIAL_OPTIONS} placeholder="Pilih material dinding utama" /></div>
+                            <div><FieldLabel label="Struktur / Lantai Utama" required /><SelectInput value={form.structureMaterial} onChange={(value) => setField("structureMaterial", value)} options={STRUCTURE_MATERIAL_OPTIONS} placeholder="Struktur atau lantai utamanya terbuat dari apa?" /></div>
+                            <div><FieldLabel label="Atap Bangunan" required /><SelectInput value={form.roofMaterial} onChange={(value) => setField("roofMaterial", value)} options={ROOF_MATERIAL_OPTIONS} placeholder="Penutup atapnya terbuat dari apa?" /></div>
                             <div><FieldLabel label="Bagian mudah terbakar lainnya?" required /><SelectInput value={form.flammableMaterial} onChange={(value) => setField("flammableMaterial", value)} options={FLAMMABLE_MATERIAL_OPTIONS} placeholder="Apakah ada bagian utama bangunan lain yang mudah terbakar?" /></div>
                           </div>
                           {constructionInfo ? <div className="mt-3 rounded-[12px] border border-[#D5DDE6] bg-white px-3 py-2.5 text-[12px] leading-5 text-slate-600"><span className="font-semibold text-slate-900">{constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
@@ -2518,9 +2518,9 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                           {showConstructionGuide ? <div className="mt-3 grid gap-2 rounded-xl border border-[#D5DDE6] bg-white p-3">{CONSTRUCTION_GUIDE.map((item) => <div key={item.title} className="rounded-lg bg-[#F8FBFE] p-3 ring-1 ring-slate-200"><div className="text-[13px] font-semibold text-[#0A4D82]">{item.title}</div><div className="mt-1 text-[12px] leading-5 text-slate-600">{item.desc}</div></div>)}</div> : null}
                         </div>
                       </div>
-                      <div className="md:col-span-2"><FieldLabel label="Alamat / Lokasi Properti" required /><TextInput value={form.locationSearch} onChange={(value) => setField("locationSearch", value)} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} /><div className="mt-2 flex flex-wrap gap-2.5"><button type="button" onClick={() => { setField("locationSearch", "Lokasi GPS tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Jl. Sudirman Kav. 44, Jakarta Selatan", source: "gps" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Ambil Lokasi Sekarang</button><button type="button" onClick={() => { setField("locationSearch", "Pin peta tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading", source: "map" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Pilih di Peta</button></div></div>
+                      <div className="md:col-span-2"><FieldLabel label="Alamat / Lokasi Objek" required /><TextInput value={form.locationSearch} onChange={(value) => setField("locationSearch", value)} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} /><div className="mt-2 flex flex-wrap gap-2.5"><button type="button" onClick={() => { setField("locationSearch", "Lokasi GPS tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Jl. Sudirman Kav. 44, Jakarta Selatan", source: "gps" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Ambil Lokasi Sekarang</button><button type="button" onClick={() => { setField("locationSearch", "Pin peta tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading", source: "map" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Pilih di Peta</button></div></div>
                     </div>
-                    <div className="mt-4 rounded-xl border border-[#D5DDE6] bg-[#FAFBFC] p-4"><div className="flex items-center justify-between gap-3"><div className="text-[15px] font-bold text-slate-900">Rincian Properti</div><button type="button" onClick={() => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }))} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-4 w-4" />Tambah Objek</button></div><div className="mt-3 space-y-2.5">{objectRows.map((row) => <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3"><div className="grid gap-2.5 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-center"><SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" /><CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" /><TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} /><button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek"><Trash2 className="h-4 w-4" /></button></div></div>)}</div><div className="mt-3 rounded-[10px] bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200"><div className="flex flex-col gap-1.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><span>Total Nilai yang Dilindungi</span><span className="break-words text-left text-[18px] font-bold text-[#E8A436] sm:text-right">Rp {formatRupiah(totalValue)}</span></div></div></div>
+                    <div className="mt-4 rounded-xl border border-[#D5DDE6] bg-[#FAFBFC] p-4"><div className="flex items-center justify-between gap-3"><div className="text-[15px] font-bold text-slate-900">Rincian Properti</div><button type="button" onClick={() => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }))} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-4 w-4" />Tambah Objek</button></div><div className="mt-3 space-y-2.5">{objectRows.map((row) => <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3"><div className="grid gap-2.5 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-center"><SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" /><CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" /><TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} /><button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek"><Trash2 className="h-4 w-4" /></button></div></div>)}</div><div className="mt-3 rounded-[10px] bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200"><div className="flex flex-col gap-1.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><span>Total Nilai Pertanggungan</span><span className="break-words text-left text-[18px] font-bold text-[#E8A436] sm:text-right">Rp {formatRupiah(totalValue)}</span></div></div></div>
                   </SectionCard>
 
                   {!quoted ? (
@@ -2615,7 +2615,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                   <div className="border-t border-white/15 pt-3">
                     <SummaryRow label={selectedCustomer || isDigitsOnly(form.identity.trim()) ? "Kode CIF / Nama" : "Nama Calon Pemegang Polis"} value={form.identity || "-"} />
                     <SummaryRow label="Jenis Bangunan" value={form.propertyType} />
-                    <SummaryRow label="Penggunaan bangunan" value={form.occupancy} />
+                    <SummaryRow label="Penggunaan Properti yang Diasuransikan" value={form.occupancy} />
                     <SummaryRow label="Kelas Konstruksi" value={form.constructionClass} />
                   </div>
                   <div className="border-t border-white/15 pt-3">
