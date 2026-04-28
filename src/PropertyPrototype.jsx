@@ -7,6 +7,7 @@ import {
   Building2,
   Camera,
   CameraOff,
+  Check,
   CheckCircle2,
   ChevronDown,
   FileText,
@@ -663,6 +664,50 @@ function SummaryGuaranteeItem({ title, icon, compact = false }) {
   );
 }
 
+function PropertyGuaranteeDetailCard({ title, icon, premium, detail, deductible, coverageAmount }) {
+  const [expanded, setExpanded] = useState(false);
+  const IconComponent = icon || Shield;
+  return (
+    <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
+      <button type="button" onClick={() => setExpanded((prev) => !prev)} className="flex w-full items-start justify-between gap-3 px-3.5 py-3 text-left">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-[#0A4D82]">
+            {React.createElement(IconComponent, { className: "h-4 w-4 shrink-0" })}
+            <div className="text-[14px] font-medium leading-[1.35] text-slate-900">{title}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="whitespace-nowrap text-[12px] font-medium text-slate-600">{premium}</div>
+          <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
+        </div>
+      </button>
+      {expanded ? (
+        <div className="border-t border-[#D6E0EA] px-3.5 py-3">
+          {coverageAmount ? (
+            <div className="mb-2 text-[12px] leading-5 text-slate-600">
+              <span className="font-medium text-slate-700">Nilai pertanggungan: </span>
+              <span>{coverageAmount}</span>
+            </div>
+          ) : null}
+          <div className="whitespace-pre-line text-[12.5px] leading-5 text-slate-700">{detail}</div>
+          {deductible ? (
+            <div className="mt-2 text-[12px] leading-5 text-slate-600">
+              {deductibleIsDirectText(deductible) ? (
+                <span>{String(deductible || "")}</span>
+              ) : (
+                <>
+                  <span className="font-medium text-slate-700">Risiko sendiri saat klaim: </span>
+                  <span>{String(deductible || "")}</span>
+                </>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function OfferSummaryKeyValue({ label, value, emphasize = false }) {
   const normalizedLabel = String(label || "").replace(/:\s*$/, "");
   const isEmptyString = typeof value === "string" && (!value.trim() || value.trim() === "-" || value.trim().toLowerCase() === "belum dipilih");
@@ -684,6 +729,69 @@ function OfferSummaryKeyValue({ label, value, emphasize = false }) {
 function deductibleIsDirectText(value) {
   return ["tanpa biaya sendiri", "tidak dikenakan risiko sendiri", "tidak ada risiko sendiri"].some((token) =>
     String(value || "").trim().toLowerCase().startsWith(token)
+  );
+}
+
+function PreviewPropertyGuaranteeOption({ title, icon, premium, checked, expanded, onToggleChecked, onToggleExpand, detail, deductible, coverageAmount }) {
+  const IconComponent = icon || Shield;
+  return (
+    <div
+      className={cls(
+        "group relative overflow-hidden rounded-xl border px-3 py-2.5 transition-all duration-200",
+        checked
+          ? "border-[#AFCFEA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4FAFF_100%)] shadow-[0_12px_26px_rgba(10,77,130,0.10)]"
+          : "border-slate-200 bg-white hover:border-[#C8D9EA] hover:bg-[#FBFDFF] hover:shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
+      )}
+    >
+      {checked ? <div className="absolute inset-y-0 left-0 w-1 rounded-l-xl bg-[#0A4D82]" /> : null}
+      <div className={cls("flex items-start gap-2.5", checked && "pl-1")}>
+        <button
+          type="button"
+          aria-pressed={checked}
+          onClick={onToggleChecked}
+          className={cls(
+            "mt-0.5 flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-md border transition-all duration-200",
+            checked
+              ? "border-[#0A4D82] bg-[#0A4D82] text-white shadow-[0_6px_12px_rgba(10,77,130,0.22)]"
+              : "border-[#CAD6E3] bg-white text-transparent hover:border-[#9DB8D4]"
+          )}
+        >
+          <Check className="h-3.5 w-3.5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <button type="button" onClick={onToggleChecked} className="min-w-0 flex-1 text-left">
+              <SummaryGuaranteeItem title={title} icon={IconComponent} compact />
+            </button>
+            <button type="button" onClick={onToggleExpand} className="flex shrink-0 items-center gap-2 text-left">
+              <span className={cls("whitespace-nowrap text-[12px] font-medium", checked ? "text-slate-600" : "text-slate-500")}>
+                {premium}
+              </span>
+              <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition duration-200", expanded && "rotate-180")} />
+            </button>
+          </div>
+          {expanded && coverageAmount ? (
+            <div className="mt-1.5 pl-[30px] text-[12px] leading-5 text-slate-600">
+              <span className="font-medium text-slate-700">Nilai pertanggungan: </span>
+              <span>{coverageAmount}</span>
+            </div>
+          ) : null}
+          {expanded ? <div className={cls("text-[12.5px] leading-5 text-slate-600", coverageAmount ? "mt-1 pl-[30px]" : "mt-1.5 pl-[30px]")}>{detail}</div> : null}
+          {expanded && deductible ? (
+            <div className="mt-2 pl-[30px] text-[12px] leading-5 text-slate-600">
+              {deductibleIsDirectText(deductible) ? (
+                <span>{String(deductible || "")}</span>
+              ) : (
+                <>
+                  <span className="font-medium text-slate-700">Risiko sendiri saat klaim: </span>
+                  <span>{String(deductible || "")}</span>
+                </>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1175,11 +1283,12 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   const objectTypeSummary = objectRows.length
     ? Array.from(new Set(objectRows.map((row) => String(row.type || "").trim()).filter(Boolean))).join(", ")
     : "Belum ada objek yang dipilih";
-  const selectedExtensionSummaryItems = selectedExtensions.map((item) => item.title).filter(Boolean);
-  const guaranteeSummaryVisualItems = selectedExtensionSummaryItems.map((title) => {
-    const source = extensionOptions.find((item) => item.title === title);
-    return { title, icon: source?.icon || Shield };
-  });
+  const mainCoverageDeductible = constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther;
+  const selectedExtensionDetailItems = selectedExtensions.map((item) => ({
+    ...item,
+    premium: "Rp " + formatRupiah(Math.round(totalValue * item.rate)),
+    deductible: item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible,
+  }));
   const constructionSummaryLabel = constructionClass || "Belum dipilih";
   const showAdvancedAccordions = !isIndicative && (hasAnyAdvancedData || uploads.frontView || uploads.sideRightView || uploads.sideLeftView);
   const guaranteeSectionSubtitle = isIndicative
@@ -1362,30 +1471,52 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
                     </div>
                     <div className="space-y-2">
                       <div className="text-[14px] font-medium text-slate-600">Risiko yang dijamin</div>
-                      <div className="rounded-xl border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#F7FAFD_100%)] px-4 py-3">
-                        <SummaryGuaranteeItem title={activeVariant.primaryCoverageTitle} icon={Flame} />
-                        <div className="mt-2 text-[13px] leading-5 text-slate-600">{activeVariant.primaryCoverageDescription}</div>
-                        <div className="mt-2 text-[12px] font-semibold text-[#0A4D82]">Premi: Rp {formatRupiah(basePremium)}</div>
-                        <div className="mt-1 text-[12px] leading-5 text-slate-500">
-                          Risiko sendiri saat klaim: {constructionClass === "Kelas 1" ? activeVariant.primaryCoverageDeductibleClassOne : activeVariant.primaryCoverageDeductibleOther}
-                        </div>
-                      </div>
+                      <PropertyGuaranteeDetailCard
+                        title={activeVariant.primaryCoverageTitle}
+                        icon={Flame}
+                        premium={"Rp " + formatRupiah(basePremium)}
+                        detail={activeVariant.primaryCoverageDescription}
+                        deductible={mainCoverageDeductible}
+                      />
                     </div>
                     <div className="space-y-2">
                       <div className="text-[14px] font-medium text-slate-600">Perluasan Jaminan</div>
-                      {guaranteeSummaryVisualItems.length ? (
-                        <div className="grid gap-2 md:grid-cols-2">
-                          {selectedExtensions.map((item) => (
-                            <div key={item.key} className="rounded-xl border border-[#D8E1EA] bg-white px-4 py-3">
-                              <SummaryGuaranteeItem title={item.title} icon={item.icon || Shield} compact />
-                              {item.detail ? <div className="mt-2 text-[12px] leading-5 text-slate-600">{item.detail}</div> : null}
-                              <div className="mt-2 text-[12px] font-semibold text-[#0A4D82]">Premi: Rp {formatRupiah(Math.round(totalValue * item.rate))}</div>
-                            </div>
+                      {isIndicative ? (
+                        <div className="space-y-2">
+                          {extensionOptions.map((item) => {
+                            const checked = !!selectedGuarantees[item.key];
+                            const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible;
+                            const toggleChecked = isInternalPreview ? undefined : () => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }));
+                            return (
+                              <PreviewPropertyGuaranteeOption
+                                key={item.key}
+                                title={item.title}
+                                icon={item.icon}
+                                premium={"Rp " + formatRupiah(Math.round(totalValue * item.rate))}
+                                checked={checked}
+                                expanded={!!expandedRows[item.key]}
+                                onToggleChecked={toggleChecked || (() => {})}
+                                onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                                detail={item.detail}
+                                deductible={deductibleValue}
+                              />
+                            );
+                          })}
+                        </div>
+                      ) : selectedExtensionDetailItems.length ? (
+                        <div className="space-y-2">
+                          {selectedExtensionDetailItems.map((item) => (
+                            <PropertyGuaranteeDetailCard
+                              key={item.key}
+                              title={item.title}
+                              icon={item.icon || Shield}
+                              premium={item.premium}
+                              detail={item.detail}
+                              deductible={item.deductible}
+                            />
                           ))}
                         </div>
-                      ) : (
-                        <div className="rounded-xl border border-dashed border-[#CAD6E3] bg-white px-4 py-3 text-[13px] text-slate-500">Belum ada perluasan jaminan yang dipilih.</div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </OfferSummarySection>
