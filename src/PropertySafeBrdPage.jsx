@@ -82,7 +82,7 @@ export default function PropertySafeBrdPage({ onBack }) {
   const businessRules = [
     ["BR-01", "Data minimum draft", "Nama tertanggung, kontak, alamat objek, okupasi, nilai pertanggungan wajib ada sebelum indikasi."],
     ["BR-02", "Link indikasi", "Link indikasi memiliki expiry dan tidak boleh dipakai jika status transaksi berubah ke invalid."],
-    ["BR-03", "Material change", "Perubahan okupasi/jenis bangunan/nilai signifikan memicu repricing dan potensi review."],
+    ["BR-03", "Material change", "Perubahan okupasi/nilai signifikan memicu repricing dan potensi review."],
     ["BR-04", "Version control", "Satu transaksi hanya boleh punya satu final quote aktif pada satu waktu."],
     ["BR-05", "Consent", "Consent wajib bernilai true sebelum tombol bayar diaktifkan."],
     ["BR-06", "Foto wajib", "Foto objek wajib lengkap; foto non-live tertentu dapat memicu verifikasi manual."],
@@ -108,7 +108,7 @@ export default function PropertySafeBrdPage({ onBack }) {
   const detailedFields = [
     ["Data Tertanggung", "Nama, jenis customer, kontak, email, NPWP, PIC", "Nama & minimal satu kontak", "Format kontak, NPWP sesuai tipe customer"],
     ["Data Lokasi", "Alamat, kota, detail area, contact person lokasi", "Alamat + kota + detail lokasi", "Konsistensi alamat dan cakupan wilayah"],
-    ["Data Obyek", "Jenis bangunan, okupasi, konstruksi, nilai pertanggungan", "Jenis, okupasi, konstruksi, nilai", "Trigger material change + repricing"],
+    ["Data Obyek", "Okupasi, konstruksi, nilai pertanggungan", "Okupasi, konstruksi, nilai", "Trigger material change + repricing"],
     ["Dokumentasi Foto", "Foto fasad, interior, titik risiko", "Foto wajib sesuai checklist", "Live/non-live marker + quality check"],
     ["Data Underwriting", "Riwayat risiko, proteksi, occupancy detail", "Sesuai rule produk", "Trigger review sesuai matriks"],
     ["Consent & Persetujuan", "Consent pemrosesan data dan persetujuan quote", "Consent true", "Hard gate sebelum payment"],

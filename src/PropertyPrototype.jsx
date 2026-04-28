@@ -108,7 +108,7 @@ const CONSTRUCTION_GUIDE = [
 const OCCUPANCY_MAP = {
   "Rumah Tinggal": ["Hunian", "Kantor", "Ritel / Toko", "Warung / Kelontong"],
   Ruko: ["Hunian", "Ritel / Toko", "Kantor", "Warung / Kelontong", "Kos-kosan"],
-  Toko: ["Ritel / Toko", "Warung / Kelontong", "Minimarket", "Kantor"],
+  Toko: ["Ritel / Toko", "Warung / Kelontong", "Minimarket", "Tenda makanan", "Kantor"],
   Kantor: ["Kantor", "Ritel / Toko", "Hunian"],
   "Kos-kosan": ["Hunian", "Kos-kosan", "Kantor"],
 };
@@ -125,6 +125,7 @@ const OCCUPANCY_CODE_MAP = {
   "Toko|Ritel / Toko": "2941",
   "Toko|Warung / Kelontong": "2941",
   "Toko|Minimarket": "2941",
+  "Toko|Tenda makanan": "2941",
   "Toko|Kantor": "2932",
   "Kantor|Kantor": "2932",
   "Kantor|Ritel / Toko": "2941",
@@ -133,6 +134,16 @@ const OCCUPANCY_CODE_MAP = {
   "Kos-kosan|Kos-kosan": "2971",
   "Kos-kosan|Kantor": "2932",
 };
+const PROPERTY_TYPE_BY_OCCUPANCY = {
+  Hunian: "Rumah Tinggal",
+  "Ritel / Toko": "Toko",
+  "Warung / Kelontong": "Toko",
+  Minimarket: "Toko",
+  "Tenda makanan": "Toko",
+  Kantor: "Kantor",
+  "Kos-kosan": "Kos-kosan",
+};
+const OCCUPANCY_OPTIONS = Array.from(new Set(Object.values(OCCUPANCY_MAP).flat()));
 
 const PERSONAL_PRODUCTS = [
   {
@@ -432,6 +443,25 @@ function deriveConstructionClass(form) {
 
 function getOccupancyCode(propertyType, occupancy) {
   return OCCUPANCY_CODE_MAP[[propertyType, occupancy].filter(Boolean).join("|")] || "";
+}
+
+function getOccupancyOptionsForPropertyTypes(propertyTypes) {
+  const options = [];
+  propertyTypes.forEach((propertyType) => {
+    (OCCUPANCY_MAP[propertyType] || []).forEach((occupancy) => {
+      if (!options.includes(occupancy)) options.push(occupancy);
+    });
+  });
+  return options.length ? options : OCCUPANCY_OPTIONS;
+}
+
+function derivePropertyTypeFromOccupancy(occupancy, propertyTypes = PROPERTY_TYPES) {
+  if (!occupancy) return "";
+  const allowed = propertyTypes.filter((item) => PROPERTY_TYPES.includes(item));
+  const candidates = allowed.length ? allowed : PROPERTY_TYPES;
+  const preferred = PROPERTY_TYPE_BY_OCCUPANCY[occupancy];
+  if (preferred && candidates.includes(preferred) && (OCCUPANCY_MAP[preferred] || []).includes(occupancy)) return preferred;
+  return candidates.find((propertyType) => (OCCUPANCY_MAP[propertyType] || []).includes(occupancy)) || "";
 }
 
 function selectedFireProtectionItems(uwForm) {
@@ -1242,7 +1272,7 @@ function UnderwritingSections({
   );
 }
 
-function ExternalProposalPage({ mode, customerName, customerType, form, setFormField = () => {}, uwForm, uploads, propertyOptions = PROPERTY_TYPES, propertyType, setPropertyType = () => {}, occupancy, setOccupancy = () => {}, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, onEditObject, onEditInsured, floorCount, setFloorCount, canProceed, floorFieldRef, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
+function ExternalProposalPage({ mode, customerName, customerType, form, setFormField = () => {}, uwForm, uploads, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, onEditObject, onEditInsured, floorCount, setFloorCount, canProceed, floorFieldRef, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
   const isIndicative = mode === "indicative";
   const isInternalPreview = viewerMode === "internal";
   const activeVariant = productConfig || getPropertyVariant("property-safe");
@@ -1487,13 +1517,9 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
                   {summaryEditing.property ? (
                     <div className="space-y-4">
                       <div className="grid gap-3 md:grid-cols-2">
-                        <div>
-                          <FieldLabel label="Jenis Bangunan" required />
-                          <SelectInput value={propertyType} onChange={setPropertyType} options={propertyOptions} placeholder="Pilih jenis bangunan" />
-                        </div>
-                        <div>
+                        <div className="md:col-span-2">
                           <FieldLabel label="Penggunaan Properti yang Diasuransikan" required />
-                          <SelectInput value={occupancy} onChange={setOccupancy} options={OCCUPANCY_MAP[propertyType] || []} placeholder="Pilih penggunaan properti" />
+                          <SelectInput value={occupancy} onChange={setOccupancy} options={occupancyOptions} placeholder="Pilih penggunaan properti" />
                         </div>
                         <div>
                           <FieldLabel label="Dinding Utama" required />
@@ -1547,7 +1573,6 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      <OfferSummaryKeyValue label="Jenis Bangunan" value={propertyType} />
                       <OfferSummaryKeyValue label="Penggunaan Properti yang Diasuransikan" value={occupancy} />
                       <OfferSummaryKeyValue
                         label="Objek yang Dijamin"
@@ -1785,6 +1810,10 @@ export default function PropertyStepOneFrontendCompact({
     const filtered = allowedPropertyTypes.filter((item) => PROPERTY_TYPES.includes(item));
     return filtered.length ? filtered : PROPERTY_TYPES;
   }, [allowedPropertyTypes]);
+  const availableOccupancyOptions = useMemo(
+    () => getOccupancyOptionsForPropertyTypes(availablePropertyTypes),
+    [availablePropertyTypes],
+  );
   const [currentProductVariant, setCurrentProductVariant] = useState(productVariant);
   const activeVariant = getPropertyVariant(currentProductVariant);
   const isInternalMode = entryMode === "internal";
@@ -1878,13 +1907,14 @@ export default function PropertyStepOneFrontendCompact({
   const resultsRef = useRef(null);
   const floorFieldRef = useRef(null);
   const previousFloorFieldVisibleRef = useRef(false);
+  const effectivePropertyType = (form.occupancy && derivePropertyTypeFromOccupancy(form.occupancy, availablePropertyTypes)) || form.propertyType;
 
   const customerSuggestions = useMemo(() => {
     const keyword = String(form.identity || "").trim().toLowerCase();
     if (!keyword) return [];
     return MOCK_CIF.filter((item) => item.name.toLowerCase().includes(keyword) || item.cif.toLowerCase().includes(keyword)).slice(0, 5);
   }, [form.identity]);
-  const showFloorInput = selectedGuarantees.earthquake && isFloorRelevant(form.propertyType, form.occupancy);
+  const showFloorInput = selectedGuarantees.earthquake && isFloorRelevant(effectivePropertyType, form.occupancy);
   const fraudAlerts = useMemo(() => summarizeFraudSignals({ documentChecks: [documentChecks.ktp], evidenceChecks: [evidence.location, evidence.photos.frontView, evidence.photos.sideRightView, evidence.photos.sideLeftView] }), [documentChecks, evidence]);
   const operatingVersion = operatingRecord?.version;
   const operatingOwner = operatingRecord?.owner;
@@ -1894,13 +1924,13 @@ export default function PropertyStepOneFrontendCompact({
     () =>
       createTransactionAuthority({
         productCode: activeVariant.productCode,
-        primaryValue: selectedCustomer?.name || form.identity || form.propertyType,
+        primaryValue: selectedCustomer?.name || form.identity || form.occupancy || effectivePropertyType,
         versionLabel: operatingVersion || (internalStep === 1 ? "Rev 1" : "Rev 2"),
         preparedBy: operatingOwner || sessionName || "Tim Jasindo",
         transactionId: operatingId,
         validUntil: operatingValidUntil || "",
       }),
-    [activeVariant.productCode, form.identity, form.propertyType, internalStep, operatingId, operatingOwner, operatingValidUntil, operatingVersion, selectedCustomer?.name, sessionName],
+    [activeVariant.productCode, effectivePropertyType, form.identity, form.occupancy, internalStep, operatingId, operatingOwner, operatingValidUntil, operatingVersion, selectedCustomer?.name, sessionName],
   );
   useEffect(() => {
     if (!fraudAlerts.length) return;
@@ -1915,19 +1945,17 @@ export default function PropertyStepOneFrontendCompact({
     onOperatingSignal({ authority: transactionAuthority });
   }, [onOperatingSignal, transactionAuthority]);
   useEffect(() => {
-    const allowed = OCCUPANCY_MAP[form.propertyType] || [];
-    if (form.occupancy && !allowed.includes(form.occupancy)) setForm((prev) => ({ ...prev, occupancy: "" }));
-  }, [form.propertyType, form.occupancy]);
-  useEffect(() => {
-    if (form.propertyType && !availablePropertyTypes.includes(form.propertyType)) {
-      const fallbackPropertyType = availablePropertyTypes.includes("Rumah Tinggal") ? "Rumah Tinggal" : availablePropertyTypes[0];
-      setForm((prev) => ({
-        ...prev,
-        propertyType: fallbackPropertyType,
-        occupancy: "",
-      }));
+    if (form.occupancy && !availableOccupancyOptions.includes(form.occupancy)) {
+      setForm((prev) => ({ ...prev, occupancy: "", propertyType: "" }));
+      return;
     }
-  }, [availablePropertyTypes, form.propertyType]);
+    if (form.occupancy) {
+      const derivedPropertyType = derivePropertyTypeFromOccupancy(form.occupancy, availablePropertyTypes);
+      if (derivedPropertyType && form.propertyType !== derivedPropertyType) {
+        setForm((prev) => ({ ...prev, propertyType: derivedPropertyType }));
+      }
+    }
+  }, [availableOccupancyOptions, availablePropertyTypes, form.occupancy, form.propertyType]);
   useEffect(() => {
     if (selectedCustomer) {
       setForm((prev) => ({
@@ -2005,11 +2033,14 @@ export default function PropertyStepOneFrontendCompact({
       return () => window.clearTimeout(timer);
     }
     if (!shouldShowFloorField) previousFloorFieldVisibleRef.current = false;
-  }, [selectedGuarantees.earthquake, showFloorInput, quoted, externalView, form.propertyType, form.occupancy]);
+  }, [selectedGuarantees.earthquake, showFloorInput, quoted, externalView, form.occupancy]);
 
   const setField = (key, value) =>
     setForm((prev) => {
       const next = { ...prev, [key]: value };
+      if (key === "occupancy") {
+        next.propertyType = derivePropertyTypeFromOccupancy(value, availablePropertyTypes);
+      }
       if (["wallMaterial", "structureMaterial", "roofMaterial", "flammableMaterial"].includes(key)) {
         next.constructionClass = deriveConstructionClass(next);
       }
@@ -2020,8 +2051,8 @@ export default function PropertyStepOneFrontendCompact({
   const addObjectRow = () => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }));
   const removeObjectRow = (id) => setObjectRows((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
   const totalValue = useMemo(() => objectRows.reduce((sum, row) => sum + parseNumber(row.amount), 0), [objectRows]);
-  const baseRate = form.propertyType === "Rumah Tinggal" ? 0.00185 : 0.00265;
-  const hasQuoteBasis = Boolean(form.propertyType) && Boolean(form.occupancy) && Boolean(form.constructionClass) && totalValue > 0;
+  const baseRate = effectivePropertyType === "Rumah Tinggal" ? 0.00185 : 0.00265;
+  const hasQuoteBasis = Boolean(form.occupancy) && Boolean(form.constructionClass) && totalValue > 0;
   const basePremiumNumber = hasQuoteBasis ? Math.max(Math.round(totalValue * baseRate), 150000) : 0;
   const stampDutyNumber = hasQuoteBasis ? 10000 + (selectedGuarantees.earthquake ? 10000 : 0) : 0;
   const guaranteeBreakdown = activeGuarantees.filter((item) => selectedGuarantees[item.key]).map((item) => ({ ...item, premium: Math.round(totalValue * item.rate) }));
@@ -2029,7 +2060,7 @@ export default function PropertyStepOneFrontendCompact({
   const estimatedTotalNumber = hasQuoteBasis ? basePremiumNumber + additionalPremiumNumber + stampDutyNumber : 0;
   const customerName = selectedCustomer ? selectedCustomer.name : form.identity;
   const effectiveCustomerName = customerName || sharedCustomerName;
-  const occupancyCode = getOccupancyCode(form.propertyType, form.occupancy);
+  const occupancyCode = getOccupancyCode(effectivePropertyType, form.occupancy);
   const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === form.constructionClass);
   const currentExternalTarget = internalStep === 2 ? "offer-final" : "offer-indicative";
   const referralCode = createReferralCode(sessionName, transactionAuthority.transactionId);
@@ -2038,7 +2069,7 @@ export default function PropertyStepOneFrontendCompact({
     customerType: form.customerType,
     phone: form.phone,
     email: form.email,
-    propertyType: form.propertyType,
+    propertyType: effectivePropertyType,
     occupancy: form.occupancy,
     constructionClass: form.constructionClass,
     wallMaterial: form.wallMaterial,
@@ -2070,11 +2101,13 @@ export default function PropertyStepOneFrontendCompact({
   const hasValidPhoneContact = Boolean(form.phone.trim()) && isValidPhone(form.phone);
   const hasValidEmailContact = Boolean(form.email.trim()) && isValidEmail(form.email);
   const hasValidStepOneContact = hasValidPhoneContact && hasValidEmailContact;
+  const hasValidStepOneOccupancy = Boolean(form.occupancy);
   const hasValidStepOneLocation = Boolean(form.locationSearch.trim());
+  const hasValidConstruction = Boolean(form.constructionClass);
   const hasValidObjects = totalValue > 0 && objectRows.every((row) => parseNumber(row.amount) > 0);
   const hasStockObject = objectRows.some((row) => row.type === "Stok");
   const hasRequiredFloorCount = !showFloorInput || Number(floorCount) > 0;
-  const canAdvanceInternalStepOne = hasValidStepOneIdentity && hasValidStepOneContact && hasValidStepOneLocation && hasValidObjects && hasRequiredFloorCount;
+  const canAdvanceInternalStepOne = hasValidStepOneIdentity && hasValidStepOneContact && hasValidStepOneOccupancy && hasValidStepOneLocation && hasValidConstruction && hasValidObjects && hasRequiredFloorCount;
   const hasValidUwIdentity = !uwForm.idNumber.trim() || isValidIdNumber(form.customerType, uwForm.idNumber);
   const hasValidPicName = form.customerType !== "Badan Usaha" || Boolean(uwForm.picName.trim());
   const hasValidStockType = !hasStockObject || Boolean(String(uwForm.stockType || "").trim());
@@ -2083,9 +2116,10 @@ export default function PropertyStepOneFrontendCompact({
   const canAdvanceUnderwriting = hasValidUwIdentity && hasValidPicName && hasValidUnderwriting && hasCompleteUploads;
   const stepOnePendingItems = [];
   if (!hasValidStepOneIdentity) stepOnePendingItems.push("Isi nama calon pemegang polis atau pilih CIF.");
-if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone dan alamat email yang valid.");
+  if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone dan alamat email yang valid.");
+  if (!hasValidStepOneOccupancy) stepOnePendingItems.push("Pilih penggunaan properti yang diasuransikan.");
   if (!hasValidStepOneLocation) stepOnePendingItems.push("Isi lokasi properti atau gunakan tombol lokasi cepat.");
-  if (!form.constructionClass) stepOnePendingItems.push("Lengkapi material bangunan untuk menentukan kelas konstruksi.");
+  if (!hasValidConstruction) stepOnePendingItems.push("Lengkapi material bangunan untuk menentukan kelas konstruksi.");
   if (!hasValidObjects) stepOnePendingItems.push("Setiap objek harus punya nilai yang ingin dilindungi.");
   if (!hasRequiredFloorCount) stepOnePendingItems.push("Lengkapi jumlah lantai pada perluasan Risiko Gempa Bumi.");
   const underwritingPendingItems = [];
@@ -2143,7 +2177,6 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
     setField("identity", `${demoCustomer.name} - ${demoCustomer.cif}`);
     setField("phone", demoCustomer.phone);
     setField("email", demoCustomer.email);
-    setField("propertyType", PROPERTY_TYPES.includes("Rumah Tinggal") ? "Rumah Tinggal" : PROPERTY_TYPES[0]);
     setField("occupancy", "Hunian");
     setField("wallMaterial", WALL_MATERIAL_OPTIONS[0]);
     setField("structureMaterial", STRUCTURE_MATERIAL_OPTIONS[0]);
@@ -2223,11 +2256,10 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           setFormField={setField}
           uwForm={uwForm}
           uploads={uploads}
-          propertyOptions={availablePropertyTypes}
-          propertyType={form.propertyType}
-          setPropertyType={(value) => setField("propertyType", value)}
+          propertyType={effectivePropertyType}
           occupancy={form.occupancy}
           setOccupancy={(value) => setField("occupancy", value)}
+          occupancyOptions={availableOccupancyOptions}
           objectRows={objectRows}
           updateObjectRow={updateObjectRow}
           addObjectRow={addObjectRow}
@@ -2292,11 +2324,10 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           setFormField={setField}
           uwForm={uwForm}
           uploads={uploads}
-          propertyOptions={availablePropertyTypes}
-          propertyType={form.propertyType}
-          setPropertyType={(value) => setField("propertyType", value)}
+          propertyType={effectivePropertyType}
           occupancy={form.occupancy}
           setOccupancy={(value) => setField("occupancy", value)}
+          occupancyOptions={availableOccupancyOptions}
           objectRows={objectRows}
           updateObjectRow={updateObjectRow}
           addObjectRow={addObjectRow}
@@ -2355,7 +2386,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
   if (externalView === "external-underwriting") {
     const externalDataValidity = resolveOfferValidity(true, uwForm.coverageStartDate);
     const externalDataObjectLabel =
-      [form.propertyType, form.occupancy].filter(Boolean).join(" - ") ||
+      form.occupancy ||
       (objectRows.length ? `${objectRows.length} objek dilindungi` : "-");
     const externalDataOfferMeta = {
       reference: transactionAuthority.transactionId,
@@ -2506,12 +2537,11 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
 
                   <SectionCard title="Informasi Properti">
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div><FieldLabel label="Jenis Bangunan" required /><SelectInput value={form.propertyType} onChange={(value) => setField("propertyType", value)} options={availablePropertyTypes} placeholder="Contoh: rumah tinggal, ruko, toko, atau kantor." /></div>
                       <div className="md:col-span-2 md:max-w-[760px]">
                         <div className={cls("grid gap-3", occupancyCode ? "md:grid-cols-[minmax(0,1fr)_180px]" : "md:grid-cols-1")}>
                           <div className="min-w-0">
                             <FieldLabel label="Penggunaan Properti yang Diasuransikan" required helpText="Pilih penggunaan untuk properti yang akan diasuransikan pada pengajuan ini." />
-                            <SelectInput value={form.occupancy} onChange={(value) => setField("occupancy", value)} options={OCCUPANCY_MAP[form.propertyType] || []} placeholder="Pilih penggunaan properti yang diasuransikan" />
+                            <SelectInput value={form.occupancy} onChange={(value) => setField("occupancy", value)} options={availableOccupancyOptions} placeholder="Pilih penggunaan properti yang diasuransikan" />
                           </div>
                           {occupancyCode ? (
                             <div className="self-end rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2.5">
@@ -2581,7 +2611,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                           ) : null}
                           <div>
                             <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
-                            <div className="mt-3 space-y-2.5">{activeGuarantees.map((item) => { const checked = selectedGuarantees[item.key]; const premiumValue = Math.round(totalValue * item.rate); const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible; return <AccordionRiskRow key={item.key} title={item.title} icon={item.icon} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(premiumValue) : "-"} detail={item.detail} deductible={deductibleValue} checked={checked} onToggleChecked={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} expanded={expandedRows[item.key]} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} extra={item.key === "earthquake" && checked && isFloorRelevant(form.propertyType, form.occupancy) ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Diisi hanya bila objek bertingkat dan gempa bumi dipilih." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null} />; })}</div>
+                            <div className="mt-3 space-y-2.5">{activeGuarantees.map((item) => { const checked = selectedGuarantees[item.key]; const premiumValue = Math.round(totalValue * item.rate); const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible; return <AccordionRiskRow key={item.key} title={item.title} icon={item.icon} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(premiumValue) : "-"} detail={item.detail} deductible={deductibleValue} checked={checked} onToggleChecked={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} expanded={expandedRows[item.key]} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} extra={item.key === "earthquake" && checked && isFloorRelevant(effectivePropertyType, form.occupancy) ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Diisi hanya bila objek bertingkat dan gempa bumi dipilih." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null} />; })}</div>
                           </div>
                         </div>
                       </SectionCard>
@@ -2637,7 +2667,6 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                 {showStepOneSummarySidebar ? <SummarySidebarShell title="Ringkasan">
                   <div className="border-t border-white/15 pt-3">
                     <SummaryRow label={selectedCustomer || isDigitsOnly(form.identity.trim()) ? "Kode CIF / Nama" : "Nama Calon Pemegang Polis"} value={form.identity || "-"} />
-                    <SummaryRow label="Jenis Bangunan" value={form.propertyType} />
                     <SummaryRow label="Penggunaan Properti yang Diasuransikan" value={form.occupancy} />
                     <SummaryRow label="Kelas Konstruksi" value={form.constructionClass} />
                   </div>

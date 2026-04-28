@@ -19,7 +19,7 @@ export const PROPERTY_PRODUCT_VARIANTS = {
     exclusionsSectionSubtitle: "",
     importantExclusions: [],
     benefitsSummaryIntro:
-      "Perlindungan utama mencakup kerusakan akibat kebakaran sesuai jenis bangunan dan nilai yang ingin Anda lindungi.",
+      "Perlindungan utama mencakup kerusakan akibat kebakaran sesuai penggunaan properti dan nilai yang ingin Anda lindungi.",
     summaryCoverageLine: "Tambahan perlindungan yang tersedia dapat dipilih untuk melengkapi proteksi dari risiko kebakaran.",
     optionalExtensionsLabel: "Tambahan perlindungan yang tersedia",
     shareSubject: "Penawaran Asuransi Kebakaran",

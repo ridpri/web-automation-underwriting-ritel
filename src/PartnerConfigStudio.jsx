@@ -279,7 +279,6 @@ const FIELD_HELPERS = {
   "Nomor Handphone": "Isi nomor handphone yang aktif.",
   "Alamat Email": "Gunakan email yang aktif.",
   "Informasi Calon Pemegang Polis": "Lengkapi identitas calon pemegang polis yang akan dicetak di polis.",
-  "Jenis Bangunan": "Pilih jenis bangunan yang paling sesuai.",
   "Penggunaan Properti yang Diasuransikan": "Pilih penggunaan utama properti yang diasuransikan.",
   "Kelas Konstruksi": "Pilih sesuai material utama bangunan.",
   "Alamat / Lokasi Objek": "Isi alamat objek secara jelas.",
