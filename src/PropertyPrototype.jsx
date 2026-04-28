@@ -1220,7 +1220,7 @@ function UnderwritingSections({
   );
 }
 
-function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, uploads, propertyType, occupancy, objectRows, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, onEditObject, onEditInsured, floorCount, setFloorCount, canProceed, floorFieldRef, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
+function ExternalProposalPage({ mode, customerName, customerType, form, setFormField = () => {}, uwForm, uploads, propertyOptions = PROPERTY_TYPES, propertyType, setPropertyType = () => {}, occupancy, setOccupancy = () => {}, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, onEditObject, onEditInsured, floorCount, setFloorCount, canProceed, floorFieldRef, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
   const isIndicative = mode === "indicative";
   const isInternalPreview = viewerMode === "internal";
   const activeVariant = productConfig || getPropertyVariant("property-safe");
@@ -1231,6 +1231,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   const operatingId = operatingRecord?.id;
   const primaryLabel = isIndicative ? "Isi Data Lanjutan" : "Pembayaran";
   const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === constructionClass);
+  const [summaryEditing, setSummaryEditing] = useState({ insured: false, property: false });
   const [sectionOpen, setSectionOpen] = useState({ property: false, insured: false, guarantee: false });
   const [objectOpen, setObjectOpen] = useState({ detail: false, main: false, exclusions: false, extension: false });
   const [insuredOpen, setInsuredOpen] = useState({ profile: false, advanced: false, photos: false });
@@ -1420,48 +1421,140 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
           >
             <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
               <div className="space-y-3">
-                <OfferSummarySection title="Ringkasan Informasi Calon Pemegang Polis" action={!isInternalPreview ? <SummaryEditButton onClick={onEditInsured} /> : null}>
-                  <div className="space-y-2.5">
-                    <OfferSummaryKeyValue label="Nama Calon Pemegang Polis" value={customerDisplay} />
-                    <OfferSummaryKeyValue label="Alamat Email" value={emailDisplay} />
-                    <OfferSummaryKeyValue label="Nomor Handphone" value={phoneDisplay} />
-                  </div>
+                <OfferSummarySection
+                  title="Ringkasan Informasi Calon Pemegang Polis"
+                  action={!isInternalPreview && !summaryEditing.insured ? <SummaryEditButton onClick={() => setSummaryEditing({ insured: true, property: false })} /> : null}
+                >
+                  {summaryEditing.insured ? (
+                    <div className="space-y-4">
+                      <OfferSummaryKeyValue label="Nama Calon Pemegang Polis" value={customerDisplay} />
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div>
+                          <FieldLabel label="Alamat Email" required />
+                          <TextInput value={form.email} onChange={(value) => setFormField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" />
+                        </div>
+                        <div>
+                          <FieldLabel label="Nomor Handphone" required />
+                          <TextInput value={form.phone} onChange={(value) => setFormField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm text-slate-500">Yang bisa diubah di bagian ini hanya alamat email dan nomor handphone.</div>
+                        <button
+                          type="button"
+                          onClick={() => setSummaryEditing((prev) => ({ ...prev, insured: false }))}
+                          className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
+                        >
+                          Simpan
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <OfferSummaryKeyValue label="Nama Calon Pemegang Polis" value={customerDisplay} />
+                      <OfferSummaryKeyValue label="Alamat Email" value={emailDisplay} />
+                      <OfferSummaryKeyValue label="Nomor Handphone" value={phoneDisplay} />
+                    </div>
+                  )}
                 </OfferSummarySection>
 
                 <OfferSummarySection
                   title="Ringkasan Informasi Properti"
-                  action={!isInternalPreview ? <SummaryEditButton onClick={onEditObject} /> : null}
+                  action={!isInternalPreview && !summaryEditing.property ? <SummaryEditButton onClick={() => setSummaryEditing({ insured: false, property: true })} /> : null}
                 >
-                  <div className="space-y-2.5">
-                    <OfferSummaryKeyValue label="Jenis Bangunan" value={propertyType} />
-                    <OfferSummaryKeyValue label="Penggunaan Bangunan" value={occupancy} />
-                    <OfferSummaryKeyValue
-                      label="Objek yang Dijamin"
-                      emphasize
-                      value={
-                        objectRows.length ? (
-                          <div className="space-y-0.5">
-                            {objectRows.map((row) => (
-                              <div key={row.id}>
-                                <span className="font-semibold">{row.type || "Objek"}</span>
-                                <span>: Rp {formatRupiah(parseNumber(row.amount))}</span>
-                                {row.note ? <span className="text-slate-600">, {row.note}</span> : null}
-                              </div>
-                            ))}
+                  {summaryEditing.property ? (
+                    <div className="space-y-4">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div>
+                          <FieldLabel label="Jenis Bangunan" required />
+                          <SelectInput value={propertyType} onChange={setPropertyType} options={propertyOptions} placeholder="Pilih jenis bangunan" />
+                        </div>
+                        <div>
+                          <FieldLabel label="Penggunaan Properti yang Diasuransikan" required />
+                          <SelectInput value={occupancy} onChange={setOccupancy} options={OCCUPANCY_MAP[propertyType] || []} placeholder="Pilih penggunaan properti" />
+                        </div>
+                        <div>
+                          <FieldLabel label="Dinding utama" required />
+                          <SelectInput value={form.wallMaterial} onChange={(value) => setFormField("wallMaterial", value)} options={WALL_MATERIAL_OPTIONS} placeholder="Pilih material dinding" />
+                        </div>
+                        <div>
+                          <FieldLabel label="Struktur / lantai utama" required />
+                          <SelectInput value={form.structureMaterial} onChange={(value) => setFormField("structureMaterial", value)} options={STRUCTURE_MATERIAL_OPTIONS} placeholder="Pilih material struktur" />
+                        </div>
+                        <div>
+                          <FieldLabel label="Atap" required />
+                          <SelectInput value={form.roofMaterial} onChange={(value) => setFormField("roofMaterial", value)} options={ROOF_MATERIAL_OPTIONS} placeholder="Pilih material atap" />
+                        </div>
+                        <div>
+                          <FieldLabel label="Bagian mudah terbakar lainnya?" required />
+                          <SelectInput value={form.flammableMaterial} onChange={(value) => setFormField("flammableMaterial", value)} options={FLAMMABLE_MATERIAL_OPTIONS} placeholder="Pilih kondisi material" />
+                        </div>
+                      </div>
+                      {constructionInfo ? <div className="rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2.5 text-sm leading-6 text-slate-600"><span className="font-semibold text-[#0A4D82]">{constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-[14px] font-semibold text-slate-900">Objek yang Dijamin</div>
+                          <button type="button" onClick={addObjectRow} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                            <Plus className="h-4 w-4" />
+                            Tambah Objek
+                          </button>
+                        </div>
+                        {objectRows.map((row) => (
+                          <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                            <div className="grid gap-2.5 lg:grid-cols-[170px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-center">
+                              <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" />
+                              <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" />
+                              <TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} />
+                              <button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
-                        ) : (
-                          objectTypeSummary
-                        )
-                      }
-                    />
-                    <OfferSummaryKeyValue
-                      label="Kelas Konstruksi"
-                      value={constructionInfo ? `${constructionSummaryLabel}: ${constructionInfo.desc}` : constructionSummaryLabel}
-                      emphasize
-                    />
-                    <OfferSummaryKeyValue label="Harga Pertanggungan" value={coverageValue} />
-                    <OfferSummaryKeyValue label="Cakupan Polis" value={activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle} />
-                  </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm text-slate-500">Harga pertanggungan dan premi akan mengikuti perubahan data properti di bagian ini.</div>
+                        <button
+                          type="button"
+                          onClick={() => setSummaryEditing((prev) => ({ ...prev, property: false }))}
+                          className="inline-flex h-9 items-center rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white hover:bg-[#0D5B98]"
+                        >
+                          Simpan
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <OfferSummaryKeyValue label="Jenis Bangunan" value={propertyType} />
+                      <OfferSummaryKeyValue label="Penggunaan Bangunan" value={occupancy} />
+                      <OfferSummaryKeyValue
+                        label="Objek yang Dijamin"
+                        emphasize
+                        value={
+                          objectRows.length ? (
+                            <div className="space-y-0.5">
+                              {objectRows.map((row) => (
+                                <div key={row.id}>
+                                  <span className="font-semibold">{row.type || "Objek"}</span>
+                                  <span>: Rp {formatRupiah(parseNumber(row.amount))}</span>
+                                  {row.note ? <span className="text-slate-600">, {row.note}</span> : null}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            objectTypeSummary
+                          )
+                        }
+                      />
+                      <OfferSummaryKeyValue
+                        label="Kelas Konstruksi"
+                        value={constructionInfo ? `${constructionSummaryLabel}: ${constructionInfo.desc}` : constructionSummaryLabel}
+                        emphasize
+                      />
+                      <OfferSummaryKeyValue label="Harga Pertanggungan" value={coverageValue} />
+                      <OfferSummaryKeyValue label="Cakupan Polis" value={activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle} />
+                    </div>
+                  )}
                 </OfferSummarySection>
 
                 <OfferSummarySection title="Ringkasan Syarat dan Ketentuan">
@@ -2094,6 +2187,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           customerName={effectiveCustomerName || uwForm.picName}
           customerType={form.customerType}
           form={form}
+          setFormField={setField}
           uwForm={uwForm}
           uploads={uploads}
           propertyOptions={availablePropertyTypes}
@@ -2162,6 +2256,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
           customerName={effectiveCustomerName || uwForm.picName}
           customerType={form.customerType}
           form={form}
+          setFormField={setField}
           uwForm={uwForm}
           uploads={uploads}
           propertyOptions={availablePropertyTypes}
