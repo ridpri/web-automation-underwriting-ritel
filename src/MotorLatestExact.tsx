@@ -55,7 +55,7 @@ type VehicleCatalogItem = {
 
 type FlowState = {
   ui: { extOpen: boolean; dataMode: DataMode; stnkMode: DataMode };
-  underwriting: { claimHistory: string };
+  underwriting: { claimHistory: string; noExistingDamage: boolean };
   quote: {
     usage: string;
     vehicleType: string;
@@ -116,6 +116,23 @@ const CAR_UPLOAD_FIELDS = [
   "Ambil foto bagian samping kiri",
   "Ambil foto bagian belakang",
 ] as const;
+const CAR_COMP_EXISTING_DAMAGE_UPLOAD = "Foto kerusakan existing";
+const CAR_COMP_UPLOAD_FIELDS = [
+  "Ambil foto bagian depan",
+  "Ambil foto bagian belakang",
+  "Ambil foto bagian samping kanan",
+  "Ambil foto bagian samping kiri",
+  "Foto interior dashboard dan odometer",
+  "Foto STNK",
+  "Foto nomor rangka / VIN",
+  CAR_COMP_EXISTING_DAMAGE_UPLOAD,
+] as const;
+
+function getVehicleUploadFields(type: FlowType) {
+  if (type === "motor") return [...MOTOR_UPLOAD_FIELDS];
+  if (type === "carComp") return [...CAR_COMP_UPLOAD_FIELDS];
+  return [...CAR_UPLOAD_FIELDS];
+}
 
 const OJK_REGION_1_CODES = ["BA", "BB", "BD", "BE", "BG", "BH", "BK", "BL", "BM", "BN", "BP"];
 const OJK_REGION_2_CODES = ["A", "B", "D", "E", "F", "T", "Z"];
@@ -338,7 +355,7 @@ function createFlowState(type: FlowType): FlowState {
   const isMotor = type === "motor";
   return {
     ui: { extOpen: false, dataMode: "scan", stnkMode: "scan" },
-    underwriting: { claimHistory: "" },
+    underwriting: { claimHistory: "", noExistingDamage: false },
     quote: {
       usage: "",
       vehicleType: "",
@@ -369,9 +386,7 @@ function createFlowState(type: FlowType): FlowState {
     vehicle: { plateNumber: "", ownerNameOnStnk: "", chassisNumber: "", engineNumber: "", color: "", year: "", contactOnLocation: "" },
     ktpRead: false,
     stnkRead: false,
-    uploads: isMotor
-      ? Object.fromEntries(MOTOR_UPLOAD_FIELDS.map((label) => [label, false]))
-      : Object.fromEntries(CAR_UPLOAD_FIELDS.map((label) => [label, false])),
+    uploads: Object.fromEntries(getVehicleUploadFields(type).map((label) => [label, false])),
     paymentMethod: "",
     promoCode: "",
     agree: false,
@@ -1003,13 +1018,30 @@ function getVehiclePhotoTitle(name: string) {
   if (name === "Foto motor dari sudut depan samping") return "Foto Tampak Depan";
   if (name === "Foto salah satu sisi motor secara penuh") return "Foto Samping";
   if (name === "Foto panel speedometer saat kontak ON") return "Foto Panel Speedometer";
-  if (name === "Ambil foto bagian depan") return "Foto mobil dari depan, dengan plat terlihat";
-  if (name === "Ambil foto bagian samping kanan") return "Foto sisi kanan mobil secara penuh";
-  if (name === "Ambil foto bagian samping kiri") return "Foto sisi kiri mobil secara penuh";
-  return "Foto mobil dari belakang";
+  if (name === "Ambil foto bagian depan") return "Depan + plat terlihat";
+  if (name === "Ambil foto bagian belakang") return "Belakang + plat terlihat";
+  if (name === "Ambil foto bagian samping kanan") return "Sisi kanan penuh";
+  if (name === "Ambil foto bagian samping kiri") return "Sisi kiri penuh";
+  if (name === "Foto interior dashboard dan odometer") return "Interior/dashboard + odometer";
+  if (name === "Foto STNK") return "Foto STNK";
+  if (name === "Foto nomor rangka / VIN") return "Nomor rangka/VIN";
+  if (name === CAR_COMP_EXISTING_DAMAGE_UPLOAD) return "Foto kerusakan existing";
+  return "Foto kendaraan";
 }
 
-function getVehiclePhotoHelper(name: string) {
+function getVehiclePhotoHelper(name: string, noExistingDamage = false) {
+  if (name === "Ambil foto bagian depan") return "Pastikan bagian depan kendaraan dan plat nomor terlihat jelas.";
+  if (name === "Ambil foto bagian belakang") return "Pastikan bagian belakang kendaraan dan plat nomor terlihat jelas.";
+  if (name === "Ambil foto bagian samping kanan") return "Ambil kendaraan sisi kanan secara penuh dari ujung depan sampai belakang.";
+  if (name === "Ambil foto bagian samping kiri") return "Ambil kendaraan sisi kiri secara penuh dari ujung depan sampai belakang.";
+  if (name === "Foto interior dashboard dan odometer") return "Pastikan dashboard dan angka odometer/kilometer terlihat jelas.";
+  if (name === "Foto STNK") return "Foto STNK asli yang masih terbaca untuk verifikasi data kendaraan.";
+  if (name === "Foto nomor rangka / VIN") return "Ambil area nomor rangka/VIN kendaraan bila dapat diakses dengan aman.";
+  if (name === CAR_COMP_EXISTING_DAMAGE_UPLOAD) {
+    return noExistingDamage
+      ? "Opsional karena Anda menyatakan tidak ada kerusakan existing."
+      : "Wajib bila ada kerusakan existing. Jika tidak ada, centang pernyataan tidak ada kerusakan existing.";
+  }
   return "Wajib diisi.";
 }
 
@@ -1928,6 +1960,7 @@ export default function MotorLatestExact({
       next[type].underwriting = {
         ...next[type].underwriting,
         claimHistory: "Tidak Ada",
+        noExistingDamage: type === "carComp" ? true : next[type].underwriting.noExistingDamage,
       };
       next[type].quote = {
         ...next[type].quote,
@@ -2099,10 +2132,13 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     deductible: deductibleText(flowType, selected.quote.vehicleType, item.id),
   }));
 
-  const visibleUploadNames = selected
-    ? (flowType === "motor" ? [...MOTOR_UPLOAD_FIELDS] : [...CAR_UPLOAD_FIELDS])
-    : [];
-  const uploadsComplete = selected ? visibleUploadNames.every((name) => Boolean(selected.uploads[name])) : false;
+  const visibleUploadNames = selected && flowType ? getVehicleUploadFields(flowType) : [];
+  const existingDamageRequirementMet = flowType !== "carComp" || Boolean(selected?.underwriting.noExistingDamage || selected?.uploads[CAR_COMP_EXISTING_DAMAGE_UPLOAD]);
+  const requiredUploadNames =
+    flowType === "carComp" && selected?.underwriting.noExistingDamage
+      ? visibleUploadNames.filter((name) => name !== CAR_COMP_EXISTING_DAMAGE_UPLOAD)
+      : visibleUploadNames;
+  const uploadsComplete = selected ? requiredUploadNames.every((name) => Boolean(selected.uploads[name])) && existingDamageRequirementMet : false;
   const dataComplete = selected ? !!(selected.insured.customerType && selected.insured.fullName && selected.insured.address && selected.insured.email && selected.insured.phone && selected.vehicle.plateNumber && selected.vehicle.chassisNumber && selected.vehicle.engineNumber) : false;
   const periodComplete = selected ? !!(selected.quote.coverageStart && selected.quote.coverageEnd) : false;
   const readyForNextStage = !!(selected && calc && uploadsComplete && dataComplete && periodComplete && calc.status !== "Need Review");
@@ -2138,6 +2174,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
       customer: selected?.insured?.fullName || "",
       offer: {
         quote: selected?.quote,
+        underwriting: selected?.underwriting,
         insured: selected?.insured,
         vehicle: selected?.vehicle,
         uploads: selected?.uploads,
@@ -2276,6 +2313,10 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         quote: {
           ...next[flowType].quote,
           ...(sharedOffer.quote || {}),
+        },
+        underwriting: {
+          ...next[flowType].underwriting,
+          ...(sharedOffer.underwriting || {}),
         },
         insured: {
           ...next[flowType].insured,
@@ -2425,7 +2466,11 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     !selected.vehicle.engineNumber ? "Nomor mesin kendaraan belum lengkap." : null,
     !selected.underwriting.claimHistory ? "Riwayat klaim 3 tahun terakhir belum diisi." : null,
     !periodComplete ? "Tanggal mulai perlindungan belum diisi." : null,
-    !uploadsComplete ? "Foto kendaraan belum lengkap." : null,
+    !uploadsComplete
+      ? flowType === "carComp" && !existingDamageRequirementMet
+        ? "Foto kerusakan existing belum diisi, atau centang pernyataan tidak ada kerusakan existing."
+        : "Foto kendaraan belum lengkap."
+      : null,
     selected.ui.dataMode === "scan" && !selected.ktpRead ? "Foto KTP belum terbaca." : null,
     selected.ui.stnkMode === "scan" && !selected.stnkRead ? "Foto STNK belum terbaca." : null,
     calc?.status === "Need Review" ? "Profil risiko kendaraan masih perlu kami cek lebih lanjut." : null,
@@ -3270,6 +3315,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                               }),
                             },
                           }));
+                          if (flowType === "carComp") {
+                            setAt(flowType, "uploads.Foto STNK", true);
+                            setEvidence((prev) => ({
+                              ...prev,
+                              [flowType]: {
+                                ...prev[flowType],
+                                "Foto STNK": createVehiclePhotoMetadata("Foto STNK", selected.insured.address),
+                              },
+                            }));
+                          }
                         }}
                         className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-bold text-white hover:brightness-105"
                       >
@@ -3418,12 +3473,45 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           </div>
           <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
             <div className="space-y-4">
-              <div className="text-[18px] font-bold tracking-tight text-slate-900">Foto Kendaraan</div>
+              <div>
+                <div className="text-[18px] font-bold tracking-tight text-slate-900">Foto Kendaraan</div>
+                {flowType === "carComp" ? (
+                  <div className="mt-2 rounded-xl border border-[#D8E1EA] bg-white px-3 py-3">
+                    <label className="flex cursor-pointer items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selected.underwriting.noExistingDamage)}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setAt(flowType, "underwriting.noExistingDamage", checked);
+                          if (checked) {
+                            setAt(flowType, `uploads.${CAR_COMP_EXISTING_DAMAGE_UPLOAD}`, false);
+                            setEvidence((prev) => ({
+                              ...prev,
+                              [flowType]: {
+                                ...prev[flowType],
+                                [CAR_COMP_EXISTING_DAMAGE_UPLOAD]: null,
+                              },
+                            }));
+                          }
+                        }}
+                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#0A4D82] focus:ring-[#0A4D82]"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-slate-900">Tidak ada kerusakan existing</span>
+                        <span className="mt-1 block text-xs leading-5 text-slate-500">
+                          Centang jika kendaraan tidak memiliki kerusakan sebelum polis aktif. Jika ada kerusakan existing, unggah fotonya pada kartu kerusakan existing.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                ) : null}
+              </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {visibleUploadNames.map((name) => {
                 const uploaded = selected.uploads[name];
                 const photoTitle = getVehiclePhotoTitle(name);
-                const helperText = getVehiclePhotoHelper(name);
+                const helperText = getVehiclePhotoHelper(name, Boolean(selected.underwriting.noExistingDamage));
                 const photoEvidence = evidence[flowType]?.[name];
                 return (
                   <div
@@ -3440,6 +3528,9 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                     <button
                       type="button"
                       onClick={() => {
+                        if (name === CAR_COMP_EXISTING_DAMAGE_UPLOAD) {
+                          setAt(flowType, "underwriting.noExistingDamage", false);
+                        }
                         setAt(flowType, `uploads.${name}`, true);
                         setEvidence((prev) => ({
                           ...prev,
