@@ -55,7 +55,7 @@ type VehicleCatalogItem = {
 
 type FlowState = {
   ui: { extOpen: boolean; dataMode: DataMode; stnkMode: DataMode };
-  underwriting: { claimHistory: string; noExistingDamage: boolean };
+  underwriting: { claimHistory: string; noExistingDamage: boolean; existingDamageStatus: "" | "none" | "yes"; existingDamagePhotoCount: number };
   quote: {
     usage: string;
     vehicleType: string;
@@ -116,7 +116,7 @@ const CAR_UPLOAD_FIELDS = [
   "Ambil foto bagian samping kiri",
   "Ambil foto bagian belakang",
 ] as const;
-const CAR_COMP_EXISTING_DAMAGE_UPLOAD = "Foto kerusakan existing";
+const CAR_COMP_EXISTING_DAMAGE_PREFIX = "Foto kerusakan existing";
 const CAR_COMP_UPLOAD_FIELDS = [
   "Ambil foto bagian depan",
   "Ambil foto bagian belakang",
@@ -124,13 +124,25 @@ const CAR_COMP_UPLOAD_FIELDS = [
   "Ambil foto bagian samping kiri",
   "Foto interior dashboard dan odometer",
   "Foto nomor rangka / VIN",
-  CAR_COMP_EXISTING_DAMAGE_UPLOAD,
 ] as const;
 
 function getVehicleUploadFields(type: FlowType) {
   if (type === "motor") return [...MOTOR_UPLOAD_FIELDS];
   if (type === "carComp") return [...CAR_COMP_UPLOAD_FIELDS];
   return [...CAR_UPLOAD_FIELDS];
+}
+
+function getExistingDamageUploadName(index: number) {
+  return `${CAR_COMP_EXISTING_DAMAGE_PREFIX} ${index}`;
+}
+
+function isExistingDamageUploadName(name: string) {
+  return String(name || "").startsWith(CAR_COMP_EXISTING_DAMAGE_PREFIX);
+}
+
+function getExistingDamagePhotoNames(count: number) {
+  const safeCount = Math.max(1, Number(count || 1));
+  return Array.from({ length: safeCount }, (_, index) => getExistingDamageUploadName(index + 1));
 }
 
 const OJK_REGION_1_CODES = ["BA", "BB", "BD", "BE", "BG", "BH", "BK", "BL", "BM", "BN", "BP"];
@@ -354,7 +366,7 @@ function createFlowState(type: FlowType): FlowState {
   const isMotor = type === "motor";
   return {
     ui: { extOpen: false, dataMode: "scan", stnkMode: "scan" },
-    underwriting: { claimHistory: "", noExistingDamage: false },
+    underwriting: { claimHistory: "", noExistingDamage: false, existingDamageStatus: "", existingDamagePhotoCount: 1 },
     quote: {
       usage: "",
       vehicleType: "",
@@ -1023,22 +1035,18 @@ function getVehiclePhotoTitle(name: string) {
   if (name === "Ambil foto bagian samping kiri") return "Sisi kiri penuh";
   if (name === "Foto interior dashboard dan odometer") return "Interior/dashboard + odometer";
   if (name === "Foto nomor rangka / VIN") return "Nomor rangka/VIN";
-  if (name === CAR_COMP_EXISTING_DAMAGE_UPLOAD) return "Foto kerusakan existing";
+  if (isExistingDamageUploadName(name)) return name.replace(CAR_COMP_EXISTING_DAMAGE_PREFIX, "Foto kerusakan");
   return "Foto kendaraan";
 }
 
-function getVehiclePhotoHelper(name: string, noExistingDamage = false) {
+function getVehiclePhotoHelper(name: string) {
   if (name === "Ambil foto bagian depan") return "Pastikan bagian depan kendaraan dan plat nomor terlihat jelas.";
   if (name === "Ambil foto bagian belakang") return "Pastikan bagian belakang kendaraan dan plat nomor terlihat jelas.";
   if (name === "Ambil foto bagian samping kanan") return "Ambil kendaraan sisi kanan secara penuh dari ujung depan sampai belakang.";
   if (name === "Ambil foto bagian samping kiri") return "Ambil kendaraan sisi kiri secara penuh dari ujung depan sampai belakang.";
   if (name === "Foto interior dashboard dan odometer") return "Pastikan dashboard dan angka odometer/kilometer terlihat jelas.";
   if (name === "Foto nomor rangka / VIN") return "Ambil area nomor rangka/VIN kendaraan bila dapat diakses dengan aman.";
-  if (name === CAR_COMP_EXISTING_DAMAGE_UPLOAD) {
-    return noExistingDamage
-      ? "Opsional karena Anda menyatakan tidak ada kerusakan existing."
-      : "Wajib bila ada kerusakan existing. Jika tidak ada, centang pernyataan tidak ada kerusakan existing.";
-  }
+  if (isExistingDamageUploadName(name)) return "Ambil foto area kerusakan dengan jelas. Anda bisa menambahkan lebih dari satu foto.";
   return "Wajib diisi.";
 }
 
@@ -1958,6 +1966,8 @@ export default function MotorLatestExact({
         ...next[type].underwriting,
         claimHistory: "Tidak Ada",
         noExistingDamage: type === "carComp" ? true : next[type].underwriting.noExistingDamage,
+        existingDamageStatus: type === "carComp" ? "none" : next[type].underwriting.existingDamageStatus,
+        existingDamagePhotoCount: 1,
       };
       next[type].quote = {
         ...next[type].quote,
@@ -2130,11 +2140,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   }));
 
   const visibleUploadNames = selected && flowType ? getVehicleUploadFields(flowType) : [];
-  const existingDamageRequirementMet = flowType !== "carComp" || Boolean(selected?.underwriting.noExistingDamage || selected?.uploads[CAR_COMP_EXISTING_DAMAGE_UPLOAD]);
-  const requiredUploadNames =
-    flowType === "carComp" && selected?.underwriting.noExistingDamage
-      ? visibleUploadNames.filter((name) => name !== CAR_COMP_EXISTING_DAMAGE_UPLOAD)
-      : visibleUploadNames;
+  const existingDamageStatus =
+    flowType === "carComp"
+      ? (selected?.underwriting.existingDamageStatus || (selected?.underwriting.noExistingDamage ? "none" : ""))
+      : "";
+  const existingDamagePhotoNames =
+    flowType === "carComp" ? getExistingDamagePhotoNames(selected?.underwriting.existingDamagePhotoCount || 1) : [];
+  const hasExistingDamagePhotos = existingDamagePhotoNames.some((name) => Boolean(selected?.uploads[name]));
+  const existingDamageRequirementMet =
+    flowType !== "carComp" || existingDamageStatus === "none" || (existingDamageStatus === "yes" && hasExistingDamagePhotos);
+  const requiredUploadNames = visibleUploadNames;
   const uploadsComplete = selected ? requiredUploadNames.every((name) => Boolean(selected.uploads[name])) && existingDamageRequirementMet : false;
   const stnkPhotoComplete = flowType !== "carComp" || Boolean(selected?.stnkRead);
   const dataComplete = selected ? !!(selected.insured.customerType && selected.insured.fullName && selected.insured.address && selected.insured.email && selected.insured.phone && selected.vehicle.plateNumber && selected.vehicle.chassisNumber && selected.vehicle.engineNumber) : false;
@@ -2466,7 +2481,9 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     !periodComplete ? "Tanggal mulai perlindungan belum diisi." : null,
     !uploadsComplete
       ? flowType === "carComp" && !existingDamageRequirementMet
-        ? "Foto kerusakan existing belum diisi, atau centang pernyataan tidak ada kerusakan existing."
+        ? existingDamageStatus === "yes"
+          ? "Unggah minimal satu foto kerusakan existing."
+          : "Pilih kondisi kerusakan existing kendaraan."
         : "Foto kendaraan belum lengkap."
       : null,
     selected.ui.dataMode === "scan" && !selected.ktpRead ? "Foto KTP belum terbaca." : null,
@@ -3467,45 +3484,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               <div>
                 <div className="text-[18px] font-bold tracking-tight text-slate-900">Foto Kendaraan</div>
                 {flowType === "carComp" ? (
-                  <div className="mt-2 rounded-xl border border-[#D8E1EA] bg-white px-3 py-3">
-                    <label className="flex cursor-pointer items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(selected.underwriting.noExistingDamage)}
-                        onChange={(event) => {
-                          const checked = event.target.checked;
-                          setAt(flowType, "underwriting.noExistingDamage", checked);
-                          if (checked) {
-                            setAt(flowType, `uploads.${CAR_COMP_EXISTING_DAMAGE_UPLOAD}`, false);
-                            setEvidence((prev) => ({
-                              ...prev,
-                              [flowType]: {
-                                ...prev[flowType],
-                                [CAR_COMP_EXISTING_DAMAGE_UPLOAD]: null,
-                              },
-                            }));
-                          }
-                        }}
-                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#0A4D82] focus:ring-[#0A4D82]"
-                      />
-                      <span>
-                        <span className="block text-sm font-semibold text-slate-900">Tidak ada kerusakan existing</span>
-                        <span className="mt-1 block text-xs leading-5 text-slate-500">
-                          Centang jika kendaraan tidak memiliki kerusakan sebelum polis aktif. Jika ada kerusakan existing, unggah fotonya pada kartu kerusakan existing.
-                        </span>
-                      </span>
-                    </label>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    Foto standar untuk memastikan kondisi kendaraan sebelum polis aktif. Kerusakan existing diisi di section terpisah.
                   </div>
                 ) : null}
               </div>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-              {(flowType === "carComp" && selected.underwriting.noExistingDamage
-                ? visibleUploadNames.filter((name) => name !== CAR_COMP_EXISTING_DAMAGE_UPLOAD)
-                : visibleUploadNames
-              ).map((name) => {
+              {visibleUploadNames.map((name) => {
                 const uploaded = selected.uploads[name];
                 const photoTitle = getVehiclePhotoTitle(name);
-                const helperText = getVehiclePhotoHelper(name, Boolean(selected.underwriting.noExistingDamage));
+                const helperText = getVehiclePhotoHelper(name);
                 const photoEvidence = evidence[flowType]?.[name];
                 return (
                   <div
@@ -3522,9 +3510,6 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                     <button
                       type="button"
                       onClick={() => {
-                        if (name === CAR_COMP_EXISTING_DAMAGE_UPLOAD) {
-                          setAt(flowType, "underwriting.noExistingDamage", false);
-                        }
                         setAt(flowType, `uploads.${name}`, true);
                         setEvidence((prev) => ({
                           ...prev,
@@ -3578,6 +3563,144 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               </div>
             </div>
           </div>
+          {flowType === "carComp" ? (
+            <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
+              <div className="space-y-4">
+                <div>
+                  <div className="text-[18px] font-bold tracking-tight text-slate-900">Kerusakan Existing</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    Deklarasikan kondisi kerusakan sebelum polis aktif. Jika ada kerusakan, unggah satu atau lebih foto area kerusakan.
+                  </div>
+                </div>
+                <div className="grid gap-2.5 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFlows((prev) => {
+                        const copy: any = JSON.parse(JSON.stringify(prev));
+                        copy[flowType].underwriting.existingDamageStatus = "none";
+                        copy[flowType].underwriting.noExistingDamage = true;
+                        Object.keys(copy[flowType].uploads || {}).forEach((key) => {
+                          if (isExistingDamageUploadName(key)) copy[flowType].uploads[key] = false;
+                        });
+                        return copy;
+                      });
+                      setEvidence((prev) => {
+                        const next: any = { ...prev, [flowType]: { ...prev[flowType] } };
+                        Object.keys(next[flowType] || {}).forEach((key) => {
+                          if (isExistingDamageUploadName(key)) next[flowType][key] = null;
+                        });
+                        return next;
+                      });
+                    }}
+                    className={cls(
+                      "rounded-[14px] border px-4 py-3 text-left transition",
+                      existingDamageStatus === "none" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                    )}
+                  >
+                    <div className="text-sm font-semibold text-[#0A4D82]">Tidak ada kerusakan existing</div>
+                    <div className="mt-1 text-xs leading-5 text-slate-500">Tidak perlu unggah foto kerusakan.</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFlows((prev) => {
+                        const copy: any = JSON.parse(JSON.stringify(prev));
+                        copy[flowType].underwriting.existingDamageStatus = "yes";
+                        copy[flowType].underwriting.noExistingDamage = false;
+                        copy[flowType].underwriting.existingDamagePhotoCount = Math.max(1, Number(copy[flowType].underwriting.existingDamagePhotoCount || 1));
+                        return copy;
+                      });
+                    }}
+                    className={cls(
+                      "rounded-[14px] border px-4 py-3 text-left transition",
+                      existingDamageStatus === "yes" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                    )}
+                  >
+                    <div className="text-sm font-semibold text-[#0A4D82]">Ada kerusakan existing</div>
+                    <div className="mt-1 text-xs leading-5 text-slate-500">Unggah minimal satu foto, bisa lebih dari satu.</div>
+                  </button>
+                </div>
+                {existingDamageStatus === "yes" ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                      {existingDamagePhotoNames.map((name) => {
+                        const uploaded = selected.uploads[name];
+                        const photoEvidence = evidence[flowType]?.[name];
+                        return (
+                          <div key={name} className="rounded-xl border border-[#D8E1EA] bg-white p-2.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-[13px] font-semibold leading-5 tracking-tight text-slate-900">{getVehiclePhotoTitle(name)}</div>
+                                <div className="mt-1 text-[12px] leading-5 text-slate-500">{getVehiclePhotoHelper(name)}</div>
+                              </div>
+                              <Camera className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAt(flowType, `uploads.${name}`, true);
+                                setEvidence((prev) => ({
+                                  ...prev,
+                                  [flowType]: {
+                                    ...prev[flowType],
+                                    [name]: createVehiclePhotoMetadata(name, selected.insured.address),
+                                  },
+                                }));
+                              }}
+                              className={cls(
+                                "mt-2 flex h-28 w-full flex-col items-center justify-center rounded-xl border px-3 text-center transition hover:border-[#0A4D82]/30",
+                                uploaded
+                                  ? "border-[#D8E1EA] bg-white"
+                                  : "border-dashed border-[#C9D6E4] bg-[linear-gradient(180deg,#FAFCFF_0%,#F4F8FC_100%)]",
+                              )}
+                            >
+                              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#DCE6F0]">
+                                <Camera className="h-4 w-4 text-[#0A4D82]" />
+                              </span>
+                              <span className="mt-2 text-[13px] font-medium text-slate-700">
+                                {uploaded ? "Foto sudah diambil" : "Ambil foto"}
+                              </span>
+                              <span className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                                {uploaded && photoEvidence?.capturedAt ? "Tersimpan untuk verifikasi." : "Ketuk untuk membuka kamera."}
+                              </span>
+                            </button>
+                            {uploaded ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAt(flowType, `uploads.${name}`, false);
+                                  setEvidence((prev) => ({
+                                    ...prev,
+                                    [flowType]: {
+                                      ...prev[flowType],
+                                      [name]: null,
+                                    },
+                                  }));
+                                }}
+                                className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[#D5DDE6] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Hapus Foto
+                              </button>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAt(flowType, "underwriting.existingDamagePhotoCount", Math.max(1, Number(selected.underwriting.existingDamagePhotoCount || 1)) + 1)}
+                      className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Tambah Foto Kerusakan
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
       </ActionCard>
     );
   };
