@@ -1491,7 +1491,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, uwForm, 
   );
 }
 
-function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSelectMethod, onBack, onProceedPayment, paymentStatus, operatingRecord, isExpired, onSimulate }) {
+function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSelectMethod, onBack, onProceedPayment, paymentStatus, operatingRecord, isExpired, onSimulate, stepOneTitle = "Tinjau Penawaran" }) {
   const operatingBlockedMessage = paymentBlockMessage(operatingRecord);
   const canProceedPayment = canProceedToPaymentFromOperating(operatingRecord);
   return (
@@ -1509,7 +1509,7 @@ function ExternalPaymentPage({ customerName, estimatedTotal, paymentMethod, onSe
         <div className="mx-auto max-w-[960px] px-4 pt-6 md:px-6">
           <div className="mx-auto rounded-[28px] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-6 rounded-[18px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-5 md:flex-row md:items-center md:gap-4 md:px-6">
-              <StepNode step="Langkah 1" title="Tinjau Penawaran" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
+              <StepNode step="Langkah 1" title={stepOneTitle} subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
               <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
               <StepNode step="Langkah 2" title="Data Lanjutan" subtitle="Selesai" active={false} done={true} icon={<FileText className="h-4 w-4" />} />
               <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
@@ -2109,7 +2109,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
   }
 
   if (externalView === "payment") {
-    return <ExternalPaymentPage customerName={effectiveCustomerName} estimatedTotal={estimatedTotalNumber} paymentMethod={paymentMethod} onSelectMethod={(value) => { setPaymentMethod(value); setPaymentStatus(""); }} onBack={() => setExternalView("offer-final")} onProceedPayment={() => setPaymentStatus(`${activeVariant.paymentSuccessMessage} Integrasi pembayaran online akan disambungkan pada tahap berikutnya.`)} paymentStatus={paymentStatus} operatingRecord={operatingRecord} isExpired={operatingRecord?.status === "Expired"} onSimulate={() => { setPaymentMethod(PAYMENT_OPTIONS[0]); setPaymentStatus(""); }} />;
+    return <ExternalPaymentPage customerName={effectiveCustomerName} estimatedTotal={estimatedTotalNumber} paymentMethod={paymentMethod} onSelectMethod={(value) => { setPaymentMethod(value); setPaymentStatus(""); }} onBack={() => setExternalView(sharedOfferSnapshot ? "offer-final" : "external-underwriting")} onProceedPayment={() => setPaymentStatus(`${activeVariant.paymentSuccessMessage} Integrasi pembayaran online akan disambungkan pada tahap berikutnya.`)} paymentStatus={paymentStatus} operatingRecord={operatingRecord} isExpired={operatingRecord?.status === "Expired"} onSimulate={() => { setPaymentMethod(PAYMENT_OPTIONS[0]); setPaymentStatus(""); }} stepOneTitle={sharedOfferSnapshot ? "Tinjau Penawaran" : "Simulasi Premi"} />;
   }
 
   if (externalView === "external-underwriting") {
@@ -2138,7 +2138,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
         version={externalDataOfferMeta.version}
         validUntil={externalDataOfferMeta.validUntil}
         statusLabel={externalDataOfferMeta.statusLabel}
-        guidanceText="Informasi yang Anda isi di halaman ini akan dipakai untuk menyiapkan penawaran final dan tahap pembayaran."
+        guidanceText="Informasi yang Anda isi di halaman ini akan dipakai untuk menyiapkan tahap pembayaran."
         summaryRows={[
           { label: activeVariant.primaryCoveragePremiumLabel, value: `Rp ${formatRupiah(basePremiumNumber)}` },
           ...(additionalPremiumNumber > 0 ? [{ label: "Premi Perluasan", value: `Rp ${formatRupiah(additionalPremiumNumber)}` }] : []),
@@ -2146,9 +2146,12 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
         ]}
         pendingItems={underwritingPendingItems}
         canContinue={canAdvanceUnderwriting}
-        continueLabel="Tinjau Penawaran Final"
-        onContinue={() => setExternalView("offer-final")}
-        onBack={() => setExternalView("offer-indicative")}
+        continueLabel="Lanjut ke Pembayaran"
+        onContinue={() => setExternalView("payment")}
+        onBack={() => setExternalView(sharedOfferSnapshot ? "offer-indicative" : "")}
+        stepOneTitle={sharedOfferSnapshot ? "Tinjau Penawaran" : "Simulasi Premi"}
+        bottomBackLabel={sharedOfferSnapshot ? "Kembali ke Tinjau Penawaran" : "Kembali ke Simulasi Premi"}
+        showSidebar={false}
         topActionLabel="Simulasi"
         onTopAction={fillStepTwoDemoData}
       >
@@ -2236,7 +2239,7 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                   <div className="flex flex-col gap-5 md:flex-row md:gap-5">
                     <StepNode step="Langkah 1" title="Simulasi Premi" subtitle={internalStep === 1 ? "Sedang diisi" : "Selesai"} active={internalStep === 1} done={internalStep > 1} icon={<Wallet className="h-4 w-4" />} onClick={() => { if (internalStep !== 1) setInternalStep(1); }} />
                     <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-                    <StepNode step="Langkah 2" title={isInternalMode ? "Isi Data" : "Data Lanjutan"} subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={!isInternalMode && internalStep > 2} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted) setInternalStep(2); }} />
+                    <StepNode step="Langkah 2" title={isInternalMode ? "Isi Data" : "Data Lanjutan"} subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={!isInternalMode && internalStep > 2} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted) { if (isInternalMode) setInternalStep(2); else setExternalView("external-underwriting"); } }} />
                     {!isInternalMode ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
                     {!isInternalMode ? (
                       <StepNode step="Langkah 3" title="Pembayaran" subtitle="Menunggu" active={false} done={false} icon={<Wallet className="h-4 w-4" />} />
@@ -2352,7 +2355,11 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
                       <button
                         type="button"
                         disabled={!canAdvanceInternalStepOne}
-                        onClick={() => { setInternalStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                        onClick={() => {
+                          if (isInternalMode) setInternalStep(2);
+                          else setExternalView("external-underwriting");
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
                         className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                       >
                         Isi Data Lanjutan
