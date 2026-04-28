@@ -2381,7 +2381,7 @@ export default function PropertyStepOneFrontendCompact({
         pendingItems={underwritingPendingItems}
         canContinue={canAdvanceUnderwriting}
         continueLabel="Lanjut ke Pembayaran"
-        onContinue={() => setExternalView("payment")}
+        onContinue={() => setExternalView(sharedOfferSnapshot ? "offer-final" : "payment")}
         onBack={() => setExternalView("offer-indicative")}
         showSidebar={false}
         stepOneTitle={sharedOfferSnapshot ? "Tinjau Penawaran" : "Simulasi Premi"}
