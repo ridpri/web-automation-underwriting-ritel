@@ -2047,15 +2047,11 @@ export default function PropertyStepOneFrontendCompact({
     selectedGuarantees,
     floorCount,
   });
+  const externalJourneyKey = activeVariant.key === "property-all-risk" ? "property-all-risk-external" : "property-external";
   const shareUrl = getShareUrl(currentExternalTarget, {
+    journey: externalJourneyKey,
+    role: "guest",
     viewer: "customer",
-    referral: referralCode,
-    sender: sessionName,
-    customer: customerName,
-    offer: shareSnapshot,
-  });
-  const previewUrl = getShareUrl(currentExternalTarget, {
-    viewer: "internal",
     referral: referralCode,
     sender: sessionName,
     customer: customerName,
@@ -2412,7 +2408,7 @@ export default function PropertyStepOneFrontendCompact({
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <SentOffersModal open={showSentOffers} onClose={() => setShowSentOffers(false)} />
-      <IndicationModal open={showIndicationModal} onClose={() => { setShowIndicationModal(false); setShareFeedback(""); }} onOpenIndicativeOffer={() => { setExternalViewerMode("internal"); setShowIndicationModal(false); setExternalView("offer-indicative"); openShareWindow(previewUrl); }} onOpenFinalOffer={internalStep === 2 ? () => { setExternalViewerMode("internal"); setShowIndicationModal(false); setExternalView("offer-final"); openShareWindow(getShareUrl("offer-final", { viewer: "internal", referral: referralCode, sender: sessionName, customer: customerName, offer: shareSnapshot })); } : null} customerName={effectiveCustomerName} shareUrl={shareUrl} onShowQrInfo={() => setQrInfoVisible((prev) => !prev)} onCopyLink={handleCopyLink} copyStatus={shareFeedback} shareLabel={activeVariant.shareLabel} shareSubject={activeVariant.shareSubject} />
+      <IndicationModal open={showIndicationModal} onClose={() => { setShowIndicationModal(false); setShareFeedback(""); }} onOpenIndicativeOffer={() => { setExternalViewerMode("customer"); setShowIndicationModal(false); setExternalView("offer-indicative"); openShareWindow(shareUrl); }} onOpenFinalOffer={internalStep === 2 ? () => { setExternalViewerMode("customer"); setShowIndicationModal(false); setExternalView("offer-final"); openShareWindow(shareUrl); } : null} customerName={effectiveCustomerName} shareUrl={shareUrl} onShowQrInfo={() => setQrInfoVisible((prev) => !prev)} onCopyLink={handleCopyLink} copyStatus={shareFeedback} shareLabel={activeVariant.shareLabel} shareSubject={activeVariant.shareSubject} />
 
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
         <div className="mx-auto flex max-w-[1800px] items-center justify-between px-4 py-3 md:px-6">
