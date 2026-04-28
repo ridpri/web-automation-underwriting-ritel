@@ -1122,13 +1122,31 @@ function getMainPremiumSplit(flowType: FlowType, calc: any) {
 }
 
 function HelpDot({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <div className="group relative inline-flex">
-      <button type="button" className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-[10px] font-bold text-slate-500">i</button>
-      <div className="pointer-events-none absolute left-0 top-6 z-40 hidden w-72 whitespace-pre-line rounded-xl bg-slate-900 px-3 py-2 text-xs leading-5 text-white shadow-xl group-hover:block">
-        {text}
-      </div>
-    </div>
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => {
+          window.setTimeout(() => setOpen(false), 120);
+        }}
+        aria-label="Lihat penjelasan"
+        aria-expanded={open}
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 bg-white text-[10px] font-bold text-slate-500"
+      >
+        i
+      </button>
+      {open ? (
+        <span className="absolute left-0 top-6 z-40 w-72 whitespace-pre-line rounded-xl bg-slate-900 px-3 py-2 text-xs leading-5 text-white shadow-xl">
+          {text}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -2896,7 +2914,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               quoteReady ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
             )}
           >
-            Kirim Penawaran
+            Kirim Penawaran Awal
           </button>
         ) : null}
         {showPremiumDetails ? (
@@ -3031,7 +3049,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               readyForNextStage ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
             )}
           >
-            Kirim Penawaran
+            Kirim Penawaran Final
           </button>
         </div>
       </div>
@@ -4046,7 +4064,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       disabled={!readyForNextStage}
                       className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm", readyForNextStage ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                     >
-                      {isInternalMode ? "Kirim Penawaran" : "Lanjut ke Pembayaran"}
+                      {isInternalMode ? "Kirim Penawaran Final" : "Lanjut ke Pembayaran"}
                     </button>
                     {!isInternalMode && hasSharedOfferJourney ? (
                       <button
