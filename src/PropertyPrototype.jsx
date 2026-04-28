@@ -1186,8 +1186,8 @@ function UnderwritingSections({
               <FieldLabel label="Jenis Stok" required helpText="Wajib diisi bila ada objek pertanggungan jenis stok." />
               <SelectInput value={uwForm.stockType || ""} onChange={(value) => setUwField("stockType", value)} options={STOCK_TYPE_OPTIONS.map((item) => item.label)} placeholder="Pilih jenis stok" />
               {!external && selectedStockTypeMeta ? (
-                <div className="mt-2 rounded-xl border border-[#D8E1EA] bg-white px-3 py-2 text-sm text-slate-700">
-                  Kategori stok ini termasuk <span className="font-semibold text-slate-900">{selectedStockTypeMeta.risk.toLowerCase()}</span>.
+                <div className="mt-1 text-xs leading-5 text-slate-500">
+                  Kategori stok: <span className="font-medium text-slate-700">{selectedStockTypeMeta.risk.toLowerCase()}</span>.
                 </div>
               ) : null}
             </div>
