@@ -104,6 +104,7 @@ const CONSTRUCTION_GUIDE = [
     desc: "Semua bangunan selain Kelas 1 dan Kelas 2.",
   },
 ];
+const CONSTRUCTION_CLASSES = CONSTRUCTION_GUIDE.map((item) => item.title);
 
 const OCCUPANCY_MAP = {
   "Rumah Tinggal": ["Hunian", "Kantor", "Ritel / Toko", "Warung / Kelontong"],
@@ -407,10 +408,6 @@ function shortObjectLabel(type) {
   return "Jenis Objek";
 }
 
-function requiresObjectNote(type) {
-  return false;
-}
-
 function isFloorRelevant(propertyType, occupancy) {
   if (propertyType === "Rumah Tinggal" || propertyType === "Kos-kosan") return false;
   if (occupancy === "Warung / Kelontong") return false;
@@ -470,13 +467,6 @@ function selectedFireProtectionItems(uwForm) {
   if (uwForm.fireProtection === "APAR + Hydrant") return ["APAR", "Hydrant"];
   if (FIRE_PROTECTION_ITEMS.includes(uwForm.fireProtection)) return [uwForm.fireProtection];
   return [];
-}
-
-function formatFireProtection(uwForm) {
-  const choice = uwForm.fireProtectionChoice || (uwForm.fireProtection && uwForm.fireProtection !== "Tidak Ada" ? "Ada" : uwForm.fireProtection);
-  if (choice === "Tidak Ada") return "Tidak Ada";
-  const selectedItems = selectedFireProtectionItems(uwForm);
-  return selectedItems.length ? selectedItems.join(" + ") : "";
 }
 
 function hasValidFireProtection(uwForm) {
@@ -1272,7 +1262,7 @@ function UnderwritingSections({
   );
 }
 
-function ExternalProposalPage({ mode, customerName, customerType, form, setFormField = () => {}, uwForm, uploads, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, onEditObject, onEditInsured, floorCount, setFloorCount, canProceed, floorFieldRef, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
+function ExternalProposalPage({ mode, customerName, form, setFormField = () => {}, uwForm, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, canProceed, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
   const isIndicative = mode === "indicative";
   const isInternalPreview = viewerMode === "internal";
   const activeVariant = productConfig || getPropertyVariant("property-safe");
@@ -1285,9 +1275,6 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
   const primaryLabel = isIndicative ? "Isi Data Lanjutan" : "Pembayaran";
   const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === constructionClass);
   const [summaryEditing, setSummaryEditing] = useState({ insured: false, property: false });
-  const [sectionOpen, setSectionOpen] = useState({ property: false, insured: false, guarantee: false });
-  const [objectOpen, setObjectOpen] = useState({ detail: false, main: false, exclusions: false, extension: false });
-  const [insuredOpen, setInsuredOpen] = useState({ profile: false, advanced: false, photos: false });
   const offerMeta = useMemo(() => {
     const now = new Date();
     const validity = resolveOfferValidity(isIndicative, uwForm.coverageStartDate);
@@ -1307,30 +1294,11 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
   const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
   const phoneDisplay = form.phone || "-";
   const emailDisplay = form.email || "-";
-  const fireProtectionSummary = formatFireProtection(uwForm);
-  const hasAnyAdvancedData = Boolean(
-    uwForm.idNumber ||
-      uwForm.picName ||
-      fireProtectionSummary ||
-      uwForm.coverageStartDate ||
-      uwForm.claimHistory ||
-      uwForm.stockType
-  );
-  const hasInsuredSummaryData = Boolean(
-    (customerName && customerName !== "-") ||
-      String(form.phone || "").trim() ||
-      String(form.email || "").trim() ||
-      hasAnyAdvancedData ||
-      uploads.frontView ||
-      uploads.sideRightView ||
-      uploads.sideLeftView
-  );
   const customerDisplay = customerName || "-";
   const greetingRecipientName = customerDisplay && customerDisplay !== "-"
     ? String(customerDisplay).trim().split(/\s+/)[0]
     : "Calon Tertanggung";
   const coverageValue = "Rp " + formatRupiah(totalValue);
-  const visibleGuarantees = isIndicative ? extensionOptions : selectedExtensions;
   const objectTypeSummary = objectRows.length
     ? Array.from(new Set(objectRows.map((row) => String(row.type || "").trim()).filter(Boolean))).join(", ")
     : "Belum ada objek yang dipilih";
@@ -1344,10 +1312,6 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
   const hasStockObject = objectRows.some((row) => row.type === "Stok");
   const selectedStockTypeMeta = STOCK_TYPE_OPTIONS.find((item) => item.label === uwForm.stockType);
   const stockTypeSummary = selectedStockTypeMeta ? `${selectedStockTypeMeta.label} (${selectedStockTypeMeta.risk})` : uwForm.stockType || "-";
-  const showAdvancedAccordions = !isIndicative && (hasAnyAdvancedData || uploads.frontView || uploads.sideRightView || uploads.sideLeftView);
-  const guaranteeSectionSubtitle = isIndicative
-    ? "Buka untuk melihat jaminan yang sudah termasuk dan memilih perluasan yang diinginkan."
-    : "Buka untuk melihat jaminan yang termasuk dalam penawaran ini.";
   const headerUserLabel = isInternalPreview ? senderName || "Taqwim (Internal)" : greetingRecipientName;
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
 
@@ -2121,7 +2085,7 @@ export default function PropertyStepOneFrontendCompact({
   if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone dan alamat email yang valid.");
   if (!hasValidStepOneOccupancy) stepOnePendingItems.push("Pilih penggunaan properti yang diasuransikan.");
   if (!hasValidStepOneLocation) stepOnePendingItems.push("Isi lokasi properti atau gunakan tombol lokasi cepat.");
-  if (!hasValidConstruction) stepOnePendingItems.push("Lengkapi material bangunan untuk menentukan kelas konstruksi.");
+  if (!hasValidConstruction) stepOnePendingItems.push("Pilih kelas konstruksi.");
   if (!hasValidObjects) stepOnePendingItems.push("Setiap objek harus punya nilai yang ingin dilindungi.");
   if (!hasRequiredFloorCount) stepOnePendingItems.push("Lengkapi jumlah lantai pada perluasan Risiko Gempa Bumi.");
   const underwritingPendingItems = [];
@@ -2184,6 +2148,7 @@ export default function PropertyStepOneFrontendCompact({
     setField("structureMaterial", STRUCTURE_MATERIAL_OPTIONS[0]);
     setField("roofMaterial", ROOF_MATERIAL_OPTIONS[0]);
     setField("flammableMaterial", FLAMMABLE_MATERIAL_OPTIONS[0]);
+    setField("constructionClass", "Kelas 1");
     setField("locationSearch", demoAddress);
     setField("customerType", demoCustomer.type);
     setObjectRows([
@@ -2554,23 +2519,18 @@ export default function PropertyStepOneFrontendCompact({
                         </div>
                       </div>
                       <div className="md:col-span-2">
-                        <div className="rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] p-4">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <div className="text-[15px] font-bold text-slate-900">Material Bangunan</div>
-                              <div className="mt-1 text-sm text-slate-500">Kelas konstruksi dihitung otomatis dari material utama bangunan.</div>
+                        <div className="space-y-2.5 md:max-w-[760px]">
+                          <FieldLabel label="Kelas Konstruksi" required />
+                          <div className="space-y-2 md:flex md:items-center md:gap-3 md:space-y-0">
+                            <div className="md:min-w-0 md:max-w-[420px] md:flex-1">
+                              <SelectInput value={form.constructionClass} onChange={(value) => setField("constructionClass", value)} options={CONSTRUCTION_CLASSES} placeholder="Pilih kelas konstruksi bangunan." />
                             </div>
-                            {form.constructionClass ? <div className="rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#0A4D82] ring-1 ring-[#D5DDE6]">{form.constructionClass}</div> : null}
+                            <button type="button" onClick={() => setShowConstructionGuide((prev) => !prev)} className="inline-flex h-auto shrink-0 items-center self-start rounded-none border-0 bg-transparent px-0 py-2 text-sm font-medium text-[#0A4D82] underline-offset-2 hover:underline">
+                              {showConstructionGuide ? "Sembunyikan panduan lengkap" : "Lihat panduan lengkap"}
+                            </button>
                           </div>
-                          <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            <div><FieldLabel label="Dinding Utama" required /><SelectInput value={form.wallMaterial} onChange={(value) => setField("wallMaterial", value)} options={WALL_MATERIAL_OPTIONS} placeholder="Pilih material dinding utama" /></div>
-                            <div><FieldLabel label="Struktur / Lantai Utama" required /><SelectInput value={form.structureMaterial} onChange={(value) => setField("structureMaterial", value)} options={STRUCTURE_MATERIAL_OPTIONS} placeholder="Struktur atau lantai utamanya terbuat dari apa?" /></div>
-                            <div><FieldLabel label="Atap Bangunan" required /><SelectInput value={form.roofMaterial} onChange={(value) => setField("roofMaterial", value)} options={ROOF_MATERIAL_OPTIONS} placeholder="Penutup atapnya terbuat dari apa?" /></div>
-                            <div><FieldLabel label="Bagian mudah terbakar lainnya?" required /><SelectInput value={form.flammableMaterial} onChange={(value) => setField("flammableMaterial", value)} options={FLAMMABLE_MATERIAL_OPTIONS} placeholder="Apakah ada bagian utama bangunan lain yang mudah terbakar?" /></div>
-                          </div>
-                          {constructionInfo ? <div className="mt-3 rounded-[12px] border border-[#D5DDE6] bg-white px-3 py-2.5 text-[12px] leading-5 text-slate-600"><span className="font-semibold text-slate-900">{constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
-                          <button type="button" onClick={() => setShowConstructionGuide((prev) => !prev)} className="mt-3 text-sm font-medium text-[#0A4D82] hover:underline">{showConstructionGuide ? "Sembunyikan panduan kelas konstruksi" : "Lihat panduan kelas konstruksi"}</button>
-                          {showConstructionGuide ? <div className="mt-3 grid gap-2 rounded-xl border border-[#D5DDE6] bg-white p-3">{CONSTRUCTION_GUIDE.map((item) => <div key={item.title} className="rounded-lg bg-[#F8FBFE] p-3 ring-1 ring-slate-200"><div className="text-[13px] font-semibold text-[#0A4D82]">{item.title}</div><div className="mt-1 text-[12px] leading-5 text-slate-600">{item.desc}</div></div>)}</div> : null}
+                          {constructionInfo ? <div className="rounded-[12px] border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2.5 text-[12px] leading-5 text-slate-600"><span className="font-semibold text-slate-900">{constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
+                          {showConstructionGuide ? <div className="overflow-hidden rounded-[14px] border border-[#D5DDE6] bg-[#F8FBFE]">{CONSTRUCTION_GUIDE.map((item, index) => <div key={item.title} className={cls("grid gap-1.5 px-3 py-2.5 md:grid-cols-[76px_minmax(0,1fr)] md:items-start md:gap-x-3", index !== 0 && "border-t border-[#E2E8F0]")}><div className="text-[12px] font-semibold text-[#0A4D82] md:text-[13px]">{item.title}</div><div className="text-[11px] leading-[1.45] text-slate-600 md:text-[12px]">{item.desc}</div></div>)}</div> : null}
                         </div>
                       </div>
                       <div className="md:col-span-2"><FieldLabel label="Alamat / Lokasi Objek" required /><TextInput value={form.locationSearch} onChange={(value) => setField("locationSearch", value)} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} /><div className="mt-2 flex flex-wrap gap-2.5"><button type="button" onClick={() => { setField("locationSearch", "Lokasi GPS tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Jl. Sudirman Kav. 44, Jakarta Selatan", source: "gps" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Ambil Lokasi Sekarang</button><button type="button" onClick={() => { setField("locationSearch", "Pin peta tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading", source: "map" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Pilih di Peta</button></div></div>
