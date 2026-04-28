@@ -76,6 +76,13 @@ function inferJourneyFromShareData(shareData) {
   return "";
 }
 
+function hasMatchingShareContext(journey) {
+  if (typeof window === "undefined" || !journey) return false;
+  const params = new URLSearchParams(window.location.search);
+  const shareJourney = inferJourneyFromShareData(decodeUrlShareToken(params.get("share") || ""));
+  return Boolean(shareJourney && shareJourney === journey);
+}
+
 function inferSessionRoleFromJourney(journey) {
   if (!journey) return "guest";
   if (INTERNAL_ONLY_JOURNEYS.has(journey)) return "internal";
@@ -83,9 +90,9 @@ function inferSessionRoleFromJourney(journey) {
   return "guest";
 }
 
-function sanitizeJourneyForRole(journey, sessionRole) {
+function sanitizeJourneyForRole(journey, sessionRole, options = {}) {
   if (!journey) return "";
-  if (DISABLED_PUBLIC_JOURNEYS.has(journey)) return "";
+  if (DISABLED_PUBLIC_JOURNEYS.has(journey) && !options.allowSharedOfferJourney) return "";
   if (INTERNAL_ONLY_JOURNEYS.has(journey) && sessionRole !== "internal") return "";
   if (journey === "self-care-portal" && sessionRole === "guest") return "self-care-lookup";
   return journey;
@@ -99,6 +106,7 @@ function resolveInitialNavigationState() {
   const params = new URLSearchParams(window.location.search);
   const shareJourney = inferJourneyFromShareData(decodeUrlShareToken(params.get("share") || ""));
   const requestedJourney = params.get("journey") || shareJourney || "";
+  const allowSharedOfferJourney = Boolean(shareJourney && requestedJourney === shareJourney);
   const requestedJourneyRole = requestedJourney ? inferSessionRoleFromJourney(requestedJourney) : null;
   const sessionRole =
     resolveUrlSessionRole(params.get("role"))
@@ -107,7 +115,7 @@ function resolveInitialNavigationState() {
     || "guest";
 
   return {
-    activeJourney: sanitizeJourneyForRole(requestedJourney, sessionRole),
+    activeJourney: sanitizeJourneyForRole(requestedJourney, sessionRole, { allowSharedOfferJourney }),
     sessionRole,
   };
 }
@@ -215,9 +223,10 @@ export default function App() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [operatingRecords, setOperatingRecords] = useState(OPERATING_QUEUE_SEED);
   const [activeTransactionId, setActiveTransactionId] = useState(OPERATING_QUEUE_SEED[0]?.id || "");
+  const allowSharedOfferJourney = useMemo(() => hasMatchingShareContext(activeJourney), [activeJourney]);
   const resolvedActiveJourney = useMemo(
-    () => sanitizeJourneyForRole(activeJourney, sessionRole),
-    [activeJourney, sessionRole],
+    () => sanitizeJourneyForRole(activeJourney, sessionRole, { allowSharedOfferJourney }),
+    [activeJourney, allowSharedOfferJourney, sessionRole],
   );
   const activeSessionName = resolveSessionName(sessionRole);
   const activeSessionProfile = resolveSessionProfile(sessionRole);
