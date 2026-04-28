@@ -117,6 +117,7 @@ const CAR_UPLOAD_FIELDS = [
   "Ambil foto bagian belakang",
 ] as const;
 const CAR_COMP_EXISTING_DAMAGE_PREFIX = "Foto kerusakan existing";
+const CAR_EQUIPMENT_PHOTO_PREFIX = "Foto perlengkapan tambahan";
 const CAR_COMP_UPLOAD_FIELDS = [
   "Ambil foto bagian depan",
   "Ambil foto bagian belakang",
@@ -143,6 +144,19 @@ function isExistingDamageUploadName(name: string) {
 function getExistingDamagePhotoNames(count: number) {
   const safeCount = Math.max(1, Number(count || 1));
   return Array.from({ length: safeCount }, (_, index) => getExistingDamageUploadName(index + 1));
+}
+
+function getEquipmentPhotoName(index: number) {
+  return `${CAR_EQUIPMENT_PHOTO_PREFIX} ${index}`;
+}
+
+function isEquipmentPhotoName(name: string) {
+  return String(name || "").startsWith(CAR_EQUIPMENT_PHOTO_PREFIX);
+}
+
+function getEquipmentPhotoNames(count: number) {
+  const safeCount = Math.max(1, Number(count || 1));
+  return Array.from({ length: safeCount }, (_, index) => getEquipmentPhotoName(index + 1));
 }
 
 const OJK_REGION_1_CODES = ["BA", "BB", "BD", "BE", "BG", "BH", "BK", "BL", "BM", "BN", "BP"];
@@ -389,7 +403,7 @@ function createFlowState(type: FlowType): FlowState {
             quake: { enabled: false },
             driverPa: { enabled: false, amount: DEFAULT_CAR_PA_AMOUNT },
             passengerPa: { enabled: false, amount: DEFAULT_CAR_PA_AMOUNT, seats: DEFAULT_CAR_PASSENGER_SEATS },
-            equipment: { enabled: false, amount: "" },
+            equipment: { enabled: false, amount: "", status: "none", inclusion: "", declaredValue: "", description: "", photoCount: 1 },
             authorizedWorkshop: { enabled: false },
           },
     },
@@ -1036,6 +1050,7 @@ function getVehiclePhotoTitle(name: string) {
   if (name === "Foto interior dashboard dan odometer") return "Interior/dashboard + odometer";
   if (name === "Foto nomor rangka / VIN") return "Nomor rangka/VIN";
   if (isExistingDamageUploadName(name)) return name.replace(CAR_COMP_EXISTING_DAMAGE_PREFIX, "Foto kerusakan");
+  if (isEquipmentPhotoName(name)) return name.replace(CAR_EQUIPMENT_PHOTO_PREFIX, "Foto perlengkapan");
   return "Foto kendaraan";
 }
 
@@ -1047,6 +1062,7 @@ function getVehiclePhotoHelper(name: string) {
   if (name === "Foto interior dashboard dan odometer") return "Pastikan dashboard dan angka odometer/kilometer terlihat jelas.";
   if (name === "Foto nomor rangka / VIN") return "Ambil area nomor rangka/VIN kendaraan bila dapat diakses dengan aman.";
   if (isExistingDamageUploadName(name)) return "Ambil foto area kerusakan dengan jelas. Anda bisa menambahkan lebih dari satu foto.";
+  if (isEquipmentPhotoName(name)) return "Ambil foto perlengkapan non-standar yang ingin dicatat atau dijamin.";
   return "Wajib diisi.";
 }
 
@@ -1978,6 +1994,18 @@ export default function MotorLatestExact({
         coverageStart: "2026-05-01",
         coverageEnd: addOneYear("2026-05-01"),
       };
+      if (type !== "motor") {
+        next[type].quote.extensions.equipment = {
+          ...next[type].quote.extensions.equipment,
+          enabled: false,
+          amount: "",
+          status: "none",
+          inclusion: "",
+          declaredValue: "",
+          description: "",
+          photoCount: 1,
+        };
+      }
       next[type].uploads = Object.keys(next[type].uploads).reduce((acc: Record<string, boolean>, key: string) => {
         acc[key] = true;
         return acc;
@@ -2149,12 +2177,39 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const hasExistingDamagePhotos = existingDamagePhotoNames.some((name) => Boolean(selected?.uploads[name]));
   const existingDamageRequirementMet =
     flowType !== "carComp" || existingDamageStatus === "none" || (existingDamageStatus === "yes" && hasExistingDamagePhotos);
+  const equipmentState = flowType !== "motor" ? (selected?.quote.extensions.equipment || {}) : {};
+  const equipmentStatus =
+    flowType !== "motor"
+      ? (equipmentState.status || (equipmentState.enabled || equipmentState.amount || equipmentState.description || equipmentState.inclusion ? "yes" : "none"))
+      : "none";
+  const equipmentInclusion = String(equipmentState.inclusion || "");
+  const equipmentChargeableAmount = Number(equipmentState.amount || 0) || 0;
+  const equipmentPhotoNames = flowType !== "motor" ? getEquipmentPhotoNames(equipmentState.photoCount || 1) : [];
+  const hasEquipmentPhotos = equipmentPhotoNames.some((name) => Boolean(selected?.uploads[name]));
+  const equipmentRequirementMet =
+    flowType === "motor" ||
+    equipmentStatus !== "yes" ||
+    (
+      Boolean(String(equipmentState.description || "").trim()) &&
+      (equipmentInclusion === "included" || (equipmentInclusion === "additional" && equipmentChargeableAmount > 0)) &&
+      hasEquipmentPhotos
+    );
+  const equipmentPendingMessage =
+    flowType !== "motor" && !equipmentRequirementMet
+      ? !String(equipmentState.description || "").trim()
+        ? "Rincian perlengkapan tambahan belum diisi."
+        : !equipmentInclusion
+          ? "Pilih apakah perlengkapan sudah termasuk dalam harga pertanggungan utama."
+          : equipmentInclusion === "additional" && equipmentChargeableAmount <= 0
+            ? "Nilai perlengkapan tambahan yang ingin dijamin belum diisi."
+            : "Unggah minimal satu foto perlengkapan tambahan."
+      : null;
   const requiredUploadNames = visibleUploadNames;
   const uploadsComplete = selected ? requiredUploadNames.every((name) => Boolean(selected.uploads[name])) && existingDamageRequirementMet : false;
   const stnkPhotoComplete = flowType !== "carComp" || Boolean(selected?.stnkRead);
   const dataComplete = selected ? !!(selected.insured.customerType && selected.insured.fullName && selected.insured.address && selected.insured.email && selected.insured.phone && selected.vehicle.plateNumber && selected.vehicle.chassisNumber && selected.vehicle.engineNumber) : false;
   const periodComplete = selected ? !!(selected.quote.coverageStart && selected.quote.coverageEnd) : false;
-  const readyForNextStage = !!(selected && calc && uploadsComplete && stnkPhotoComplete && dataComplete && periodComplete && calc.status !== "Need Review");
+  const readyForNextStage = !!(selected && calc && uploadsComplete && equipmentRequirementMet && stnkPhotoComplete && dataComplete && periodComplete && calc.status !== "Need Review");
   const canIssue = !!(readyForNextStage && selected.agree && selected.paymentMethod);
   const coverageEndDate = selected?.quote?.coverageStart ? addOneYear(selected.quote.coverageStart) : "";
   const coverageStartDisplay = selected?.quote?.coverageStart ? formatDisplayDate(new Date(`${selected.quote.coverageStart}T00:00:00`)) : "-";
@@ -2479,6 +2534,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     !selected.vehicle.engineNumber ? "Nomor mesin kendaraan belum lengkap." : null,
     !selected.underwriting.claimHistory ? "Riwayat klaim 3 tahun terakhir belum diisi." : null,
     !periodComplete ? "Tanggal mulai perlindungan belum diisi." : null,
+    equipmentPendingMessage,
     !uploadsComplete
       ? flowType === "carComp" && !existingDamageRequirementMet
         ? existingDamageStatus === "yes"
@@ -3391,43 +3447,258 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         </>
                       ) : null}
                     </div>
-
-                    {flowType !== "motor" ? (
-                      <details className="rounded-xl border border-slate-200 bg-slate-50">
-                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left">
-                          <div>
-                            <div className="text-sm font-semibold text-slate-900">Perlengkapan Tambahan</div>
-                            <div className="mt-1 text-xs text-slate-500">Aksesori atau perangkat non-standar yang bukan bawaan pabrik dan ingin ikut dijamin bersama kendaraan.</div>
-                          </div>
-                          <ChevronDown className="h-4 w-4 text-slate-400" />
-                        </summary>
-                        <div className="border-t border-slate-200 px-4 py-4">
-                          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-                            <div>
-                              <FieldLabel label="Nilai perlengkapan tambahan" required={false} />
-                              <TextInput
-                                value={selected.quote.extensions.equipment.amount ? formatRupiah(Number(selected.quote.extensions.equipment.amount)) : ""}
-                                onChange={(value: string) => {
-                                  const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
-                                  const capped = Math.min(calc?.details?.equipmentCap || 0, raw);
-                                  setAt(flowType, "quote.extensions.equipment.amount", capped);
-                                  setAt(flowType, "quote.extensions.equipment.enabled", capped > 0);
-                                }}
-                                placeholder={`Maksimum ${formatRupiah(calc?.details?.equipmentCap || 0)}`}
-                                inputMode="numeric"
-                              />
-                            </div>
-                            <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-600">
-                              Maksimum 10% dari harga pertanggungan casco, paling tinggi Rp25.000.000.
-                            </div>
-                          </div>
-                        </div>
-                      </details>
-                    ) : null}
                 </>
               </div>
             </div>
           </div>
+          {flowType !== "motor" ? (
+            <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
+              <div className="space-y-4">
+                <div>
+                  <div className="text-[18px] font-bold tracking-tight text-slate-900">Perlengkapan Tambahan</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    Aksesori atau perangkat non-standar yang bukan bawaan pabrik. Pilih apakah nilainya sudah termasuk dalam harga pertanggungan utama agar premi tidak dihitung dua kali.
+                  </div>
+                </div>
+
+                <div className="grid gap-2.5 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFlows((prev) => {
+                        const copy: any = JSON.parse(JSON.stringify(prev));
+                        copy[flowType].quote.extensions.equipment = {
+                          ...copy[flowType].quote.extensions.equipment,
+                          enabled: false,
+                          amount: "",
+                          status: "none",
+                          inclusion: "",
+                          declaredValue: "",
+                          description: "",
+                          photoCount: 1,
+                        };
+                        Object.keys(copy[flowType].uploads || {}).forEach((key) => {
+                          if (isEquipmentPhotoName(key)) copy[flowType].uploads[key] = false;
+                        });
+                        return copy;
+                      });
+                      setEvidence((prev) => {
+                        const next: any = { ...prev, [flowType]: { ...prev[flowType] } };
+                        Object.keys(next[flowType] || {}).forEach((key) => {
+                          if (isEquipmentPhotoName(key)) next[flowType][key] = null;
+                        });
+                        return next;
+                      });
+                    }}
+                    className={cls(
+                      "rounded-[14px] border px-4 py-3 text-left transition",
+                      equipmentStatus !== "yes" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                    )}
+                  >
+                    <div className="text-sm font-semibold text-[#0A4D82]">Tidak ada perlengkapan tambahan</div>
+                    <div className="mt-1 text-xs leading-5 text-slate-500">Tidak ada aksesori non-standar yang perlu dicatat atau dijamin.</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFlows((prev) => {
+                        const copy: any = JSON.parse(JSON.stringify(prev));
+                        const current = copy[flowType].quote.extensions.equipment || {};
+                        const amount = Math.min(calc?.details?.equipmentCap || 0, Number(current.amount || 0) || 0);
+                        copy[flowType].quote.extensions.equipment = {
+                          ...current,
+                          status: "yes",
+                          inclusion: current.inclusion || "",
+                          amount: current.inclusion === "additional" ? amount : "",
+                          enabled: current.inclusion === "additional" && amount > 0,
+                          photoCount: Math.max(1, Number(current.photoCount || 1)),
+                        };
+                        return copy;
+                      });
+                    }}
+                    className={cls(
+                      "rounded-[14px] border px-4 py-3 text-left transition",
+                      equipmentStatus === "yes" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                    )}
+                  >
+                    <div className="text-sm font-semibold text-[#0A4D82]">Ada perlengkapan tambahan</div>
+                    <div className="mt-1 text-xs leading-5 text-slate-500">Isi rincian, status nilai pertanggungan, dan foto perlengkapannya.</div>
+                  </button>
+                </div>
+
+                {equipmentStatus === "yes" ? (
+                  <div className="space-y-4">
+                    <div>
+                      <FieldLabel label="Rincian perlengkapan" />
+                      <TextInput
+                        value={String(equipmentState.description || "")}
+                        onChange={(value: string) => setAt(flowType, "quote.extensions.equipment.description", value)}
+                        placeholder="Contoh: dashcam depan-belakang, audio tambahan, velg non-standar"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="text-[13px] font-semibold text-slate-800">Apakah nilainya sudah termasuk dalam harga pertanggungan utama?</div>
+                      <div className="mt-2 grid gap-2.5 md:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAt(flowType, "quote.extensions.equipment.inclusion", "included");
+                            setAt(flowType, "quote.extensions.equipment.amount", "");
+                            setAt(flowType, "quote.extensions.equipment.enabled", false);
+                          }}
+                          className={cls(
+                            "rounded-[14px] border px-4 py-3 text-left transition",
+                            equipmentInclusion === "included" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                          )}
+                        >
+                          <div className="text-sm font-semibold text-[#0A4D82]">Sudah termasuk</div>
+                          <div className="mt-1 text-xs leading-5 text-slate-500">Tidak menambah premi. Foto tetap dicatat untuk verifikasi.</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const amount = Math.min(calc?.details?.equipmentCap || 0, Number(equipmentState.amount || 0) || 0);
+                            setAt(flowType, "quote.extensions.equipment.inclusion", "additional");
+                            setAt(flowType, "quote.extensions.equipment.amount", amount || "");
+                            setAt(flowType, "quote.extensions.equipment.enabled", amount > 0);
+                          }}
+                          className={cls(
+                            "rounded-[14px] border px-4 py-3 text-left transition",
+                            equipmentInclusion === "additional" ? "border-[#0A4D82] bg-white shadow-sm" : "border-slate-200 bg-white hover:border-[#A9C7E3]",
+                          )}
+                        >
+                          <div className="text-sm font-semibold text-[#0A4D82]">Belum termasuk, ingin ikut dijamin</div>
+                          <div className="mt-1 text-xs leading-5 text-slate-500">Nilainya menambah total yang dijamin dan mengubah premi.</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {equipmentInclusion ? (
+                      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px]">
+                        <div>
+                          <FieldLabel
+                            label={equipmentInclusion === "additional" ? "Nilai yang ingin dijamin" : "Estimasi nilai perlengkapan"}
+                            required={equipmentInclusion === "additional"}
+                          />
+                          <TextInput
+                            value={
+                              equipmentInclusion === "additional"
+                                ? equipmentChargeableAmount ? formatRupiah(equipmentChargeableAmount) : ""
+                                : equipmentState.declaredValue ? formatRupiah(Number(equipmentState.declaredValue)) : ""
+                            }
+                            onChange={(value: string) => {
+                              const raw = Number(String(value).replace(/[^0-9]/g, "")) || 0;
+                              if (equipmentInclusion === "additional") {
+                                const capped = Math.min(calc?.details?.equipmentCap || 0, raw);
+                                setAt(flowType, "quote.extensions.equipment.amount", capped || "");
+                                setAt(flowType, "quote.extensions.equipment.enabled", capped > 0);
+                              } else {
+                                setAt(flowType, "quote.extensions.equipment.declaredValue", raw || "");
+                              }
+                            }}
+                            placeholder={
+                              equipmentInclusion === "additional"
+                                ? `Maksimum ${formatRupiah(calc?.details?.equipmentCap || 0)}`
+                                : "Opsional, tidak menambah premi"
+                            }
+                            inputMode="numeric"
+                          />
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm leading-6 text-slate-600">
+                          {equipmentInclusion === "additional" ? (
+                            <>
+                              Batas maksimal: {formatRupiah(calc?.details?.equipmentCap || 0)}. Nilai kendaraan utama {formatRupiah(Number(selected.quote.marketValue || 0))} + perlengkapan {formatRupiah(equipmentChargeableAmount)}.
+                            </>
+                          ) : (
+                            <>
+                              Premi tidak berubah karena perlengkapan dianggap sudah masuk dalam harga pertanggungan utama {formatRupiah(Number(selected.quote.marketValue || 0))}.
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                        {equipmentPhotoNames.map((name) => {
+                          const uploaded = selected.uploads[name];
+                          const photoEvidence = evidence[flowType]?.[name];
+                          return (
+                            <div key={name} className="rounded-xl border border-[#D8E1EA] bg-white p-2.5">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="text-[13px] font-semibold leading-5 tracking-tight text-slate-900">{getVehiclePhotoTitle(name)}</div>
+                                  <div className="mt-1 text-[12px] leading-5 text-slate-500">{getVehiclePhotoHelper(name)}</div>
+                                </div>
+                                <Camera className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAt(flowType, `uploads.${name}`, true);
+                                  setEvidence((prev) => ({
+                                    ...prev,
+                                    [flowType]: {
+                                      ...prev[flowType],
+                                      [name]: createVehiclePhotoMetadata(name, selected.insured.address),
+                                    },
+                                  }));
+                                }}
+                                className={cls(
+                                  "mt-2 flex h-28 w-full flex-col items-center justify-center rounded-xl border px-3 text-center transition hover:border-[#0A4D82]/30",
+                                  uploaded
+                                    ? "border-[#D8E1EA] bg-white"
+                                    : "border-dashed border-[#C9D6E4] bg-[linear-gradient(180deg,#FAFCFF_0%,#F4F8FC_100%)]",
+                                )}
+                              >
+                                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#DCE6F0]">
+                                  <Camera className="h-4 w-4 text-[#0A4D82]" />
+                                </span>
+                                <span className="mt-2 text-[13px] font-medium text-slate-700">
+                                  {uploaded ? "Foto sudah diambil" : "Ambil foto"}
+                                </span>
+                                <span className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                                  {uploaded && photoEvidence?.capturedAt ? "Tersimpan untuk verifikasi." : "Ketuk untuk membuka kamera."}
+                                </span>
+                              </button>
+                              {uploaded ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAt(flowType, `uploads.${name}`, false);
+                                    setEvidence((prev) => ({
+                                      ...prev,
+                                      [flowType]: {
+                                        ...prev[flowType],
+                                        [name]: null,
+                                      },
+                                    }));
+                                  }}
+                                  className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[#D5DDE6] bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  Hapus Foto
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAt(flowType, "quote.extensions.equipment.photoCount", Math.max(1, Number(equipmentState.photoCount || 1)) + 1)}
+                        className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+                      >
+                        <Camera className="h-4 w-4" />
+                        Tambah Foto Perlengkapan
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
             <div className="space-y-4">
               <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Pertanggungan</div>
