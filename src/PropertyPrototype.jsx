@@ -1640,7 +1640,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
 
                 {!isInternalPreview ? (
                   <div className="rounded-[24px] border border-[#D8E1EA] bg-white p-4 shadow-sm">
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className={cls("grid gap-2", isIndicative ? "sm:grid-cols-1" : "sm:grid-cols-2")}>
                       {!isIndicative ? (
                         <button
                           type="button"
@@ -1656,7 +1656,7 @@ function ExternalProposalPage({ mode, customerName, customerType, form, setFormF
                         onClick={onPrimary}
                         className={cls(
                           "flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm",
-                          !isIndicative && "sm:col-start-2",
+                          isIndicative ? "sm:col-span-full" : "sm:col-start-2",
                           canProceed && (isIndicative || !offerMeta.isExpired)
                             ? "bg-[#F5A623] hover:brightness-105"
                             : "cursor-not-allowed bg-slate-400"
