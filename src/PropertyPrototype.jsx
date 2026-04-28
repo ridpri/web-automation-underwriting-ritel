@@ -2623,60 +2623,31 @@ if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone 
             <div className="mx-auto mt-6 max-w-4xl px-4 md:px-6">
               <div className="space-y-5">
                 <UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} uwForm={uwForm} setUwField={setUwField} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} expandedRows={expandedRows} setExpandedRows={setExpandedRows} />
-                {isInternalMode ? (
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <button
-                        type="button"
-                        onClick={() => setInternalStep(1)}
-                        className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-center text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]"
-                      >
-                        Kembali ke Simulasi Premi
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!canAdvanceUnderwriting}
-                        onClick={() => setShowIndicationModal(true)}
-                        className={cls(
-                          "flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm transition",
-                          canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
-                        )}
-                      >
-                        Kirim Penawaran
-                      </button>
-                    </div>
+                <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setInternalStep(1)}
+                      className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-center text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]"
+                    >
+                      Kembali ke Simulasi Premi
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canAdvanceUnderwriting}
+                      onClick={() => {
+                        if (isInternalMode) setShowIndicationModal(true);
+                        else setExternalView("payment");
+                      }}
+                      className={cls(
+                        "flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm transition",
+                        canAdvanceUnderwriting ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
+                      )}
+                    >
+                      {isInternalMode ? "Kirim Penawaran" : "Lanjut ke Pembayaran"}
+                    </button>
                   </div>
-                ) : (
-                  <SectionCard title="Ringkasan">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-3">
-                        <div className="text-[13px] font-semibold uppercase tracking-[0.14em] text-slate-400">Data Properti</div>
-                        <div className="mt-2">
-                          <ProposalRow label="Nasabah" value={customerName || "-"} />
-                          <ProposalRow label="Jenis Bangunan" value={form.propertyType} />
-                          <ProposalRow label="Penggunaan bangunan" value={form.occupancy} />
-                          <ProposalRow label="Nilai yang Dilindungi" value={"Rp " + formatRupiah(totalValue)} strong />
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-3">
-                        <div className="text-[13px] font-semibold uppercase tracking-[0.14em] text-slate-400">Data Lanjutan</div>
-                        <div className="mt-2">
-                          <ProposalRow label={form.customerType === "Badan Usaha" ? "NPWP" : "NIK"} value={uwForm.idNumber || "-"} />
-                          <ProposalRow label="Kontak di Lokasi" value={uwForm.picName || "-"} />
-                          <ProposalRow label="Jangka Waktu Pertanggungan (Mulai)" value={uwForm.coverageStartDate || "-"} />
-                          <ProposalRow label="Jangka Waktu Pertanggungan (Akhir)" value={calculateCoverageEnd(uwForm.coverageStartDate) || "-"} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <SummarySidebarAlert items={underwritingPendingItems} />
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <button type="button" disabled={!canAdvanceUnderwriting} onClick={() => setExternalView("offer-final")} className={cls("flex h-[46px] w-full items-center justify-center rounded-[12px] text-sm font-bold uppercase tracking-wide text-white shadow-sm", canAdvanceUnderwriting ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Tinjau Penawaran</button>
-                      <button type="button" onClick={() => setInternalStep(1)} className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-[#D5DEEA] bg-white text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"><ArrowLeft className="h-4 w-4" />Kembali</button>
-                    </div>
-                  </SectionCard>
-                )}
+                </div>
               </div>
             </div>
           )}
