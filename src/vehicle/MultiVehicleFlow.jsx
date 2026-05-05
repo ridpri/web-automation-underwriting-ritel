@@ -163,11 +163,15 @@ function SelectInput({ value, onChange, options, placeholder }) {
         <option value="" disabled hidden>
           {placeholder}
         </option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {options.map((option) => {
+          const optionValue = typeof option === "string" ? option : option.value;
+          const optionLabel = typeof option === "string" ? option : option.label;
+          return (
+            <option key={optionValue} value={optionValue}>
+              {optionLabel}
+            </option>
+          );
+        })}
       </select>
       <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
     </div>
@@ -742,6 +746,20 @@ function VehicleUnderwritingCard({ flowType, vehicle, index, onUpdateVehicle }) 
               <FieldLabel label="Riwayat Klaim 3 Tahun Terakhir" required />
               <SelectInput value={vehicle.underwriting.claimHistory} onChange={(value) => updateUnderwriting({ claimHistory: value })} options={CLAIM_HISTORY_OPTIONS} placeholder="Pilih riwayat klaim" />
             </div>
+            {flowType === "carComp" ? (
+              <div>
+                <FieldLabel label="Kondisi kerusakan sebelum polis" required />
+                <SelectInput
+                  value={vehicle.underwriting.existingDamageStatus}
+                  onChange={(value) => updateUnderwriting({ existingDamageStatus: value })}
+                  options={[
+                    { label: "Tidak ada kerusakan", value: "none" },
+                    { label: "Ada kerusakan", value: "yes" },
+                  ]}
+                  placeholder="Pilih kondisi kendaraan"
+                />
+              </div>
+            ) : null}
             <div>
               <FieldLabel label="Kontak di Lokasi" />
               <TextInput value={vehicle.vehicle.contactOnLocation} onChange={(value) => updateVehicleData({ contactOnLocation: value })} placeholder="Nama kontak kendaraan" icon={<Phone className="h-4 w-4" />} />

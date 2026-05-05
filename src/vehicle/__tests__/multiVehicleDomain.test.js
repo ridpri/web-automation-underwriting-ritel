@@ -161,4 +161,42 @@ describe("multiVehicleDomain", () => {
       "Kendaraan 2: foto kendaraan belum lengkap.",
     ]);
   });
+
+  it("requires existing damage condition for multi comprehensive cars", () => {
+    const vehicle = createMultiVehicleDraft("carComp", 0, {
+      quote: {
+        vehicleName: "BYD Atto 3 Advanced",
+      },
+      vehicle: {
+        plateNumber: "B 1458 NZX",
+        chassisNumber: "LGXCE4CB8R1234567",
+        engineNumber: "ATTO3EV123456",
+        color: "Putih",
+      },
+      underwriting: { claimHistory: "Tidak Ada", existingDamageStatus: "" },
+      uploads: {
+        frontView: true,
+        backView: true,
+        rightView: true,
+        leftView: true,
+        dashboardView: true,
+        vinView: true,
+        stnkView: true,
+      },
+    });
+
+    const result = getMultiVehicleStepTwoPendingItems({
+      flowType: "carComp",
+      insuredName: "Rama",
+      customerType: "Pribadi",
+      idNumber: "3173010101010001",
+      address: "Jl. Kemang Raya No. 18, Jakarta Selatan",
+      email: "rama@example.com",
+      phone: "081234567890",
+      coverageStartDate: "2026-05-01",
+      vehicles: [vehicle],
+    });
+
+    assert.deepEqual(result, ["BYD Atto 3 Advanced: kondisi kerusakan sebelum polis belum dipilih."]);
+  });
 });
