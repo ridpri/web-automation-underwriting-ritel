@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test:domain": "node --test src/property/__tests__/*.test.js src/app/__tests__/*.test.js src/vehicle/__tests__/*.test.js",
+    "verify": "npm run test:domain && npm run build",
     "preview": "vite preview",
     "capture:procedure:internal": "node docs/procedures/internal/capture-internal-procedure.mjs",
     "build:procedure:internal": "node docs/procedures/internal/build-internal-procedure.mjs",

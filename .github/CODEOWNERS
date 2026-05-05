@@ -1,0 +1,26 @@
+# Default owner sementara. Ganti atau tambahkan GitHub team ketika struktur tim sudah siap.
+* @ridpri
+
+# Properti
+/src/PropertyPrototype.jsx @ridpri
+/src/property/ @ridpri
+/src/propertyProductConfig.js @ridpri
+
+# KBM
+/src/MotorLatestExact.tsx @ridpri
+/src/vehicle/ @ridpri
+/src/motorDomain.js @ridpri
+/src/carDomain.js @ridpri
+/src/vehicleCatalog.js @ridpri
+
+# Routing dan shell
+/src/App.jsx @ridpri
+/src/app/ @ridpri
+
+# Review, admin, dan platform
+/src/ReviewWorkbench.jsx @ridpri
+/src/PartnerConfigStudio.jsx @ridpri
+/src/platform/ @ridpri
+
+# Dokumen dan prosedur
+/docs/ @ridpri

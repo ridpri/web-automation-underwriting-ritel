@@ -33,26 +33,19 @@ import { getPropertyExtensions, getPropertyVariant } from "./propertyProductConf
 import { CustomerDataJourneyShell } from "./components/CustomerDataJourneyShell.jsx";
 import { OfferShareModal } from "./components/OfferShareModal.jsx";
 import { PremiumBreakdown, PremiumPriceHero } from "./components/PremiumSummaryBlocks.jsx";
+import MultiPropertyFlow from "./property/MultiPropertyFlow.jsx";
+import {
+  createMultiPropertyDraft,
+  deriveConstructionClass,
+  FLAMMABLE_MATERIAL_OPTIONS,
+  ROOF_MATERIAL_OPTIONS,
+  STRUCTURE_MATERIAL_OPTIONS,
+  WALL_MATERIAL_OPTIONS,
+} from "./property/multiPropertyDomain.js";
 
 const PROPERTY_TYPES = ["Rumah Tinggal", "Ruko", "Toko", "Kantor", "Kos-kosan"];
 const OBJECT_TYPES = ["Bangunan", "Inventaris / Isi", "Stok", "Mesin / Peralatan"];
 const CUSTOMER_TYPES = ["Nasabah Perorangan", "Badan Usaha"];
-const WALL_MATERIAL_OPTIONS = [
-  "Seluruhnya dari beton, bata, hebel, atau bahan tidak mudah terbakar",
-  "Ada bagian bahan mudah terbakar, maksimal sekitar 20% dari luas dinding",
-  "Bagian bahan mudah terbakar melebihi 20% dari luas dinding",
-];
-const STRUCTURE_MATERIAL_OPTIONS = [
-  "Beton, baja, atau bahan tidak mudah terbakar",
-  "Kayu",
-  "Material lain di luar ketentuan kelas 1 dan 2",
-];
-const ROOF_MATERIAL_OPTIONS = [
-  "Beton, metal, genteng, atau bahan tidak mudah terbakar",
-  "Sirap kayu keras",
-  "Bahan mudah terbakar lainnya",
-];
-const FLAMMABLE_MATERIAL_OPTIONS = ["Tidak ada", "Ada"];
 const FIRE_PROTECTION_CHOICES = ["Tidak Ada", "Ada"];
 const FIRE_PROTECTION_ITEMS = ["APAR", "Hydrant", "Sprinkler"];
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
@@ -450,28 +443,12 @@ function isFloorRelevant(propertyType, occupancy) {
   return propertyType === "Ruko" || propertyType === "Toko" || propertyType === "Kantor";
 }
 
-function deriveConstructionClass(form) {
-  const wall = form.wallMaterial || form.wall || "";
-  const structure = form.structureMaterial || form.structure || "";
-  const roof = form.roofMaterial || form.roof || "";
-  const flammable = form.flammableMaterial || form.flammable || "";
-  if (!wall || !structure || !roof || !flammable) return "";
-  if (
-    wall === "Bagian bahan mudah terbakar melebihi 20% dari luas dinding" ||
-    structure === "Material lain di luar ketentuan kelas 1 dan 2" ||
-    roof === "Bahan mudah terbakar lainnya" ||
-    flammable === "Ada"
-  ) {
-    return "Kelas 3";
-  }
-  if (
-    wall === "Ada bagian bahan mudah terbakar, maksimal sekitar 20% dari luas dinding" ||
-    structure === "Kayu" ||
-    roof === "Sirap kayu keras"
-  ) {
-    return "Kelas 2";
-  }
-  return "Kelas 1";
+function isOfficeFloorCountRequired(propertyType, occupancy) {
+  return occupancy === "Kantor" || (!occupancy && propertyType === "Kantor");
+}
+
+function shouldShowEarthquakeFloorInput(propertyType, occupancy, selectedGuarantees) {
+  return Boolean(selectedGuarantees?.earthquake) && isFloorRelevant(propertyType, occupancy) && !isOfficeFloorCountRequired(propertyType, occupancy);
 }
 
 function getOccupancyCode(propertyType, occupancy) {
@@ -670,6 +647,19 @@ function StepNode({ step, title, subtitle, active, done, icon, onClick }) {
   );
   if (!onClick) return content;
   return <button type="button" onClick={onClick} className="relative flex flex-1 justify-center">{content}</button>;
+}
+
+function PropertyFlowModeSwitch({ mode, onSingle, onMulti }) {
+  return (
+    <div className="inline-flex rounded-[12px] border border-[#D5DDE6] bg-[#F8FBFE] p-1 text-[#0A4D82] shadow-sm" aria-label="Pilih jumlah properti yang diasuransikan">
+      <button type="button" aria-label="Satu Properti" title="Satu Properti" onClick={onSingle} className={cls("inline-flex h-9 w-9 items-center justify-center rounded-[9px] transition", mode === "single" ? "bg-[#0A4D82] text-white shadow-sm" : "text-slate-500 hover:bg-white hover:text-[#0A4D82]")}>
+        <Home className="h-4 w-4" />
+      </button>
+      <button type="button" aria-label="Beberapa Properti" title="Beberapa Properti" onClick={onMulti} className={cls("inline-flex h-9 w-9 items-center justify-center rounded-[9px] transition", mode === "multi" ? "bg-[#0A4D82] text-white shadow-sm" : "text-slate-500 hover:bg-white hover:text-[#0A4D82]")}>
+        <Building2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
 }
 
 function SummaryRow({ label, value }) {
@@ -1258,7 +1248,7 @@ function UnderwritingSections({
     <div className="space-y-5">
       <SectionCard title={customerSectionTitle}>
         <div className="grid gap-4 md:grid-cols-2">
-          <div><FieldLabel label={identityLabel} /><TextInput value={uwForm.idNumber} onChange={(value) => setUwField("idNumber", onlyDigits(value))} placeholder={customerType === "Badan Usaha" ? "Masukkan NPWP" : "Masukkan NIK"} icon={<User className="h-4 w-4" />} /></div>
+          <div><FieldLabel label={identityLabel} required /><TextInput value={uwForm.idNumber} onChange={(value) => setUwField("idNumber", onlyDigits(value))} placeholder={customerType === "Badan Usaha" ? "Masukkan NPWP" : "Masukkan NIK"} icon={<User className="h-4 w-4" />} /></div>
           {customerType === "Badan Usaha" ? <div><FieldLabel label="Kontak di Lokasi" required /><div className="space-y-2"><TextInput value={uwForm.picName} onChange={(value) => setUwField("picName", value)} placeholder={insuredName || "Nama kontak yang bisa dihubungi di lokasi"} icon={<User className="h-4 w-4" />} /><label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={uwForm.sameAsInsured} onChange={(event) => setUwField("sameAsInsured", event.target.checked)} />Sama dengan pemegang polis</label></div></div> : null}
         </div>
       </SectionCard>
@@ -1329,7 +1319,7 @@ function UnderwritingSections({
   );
 }
 
-function ExternalProposalPage({ mode, customerName, form, setFormField = () => {}, uwForm, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, canProceed, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
+function ExternalProposalPage({ mode, customerName, form, setFormField = () => {}, uwForm, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, onReject = () => {}, canProceed, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", helpRequestSent = false, onViewerModeChange = () => {} }) {
   const isIndicative = mode === "indicative";
   const isInternalPreview = viewerMode === "internal";
   const activeVariant = productConfig || getPropertyVariant("property-safe");
@@ -1744,7 +1734,28 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                       >
                         {primaryLabel}
                       </button>
+                      {isIndicative ? (
+                        <button
+                          type="button"
+                          onClick={onSecondary}
+                          className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DDE6] bg-white px-4 text-center text-sm font-semibold text-[#0A4D82] hover:bg-[#F8FBFE]"
+                        >
+                          Minta Isi Data Lanjutan dengan Staff Asuransi
+                        </button>
+                      ) : null}
                     </div>
+                    {isIndicative && helpRequestSent ? (
+                      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                        Permintaan bantuan sudah diteruskan ke staff asuransi.
+                      </div>
+                    ) : null}
+                    {isIndicative ? (
+                      <div className="mt-3 flex justify-center">
+                        <button type="button" onClick={onReject} className="text-sm font-medium text-slate-500 underline underline-offset-4 hover:text-[#0A4D82]">
+                          Tidak mau melanjutkan penawaran
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -2126,7 +2137,6 @@ export default function PropertyStepOneFrontendCompact({
   const [internalStep, setInternalStep] = useState(1);
   const [externalView, setExternalView] = useState("");
   const [quoted, setQuoted] = useState(false);
-  const [showConstructionGuide, setShowConstructionGuide] = useState(false);
   const [showIndicationModal, setShowIndicationModal] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showSentOffers, setShowSentOffers] = useState(false);
@@ -2202,6 +2212,24 @@ export default function PropertyStepOneFrontendCompact({
   const [uploads, setUploads] = useState({ frontView: "", sideRightView: "", sideLeftView: "" });
   const [documentChecks] = useState({ ktp: createEmptyDocumentCheck("KTP") });
   const [evidence, setEvidence] = useState({ location: null, photos: { frontView: null, sideRightView: null, sideLeftView: null } });
+  const [propertyFlowMode, setPropertyFlowMode] = useState("single");
+  const [multiPolicyForm, setMultiPolicyForm] = useState({
+    identity: "",
+    customerType: "Nasabah Perorangan",
+    phone: "",
+    email: "",
+    idNumber: "",
+    coverageStartDate: today,
+    selectedCustomerCif: "",
+    quoted: false,
+    notice: "",
+    consentApproved: false,
+    paymentMethod: "",
+    paymentStatus: "",
+    selectedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+    expandedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+  });
+  const [multiProperties, setMultiProperties] = useState([createMultiPropertyDraft(0)]);
   const resultsRef = useRef(null);
   const floorFieldRef = useRef(null);
   const previousFloorFieldVisibleRef = useRef(false);
@@ -2212,7 +2240,9 @@ export default function PropertyStepOneFrontendCompact({
     if (!keyword) return [];
     return MOCK_CIF.filter((item) => item.name.toLowerCase().includes(keyword) || item.cif.toLowerCase().includes(keyword)).slice(0, 5);
   }, [form.identity]);
-  const showFloorInput = selectedGuarantees.earthquake && isFloorRelevant(effectivePropertyType, form.occupancy);
+  const showPropertyFloorInput = isOfficeFloorCountRequired(effectivePropertyType, form.occupancy);
+  const showFloorInput = shouldShowEarthquakeFloorInput(effectivePropertyType, form.occupancy, selectedGuarantees);
+  const requiresFloorCount = showPropertyFloorInput || showFloorInput;
   const fraudAlerts = useMemo(() => summarizeFraudSignals({ documentChecks: [documentChecks.ktp], evidenceChecks: [evidence.location, evidence.photos.frontView, evidence.photos.sideRightView, evidence.photos.sideLeftView] }), [documentChecks, evidence]);
   const operatingVersion = operatingRecord?.version;
   const operatingOwner = operatingRecord?.owner;
@@ -2348,6 +2378,88 @@ export default function PropertyStepOneFrontendCompact({
   const updateObjectRow = (id, patch) => setObjectRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   const addObjectRow = () => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }));
   const removeObjectRow = (id) => setObjectRows((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
+  const buildSinglePropertyAsMultiDraft = () =>
+    createMultiPropertyDraft(0, {
+      propertyType: effectivePropertyType,
+      occupancy: form.occupancy,
+      locationSearch: form.locationSearch,
+      constructionClass: form.constructionClass,
+      wallMaterial: form.wallMaterial,
+      structureMaterial: form.structureMaterial,
+      roofMaterial: form.roofMaterial,
+      flammableMaterial: form.flammableMaterial,
+      objectRows: objectRows.map((row) => ({ ...row })),
+      selectedGuarantees: { ...selectedGuarantees },
+      floorCount,
+      uwForm: {
+        picName: uwForm.picName,
+        fireProtectionChoice: uwForm.fireProtectionChoice,
+        fireProtectionItems: Array.isArray(uwForm.fireProtectionItems) ? [...uwForm.fireProtectionItems] : [],
+        claimHistory: uwForm.claimHistory,
+        stockType: uwForm.stockType,
+        surroundingRisk: uwForm.surroundingRisk,
+      },
+      uploads: { ...uploads },
+    });
+  const switchToMultiPropertyFlow = () => {
+    const firstProperty = buildSinglePropertyAsMultiDraft();
+    setMultiPolicyForm((prev) => ({
+      ...prev,
+      identity: form.identity || prev.identity,
+      customerType: form.customerType || prev.customerType,
+      phone: form.phone || prev.phone,
+      email: form.email || prev.email,
+      idNumber: uwForm.idNumber || prev.idNumber,
+      coverageStartDate: uwForm.coverageStartDate || prev.coverageStartDate,
+      selectedCustomerCif: selectedCustomer?.cif || prev.selectedCustomerCif || "",
+      quoted: quoted || prev.quoted,
+      notice: "",
+      paymentStatus: "",
+      selectedGuarantees: { ...(prev.selectedGuarantees || {}), ...selectedGuarantees },
+      expandedGuarantees: { ...(prev.expandedGuarantees || {}), riot: expandedRows.riot, flood: expandedRows.flood, tsfwd: expandedRows.tsfwd, earthquake: expandedRows.earthquake },
+    }));
+    setMultiProperties((prev) => (prev.length ? [firstProperty, ...prev.slice(1)] : [firstProperty]));
+    setPropertyFlowMode("multi");
+    setExternalView("");
+    setInternalStep((prev) => (prev > 3 ? 1 : prev));
+  };
+  const switchToSinglePropertyFlow = () => {
+    const firstProperty = multiProperties[0] || createMultiPropertyDraft(0);
+    setForm((prev) => ({
+      ...prev,
+      identity: multiPolicyForm.identity || prev.identity,
+      customerType: multiPolicyForm.customerType || prev.customerType,
+      phone: multiPolicyForm.phone || prev.phone,
+      email: multiPolicyForm.email || prev.email,
+      propertyType: firstProperty.propertyType || prev.propertyType,
+      occupancy: firstProperty.occupancy || prev.occupancy,
+      locationSearch: firstProperty.locationSearch || prev.locationSearch,
+      constructionClass: firstProperty.constructionClass || prev.constructionClass,
+      wallMaterial: firstProperty.wallMaterial || prev.wallMaterial,
+      structureMaterial: firstProperty.structureMaterial || prev.structureMaterial,
+      roofMaterial: firstProperty.roofMaterial || prev.roofMaterial,
+      flammableMaterial: firstProperty.flammableMaterial || prev.flammableMaterial,
+    }));
+    if (Array.isArray(firstProperty.objectRows) && firstProperty.objectRows.length) setObjectRows(firstProperty.objectRows.map((row) => ({ ...row })));
+    setSelectedGuarantees((prev) => ({ ...prev, ...(firstProperty.selectedGuarantees || {}), ...(multiPolicyForm.selectedGuarantees || {}) }));
+    if (multiPolicyForm.expandedGuarantees) setExpandedRows((prev) => ({ ...prev, ...multiPolicyForm.expandedGuarantees }));
+    setFloorCount(firstProperty.floorCount || "");
+    setUwForm((prev) => ({
+      ...prev,
+      idNumber: multiPolicyForm.idNumber || prev.idNumber,
+      picName: firstProperty.uwForm?.picName || prev.picName,
+      coverageStartDate: multiPolicyForm.coverageStartDate || firstProperty.uwForm?.coverageStartDate || prev.coverageStartDate,
+      fireProtectionChoice: firstProperty.uwForm?.fireProtectionChoice || prev.fireProtectionChoice,
+      fireProtectionItems: Array.isArray(firstProperty.uwForm?.fireProtectionItems) ? [...firstProperty.uwForm.fireProtectionItems] : prev.fireProtectionItems,
+      claimHistory: firstProperty.uwForm?.claimHistory || prev.claimHistory,
+      stockType: firstProperty.uwForm?.stockType || prev.stockType,
+      surroundingRisk: firstProperty.uwForm?.surroundingRisk || prev.surroundingRisk,
+    }));
+    if (firstProperty.uploads) setUploads({ ...uploads, ...firstProperty.uploads });
+    setQuoted(Boolean(multiPolicyForm.quoted));
+    setPropertyFlowMode("single");
+    setInternalStep((prev) => (prev > 2 ? 2 : prev));
+  };
   const totalValue = useMemo(() => objectRows.reduce((sum, row) => sum + parseNumber(row.amount), 0), [objectRows]);
   const baseRate = effectivePropertyType === "Rumah Tinggal" ? 0.00185 : 0.00265;
   const hasQuoteBasis = Boolean(form.occupancy) && Boolean(form.constructionClass) && totalValue > 0;
@@ -2359,6 +2471,7 @@ export default function PropertyStepOneFrontendCompact({
   const customerName = selectedCustomer ? selectedCustomer.name : form.identity;
   const effectiveCustomerName = customerName || sharedCustomerName;
   const occupancyCode = getOccupancyCode(effectivePropertyType, form.occupancy);
+  const showOccupancyCode = isInternalMode && Boolean(occupancyCode);
   const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === form.constructionClass);
   const currentExternalTarget = internalStep === 2 ? "offer-final" : "offer-indicative";
   const referralCode = createReferralCode(sessionName, transactionAuthority.transactionId);
@@ -2400,9 +2513,9 @@ export default function PropertyStepOneFrontendCompact({
   const hasValidConstruction = Boolean(form.constructionClass);
   const hasValidObjects = totalValue > 0 && objectRows.every((row) => parseNumber(row.amount) > 0);
   const hasStockObject = objectRows.some((row) => row.type === "Stok");
-  const hasRequiredFloorCount = !showFloorInput || Number(floorCount) > 0;
+  const hasRequiredFloorCount = !requiresFloorCount || Number(floorCount) > 0;
   const canAdvanceInternalStepOne = hasValidStepOneIdentity && hasValidStepOneContact && hasValidStepOneOccupancy && hasValidStepOneLocation && hasValidConstruction && hasValidObjects && hasRequiredFloorCount;
-  const hasValidUwIdentity = !uwForm.idNumber.trim() || isValidIdNumber(form.customerType, uwForm.idNumber);
+  const hasValidUwIdentity = isValidIdNumber(form.customerType, uwForm.idNumber);
   const hasValidPicName = form.customerType !== "Badan Usaha" || Boolean(uwForm.picName.trim());
   const hasValidStockType = !hasStockObject || Boolean(String(uwForm.stockType || "").trim());
   const hasValidUnderwriting = Boolean(uwForm.coverageStartDate) && hasValidFireProtection(uwForm) && Boolean(uwForm.claimHistory) && hasValidStockType;
@@ -2413,11 +2526,11 @@ export default function PropertyStepOneFrontendCompact({
   if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone dan alamat email yang valid.");
   if (!hasValidStepOneOccupancy) stepOnePendingItems.push("Pilih penggunaan properti yang diasuransikan.");
   if (!hasValidStepOneLocation) stepOnePendingItems.push("Isi lokasi properti atau gunakan tombol lokasi cepat.");
-  if (!hasValidConstruction) stepOnePendingItems.push("Pilih kelas konstruksi.");
+  if (!hasValidConstruction) stepOnePendingItems.push(isInternalMode ? "Pilih kelas konstruksi." : "Lengkapi panduan konstruksi.");
   if (!hasValidObjects) stepOnePendingItems.push("Setiap objek harus punya nilai yang ingin dilindungi.");
-  if (!hasRequiredFloorCount) stepOnePendingItems.push("Lengkapi jumlah lantai pada perluasan Risiko Gempa Bumi.");
+  if (!hasRequiredFloorCount) stepOnePendingItems.push(showPropertyFloorInput ? "Lengkapi jumlah lantai untuk properti kantor." : "Lengkapi jumlah lantai pada perluasan Risiko Gempa Bumi.");
   const underwritingPendingItems = [];
-  if (uwForm.idNumber.trim() && !hasValidUwIdentity) underwritingPendingItems.push(form.customerType === "Badan Usaha" ? "NPWP yang diisi minimal 15 digit." : "NIK yang diisi harus 16 digit.");
+  if (!hasValidUwIdentity) underwritingPendingItems.push(form.customerType === "Badan Usaha" ? "NPWP yang diisi minimal 15 digit." : "NIK yang diisi harus 16 digit.");
   if (!hasValidPicName) underwritingPendingItems.push("Lengkapi kontak di lokasi.");
   if (!hasValidUnderwriting) underwritingPendingItems.push("Lengkapi data tambahan yang wajib.");
   if (!hasValidStockType) underwritingPendingItems.push("Pilih jenis stok agar sistem bisa mengkategorikan stok mudah terbakar atau tidak mudah terbakar.");
@@ -2531,7 +2644,93 @@ export default function PropertyStepOneFrontendCompact({
     });
   };
 
+  const createMultiDemoProperties = () => [
+    createMultiPropertyDraft(0, {
+      propertyType: "Rumah Tinggal",
+      occupancy: "Hunian",
+      locationSearch: "Jl. Sudirman Kav. 44, Jakarta Selatan",
+      constructionClass: "Kelas 1",
+      wallMaterial: WALL_MATERIAL_OPTIONS[0],
+      structureMaterial: STRUCTURE_MATERIAL_OPTIONS[0],
+      roofMaterial: ROOF_MATERIAL_OPTIONS[0],
+      flammableMaterial: FLAMMABLE_MATERIAL_OPTIONS[0],
+      objectRows: [{ id: "obj-1", type: "Bangunan", amount: "350000000", note: "Rumah tinggal utama" }],
+      selectedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+      detailsOpen: true,
+    }),
+    createMultiPropertyDraft(1, {
+      propertyType: "Ruko",
+      occupancy: "Ritel / Toko",
+      locationSearch: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading",
+      constructionClass: "Kelas 2",
+      wallMaterial: WALL_MATERIAL_OPTIONS[1],
+      structureMaterial: STRUCTURE_MATERIAL_OPTIONS[0],
+      roofMaterial: ROOF_MATERIAL_OPTIONS[0],
+      flammableMaterial: FLAMMABLE_MATERIAL_OPTIONS[0],
+      objectRows: [
+        { id: "obj-1", type: "Bangunan", amount: "500000000", note: "Bangunan ruko" },
+        { id: "obj-2", type: "Inventaris / Isi", amount: "125000000", note: "Inventaris toko" },
+      ],
+      selectedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+      detailsOpen: false,
+    }),
+  ];
+
+  const fillMultiStepOneDemoData = () => {
+    const demoCustomer = MOCK_CIF[0];
+    setInternalStep(1);
+    setExternalView("");
+    setMultiPolicyForm((prev) => ({
+      ...prev,
+      identity: `${demoCustomer.name} - ${demoCustomer.cif}`,
+      selectedCustomerCif: demoCustomer.cif,
+      customerType: demoCustomer.type,
+      phone: demoCustomer.phone,
+      email: demoCustomer.email,
+      quoted: false,
+      notice: "",
+      paymentStatus: "",
+      selectedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+      expandedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+    }));
+    setMultiProperties(createMultiDemoProperties());
+  };
+
+  const fillMultiStepTwoDemoData = () => {
+    const selectedCoverageDate = formatDateInput(new Date());
+    const hydrateProperty = (property) => ({
+      ...property,
+      uwForm: {
+        ...(property.uwForm || {}),
+        picName: MOCK_CIF[0].name,
+        fireProtectionChoice: "Ada",
+        fireProtectionItems: ["APAR", "Hydrant"],
+        claimHistory: "Tidak Ada",
+        stockType: (property.objectRows || []).some((row) => row.type === "Stok") ? "Sembako" : "",
+        surroundingRisk: "",
+      },
+      uploads: {
+        frontView: `data:demo/${property.id}-front`,
+        sideRightView: `data:demo/${property.id}-right`,
+        sideLeftView: `data:demo/${property.id}-left`,
+      },
+    });
+    setMultiPolicyForm((prev) => ({ ...prev, idNumber: "3173010101010001", coverageStartDate: selectedCoverageDate, notice: "" }));
+    setMultiProperties((prev) => {
+      const source = prev.length ? prev : createMultiDemoProperties();
+      return source.map(hydrateProperty);
+    });
+  };
+
   const fillDemoForCurrentStep = () => {
+    if (propertyFlowMode === "multi") {
+      if (internalStep === 1) {
+        fillMultiStepOneDemoData();
+        return;
+      }
+      fillMultiStepTwoDemoData();
+      return;
+    }
     if (internalStep === 1) {
       fillStepOneDemoData();
       return;
@@ -2573,7 +2772,7 @@ export default function PropertyStepOneFrontendCompact({
           floorCount={floorCount}
           setFloorCount={setFloorCount}
           canProceed={hasRequiredFloorCount}
-          blockingMessage={!hasRequiredFloorCount ? "Isi jumlah lantai jika Anda memilih perlindungan gempa bumi untuk bangunan bertingkat." : ""}
+          blockingMessage={!hasRequiredFloorCount ? (showPropertyFloorInput ? "Isi jumlah lantai untuk properti kantor." : "Isi jumlah lantai jika Anda memilih perlindungan gempa bumi untuk bangunan bertingkat.") : ""}
           showFloorInput={showFloorInput}
           floorFieldRef={floorFieldRef}
           onEditObject={() => {}}
@@ -2640,7 +2839,7 @@ export default function PropertyStepOneFrontendCompact({
           floorCount={floorCount}
           setFloorCount={setFloorCount}
           canProceed={hasRequiredFloorCount}
-          blockingMessage={!hasRequiredFloorCount ? "Isi jumlah lantai jika Anda memilih perlindungan gempa bumi untuk bangunan bertingkat." : ""}
+          blockingMessage={!hasRequiredFloorCount ? (showPropertyFloorInput ? "Isi jumlah lantai untuk properti kantor." : "Isi jumlah lantai jika Anda memilih perlindungan gempa bumi untuk bangunan bertingkat.") : ""}
           showFloorInput={showFloorInput}
           floorFieldRef={floorFieldRef}
           onEditObject={() => setExternalView("offer-indicative")}
@@ -2846,7 +3045,6 @@ export default function PropertyStepOneFrontendCompact({
             <div className="mx-auto max-w-[1280px] px-4 pt-6 md:px-6">
               <div className="flex items-center justify-between gap-3">
                 <button type="button" onClick={() => { if (embedded && onExit) onExit(); else setScreen("catalog"); }} className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
-                <button type="button" tabIndex={-1} aria-hidden="true" className="pointer-events-none invisible inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white"><ArrowLeft className="h-4 w-4" />Kembali ke Produk</button>
               </div>
               <div className="mt-6 text-center text-white"><div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">Selamat datang kembali, {sessionName}</div><h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{activeVariant.title}</h1><p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{activeVariant.heroSubtitle}</p></div>
               <div className="mx-auto mt-6 max-w-3xl rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-4xl md:p-5">
@@ -2854,10 +3052,10 @@ export default function PropertyStepOneFrontendCompact({
                   <div className="flex flex-col gap-5 md:flex-row md:gap-5">
                     <StepNode step="Langkah 1" title="Simulasi Premi" subtitle={internalStep === 1 ? "Sedang diisi" : "Selesai"} active={internalStep === 1} done={internalStep > 1} icon={<Wallet className="h-4 w-4" />} onClick={() => { if (internalStep !== 1) setInternalStep(1); }} />
                     <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-                    <StepNode step="Langkah 2" title="Data Lanjutan" subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={!isInternalMode && internalStep > 2} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted) setInternalStep(2); }} />
+                    <StepNode step="Langkah 2" title="Data Lanjutan" subtitle={internalStep === 2 ? "Sedang diisi" : internalStep > 2 ? "Selesai" : "Menunggu"} active={internalStep === 2} done={!isInternalMode && internalStep > 2} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted || propertyFlowMode === "multi") setInternalStep(2); }} />
                     {!isInternalMode ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
                     {!isInternalMode ? (
-                      <StepNode step="Langkah 3" title="Pembayaran" subtitle="Menunggu" active={false} done={false} icon={<Wallet className="h-4 w-4" />} />
+                      <StepNode step="Langkah 3" title="Pembayaran" subtitle={internalStep === 3 ? "Sedang diisi" : "Menunggu"} active={internalStep === 3} done={false} icon={<Wallet className="h-4 w-4" />} onClick={() => { if (propertyFlowMode === "multi" && multiPolicyForm.quoted) setInternalStep(3); }} />
                     ) : null}
                   </div>
                 </div>
@@ -2867,7 +3065,27 @@ export default function PropertyStepOneFrontendCompact({
 
           {rejectionStatus ? <div className="mx-auto mt-6 max-w-[1280px] rounded-2xl border border-[#CFE0F0] bg-[#F8FBFE] px-4 py-3 text-sm text-[#0A4D82]">{rejectionStatus}</div> : null}
           {qrInfoVisible ? <div className="mx-auto mt-4 max-w-[1280px] rounded-2xl border border-[#CFE0F0] bg-white px-4 py-4 text-sm text-slate-700 shadow-sm"><div className="font-semibold text-slate-900">QR Code belum digenerate otomatis.</div><div className="mt-1">Untuk handoff ke IT, tautan yang akan diencode adalah: <span className="break-all text-[#0A4D82]">{shareUrl}</span></div></div> : null}
-          {internalStep === 1 ? (
+          {propertyFlowMode === "multi" ? (
+            <MultiPropertyFlow
+              step={internalStep}
+              setStep={setInternalStep}
+              entryMode={entryMode}
+              productConfig={activeVariant}
+              extensionOptions={activeGuarantees}
+              occupancyOptions={availableOccupancyOptions}
+              constructionOptions={CONSTRUCTION_CLASSES}
+              constructionGuide={CONSTRUCTION_GUIDE}
+              objectTypeOptions={OBJECT_TYPES}
+              customerTypes={CUSTOMER_TYPES}
+              policyForm={multiPolicyForm}
+              setPolicyForm={setMultiPolicyForm}
+              properties={multiProperties}
+              setProperties={setMultiProperties}
+              derivePropertyType={(value) => derivePropertyTypeFromOccupancy(value, availablePropertyTypes)}
+              customerOptions={MOCK_CIF}
+              flowModeAction={<PropertyFlowModeSwitch mode={propertyFlowMode} onSingle={switchToSinglePropertyFlow} onMulti={switchToMultiPropertyFlow} />}
+            />
+          ) : internalStep === 1 ? (
             <div className={cls("mx-auto px-4 md:px-6", showStepOneSummarySidebar ? "max-w-[1280px]" : "max-w-4xl")}>
               <div className={cls("mt-6 grid items-start gap-5", showStepOneSummarySidebar ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
                 <div className="space-y-5">
@@ -2889,15 +3107,15 @@ export default function PropertyStepOneFrontendCompact({
                     </div>
                   </SectionCard>
 
-                  <SectionCard title="Informasi Properti">
+                  <SectionCard title="Informasi Properti" action={<PropertyFlowModeSwitch mode={propertyFlowMode} onSingle={switchToSinglePropertyFlow} onMulti={switchToMultiPropertyFlow} />}>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="md:col-span-2 md:max-w-[760px]">
-                        <div className={cls("grid gap-3", occupancyCode ? "md:grid-cols-[minmax(0,1fr)_180px]" : "md:grid-cols-1")}>
+                        <div className={cls("grid gap-3", showOccupancyCode ? "md:grid-cols-[minmax(0,1fr)_180px]" : "md:grid-cols-1")}>
                           <div className="min-w-0">
                             <FieldLabel label="Penggunaan Properti yang Diasuransikan" required />
                             <SelectInput value={form.occupancy} onChange={(value) => setField("occupancy", value)} options={availableOccupancyOptions} placeholder="Pilih penggunaan properti yang diasuransikan" />
                           </div>
-                          {occupancyCode ? (
+                          {showOccupancyCode ? (
                             <div className="self-end rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2.5">
                               <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">Kode Okupasi</div>
                               <div className="mt-1 text-sm font-semibold text-[#0A4D82]">{occupancyCode}</div>
@@ -2905,19 +3123,44 @@ export default function PropertyStepOneFrontendCompact({
                           ) : null}
                         </div>
                       </div>
+                      {showPropertyFloorInput ? (
+                        <div>
+                          <FieldLabel label="Jumlah Lantai" required />
+                          <TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} />
+                        </div>
+                      ) : null}
                       <div className="md:col-span-2">
                         <div className="space-y-2.5 md:max-w-[760px]">
-                          <FieldLabel label="Kelas Konstruksi" required />
-                          <div className="space-y-2 md:flex md:items-center md:gap-3 md:space-y-0">
-                            <div className="md:min-w-0 md:max-w-[420px] md:flex-1">
-                              <SelectInput value={form.constructionClass} onChange={(value) => setField("constructionClass", value)} options={CONSTRUCTION_CLASSES} placeholder="Pilih kelas konstruksi bangunan." />
+                          {isInternalMode ? (
+                            <>
+                              <FieldLabel label="Kelas Konstruksi" required />
+                              <div className="md:max-w-[420px]">
+                                <SelectInput value={form.constructionClass} onChange={(value) => setField("constructionClass", value)} options={CONSTRUCTION_CLASSES} placeholder="Pilih kelas konstruksi bangunan." />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="space-y-3">
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <div>
+                                  <FieldLabel label="Dinding Utama" required />
+                                  <SelectInput value={form.wallMaterial} onChange={(value) => setField("wallMaterial", value)} options={WALL_MATERIAL_OPTIONS} placeholder="Pilih material dinding" />
+                                </div>
+                                <div>
+                                  <FieldLabel label="Struktur / Lantai Utama" required />
+                                  <SelectInput value={form.structureMaterial} onChange={(value) => setField("structureMaterial", value)} options={STRUCTURE_MATERIAL_OPTIONS} placeholder="Pilih material struktur" />
+                                </div>
+                                <div>
+                                  <FieldLabel label="Atap Bangunan" required />
+                                  <SelectInput value={form.roofMaterial} onChange={(value) => setField("roofMaterial", value)} options={ROOF_MATERIAL_OPTIONS} placeholder="Pilih material atap" />
+                                </div>
+                                <div>
+                                  <FieldLabel label="Bagian mudah terbakar lainnya?" required />
+                                  <SelectInput value={form.flammableMaterial} onChange={(value) => setField("flammableMaterial", value)} options={FLAMMABLE_MATERIAL_OPTIONS} placeholder="Pilih kondisi material" />
+                                </div>
+                              </div>
+                              {constructionInfo ? <div className="rounded-[12px] border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2.5 text-[12px] leading-5 text-slate-600"><span className="font-semibold text-slate-900">Hasil panduan: {constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
                             </div>
-                            <button type="button" onClick={() => setShowConstructionGuide((prev) => !prev)} className="inline-flex h-auto shrink-0 items-center self-start rounded-none border-0 bg-transparent px-0 py-2 text-sm font-medium text-[#0A4D82] underline-offset-2 hover:underline">
-                              {showConstructionGuide ? "Sembunyikan panduan lengkap" : "Lihat panduan lengkap"}
-                            </button>
-                          </div>
-                          {constructionInfo ? <div className="rounded-[12px] border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2.5 text-[12px] leading-5 text-slate-600"><span className="font-semibold text-slate-900">{constructionInfo.title}.</span> {constructionInfo.desc}</div> : null}
-                          {showConstructionGuide ? <div className="overflow-hidden rounded-[14px] border border-[#D5DDE6] bg-[#F8FBFE]">{CONSTRUCTION_GUIDE.map((item, index) => <div key={item.title} className={cls("grid gap-1.5 px-3 py-2.5 md:grid-cols-[76px_minmax(0,1fr)] md:items-start md:gap-x-3", index !== 0 && "border-t border-[#E2E8F0]")}><div className="text-[12px] font-semibold text-[#0A4D82] md:text-[13px]">{item.title}</div><div className="text-[11px] leading-[1.45] text-slate-600 md:text-[12px]">{item.desc}</div></div>)}</div> : null}
+                          )}
                         </div>
                       </div>
                       <div className="md:col-span-2"><FieldLabel label="Alamat / Lokasi Objek" required /><TextInput value={form.locationSearch} onChange={(value) => setField("locationSearch", value)} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} /><div className="mt-2 flex flex-wrap gap-2.5"><button type="button" onClick={() => { setField("locationSearch", "Lokasi GPS tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Jl. Sudirman Kav. 44, Jakarta Selatan", source: "gps" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Ambil Lokasi Sekarang</button><button type="button" onClick={() => { setField("locationSearch", "Pin peta tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading", source: "map" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Pilih di Peta</button></div></div>
@@ -2960,7 +3203,7 @@ export default function PropertyStepOneFrontendCompact({
                           ) : null}
                           <div>
                             <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
-                            <div className="mt-3 space-y-2.5">{activeGuarantees.map((item) => { const checked = selectedGuarantees[item.key]; const premiumValue = Math.round(totalValue * item.rate); const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible; return <AccordionRiskRow key={item.key} title={item.title} icon={item.icon} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(premiumValue) : "-"} detail={item.detail} deductible={deductibleValue} checked={checked} onToggleChecked={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} expanded={expandedRows[item.key]} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} extra={item.key === "earthquake" && checked && isFloorRelevant(effectivePropertyType, form.occupancy) ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Diisi hanya bila objek bertingkat dan gempa bumi dipilih." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null} />; })}</div>
+                            <div className="mt-3 space-y-2.5">{activeGuarantees.map((item) => { const checked = selectedGuarantees[item.key]; const premiumValue = Math.round(totalValue * item.rate); const deductibleValue = item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible; return <AccordionRiskRow key={item.key} title={item.title} icon={item.icon} premium={shouldShowQuotedPricing ? "Rp " + formatRupiah(premiumValue) : "-"} detail={item.detail} deductible={deductibleValue} checked={checked} onToggleChecked={() => setSelectedGuarantees((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} expanded={expandedRows[item.key]} onToggleExpand={() => setExpandedRows((prev) => ({ ...prev, [item.key]: !prev[item.key] }))} extra={item.key === "earthquake" && checked && showFloorInput ? <div ref={floorFieldRef} className="max-w-sm rounded-xl border border-amber-200 bg-white p-3"><FieldLabel label="Jumlah lantai bangunan yang diasuransikan" required helpText="Diisi hanya bila objek bertingkat dan gempa bumi dipilih." /><TextInput value={floorCount} onChange={(value) => setFloorCount(onlyDigits(value))} placeholder="Masukkan jumlah lantai" icon={<Building2 className="h-4 w-4" />} /></div> : null} />; })}</div>
                           </div>
                         </div>
                       </SectionCard>
@@ -3068,6 +3311,7 @@ export default function PropertyStepOneFrontendCompact({
                 ) : null}
 
                 <UnderwritingSections form={form} customerType={form.customerType} selectedCustomer={selectedCustomer} objectRows={objectRows} uwForm={uwForm} setUwField={setUwField} uploads={uploads} setUploads={setUploads} setEvidence={setEvidence} />
+                <SummarySidebarAlert items={underwritingPendingItems} />
                 <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">
                   <div className="grid gap-3 md:grid-cols-2">
                     <button
