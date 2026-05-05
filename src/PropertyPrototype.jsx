@@ -1877,7 +1877,12 @@ function ExternalPaymentPage({
             </div>
           </div>
           <div className="flex items-center gap-3 text-white">
-            {onSimulate ? <button type="button" onClick={onSimulate} className="hidden h-10 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:inline-flex">Simulasi</button> : null}
+            {onSimulate ? (
+              <button type="button" onClick={onSimulate} aria-label="Simulasi" title="Simulasi" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:w-auto md:px-4">
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden md:ml-2 md:inline">Simulasi</span>
+              </button>
+            ) : null}
             {guestMode ? (
               <button
                 type="button"
@@ -2231,6 +2236,7 @@ export default function PropertyStepOneFrontendCompact({
   const [documentChecks] = useState({ ktp: createEmptyDocumentCheck("KTP") });
   const [evidence, setEvidence] = useState({ location: null, photos: { frontView: null, sideRightView: null, sideLeftView: null } });
   const [propertyFlowMode, setPropertyFlowMode] = useState("single");
+  const [singleQuoteAttempted, setSingleQuoteAttempted] = useState(false);
   const [multiPolicyForm, setMultiPolicyForm] = useState({
     identity: "",
     customerType: "Nasabah Perorangan",
@@ -3016,7 +3022,10 @@ export default function PropertyStepOneFrontendCompact({
                 <div className="hidden items-center gap-3 md:flex"><button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button><button type="button" onClick={() => { if (embedded && onExit) onExit(); else setScreen("catalog"); }} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button></div>
           </div>
           <div className="relative flex items-center gap-4 text-white">
-            <button type="button" onClick={fillDemoForCurrentStep} className="hidden rounded-[10px] border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15 md:inline-flex md:text-sm">Simulasi</button>
+            <button type="button" onClick={fillDemoForCurrentStep} aria-label="Simulasi" title="Simulasi" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-white/30 bg-white/10 text-xs font-semibold text-white hover:bg-white/15 md:w-auto md:px-3 md:py-2 md:text-sm">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden md:ml-2 md:inline">Simulasi</span>
+            </button>
             <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{sessionName}{helpRequestSent ? <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" /> : null}</button>
             <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
             <UserMenu
@@ -3189,8 +3198,24 @@ export default function PropertyStepOneFrontendCompact({
                   </SectionCard>
 
                   {!quoted ? (
-                    <div className="flex justify-stretch gap-3 sm:justify-end sm:gap-3">
-                      <button type="button" disabled={!canAdvanceInternalStepOne} onClick={() => setQuoted(true)} className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canAdvanceInternalStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>Cek Premi</button>
+                    <div className="space-y-3">
+                      {singleQuoteAttempted ? <SummarySidebarAlert items={stepOnePendingItems} /> : null}
+                      <div className="flex justify-stretch gap-3 sm:justify-end sm:gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!canAdvanceInternalStepOne) {
+                              setSingleQuoteAttempted(true);
+                              return;
+                            }
+                            setSingleQuoteAttempted(false);
+                            setQuoted(true);
+                          }}
+                          className="inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] bg-[#F5A623] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition hover:brightness-105"
+                        >
+                          Cek Premi
+                        </button>
+                      </div>
                     </div>
                   ) : null}
 

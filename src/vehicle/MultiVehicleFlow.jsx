@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
-  AlertTriangle,
+  Bike,
   Camera,
   Car,
   CheckCircle2,
@@ -217,37 +217,6 @@ function SummaryRow({ label, value, strong = false }) {
   );
 }
 
-function PendingItems({ items }) {
-  const [expanded, setExpanded] = React.useState(false);
-  if (!items.length) return null;
-  const preview = items[0];
-  return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
-      <button type="button" onClick={() => setExpanded((value) => !value)} className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 font-semibold">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>Yang masih perlu dilengkapi</span>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">{items.length}</span>
-          </div>
-          {!expanded ? <div className="mt-1 truncate text-[12px] text-amber-800">{preview}</div> : null}
-        </div>
-        <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-amber-800 transition", expanded && "rotate-180")} />
-      </button>
-      {expanded ? (
-        <div className="space-y-2 border-t border-amber-200 px-4 py-3">
-          {items.map((item) => (
-            <div key={item} className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function compactVehiclePendingItems(items = []) {
   const grouped = new Map();
   const compacted = [];
@@ -422,6 +391,7 @@ function VehicleExtensionEditor({ flowType, vehicle, onUpdateQuote }) {
 function VehicleQuoteCard({ flowType, vehicle, quote, index, canRemove, onUpdateVehicle, onRemoveVehicle }) {
   const detailsOpen = vehicle.detailsOpen !== false;
   const vehicleLabel = String(vehicle.quote.vehicleName || "").trim() || vehicle.title || `Kendaraan ${index + 1}`;
+  const VehicleIcon = flowType === "motor" ? Bike : Car;
   const closedSummary = [vehicle.quote.vehicleName, vehicle.quote.plateRegion, quote.marketValue > 0 ? `Rp ${formatRupiah(quote.marketValue)}` : ""].filter(Boolean).join(" - ");
   const updateQuote = (patch) => onUpdateVehicle({ quote: { ...vehicle.quote, ...patch } });
   const usageSummary = vehicleUsageSummaryText(vehicle.quote.usage);
@@ -433,7 +403,7 @@ function VehicleQuoteCard({ flowType, vehicle, quote, index, canRemove, onUpdate
       <div className="flex items-center gap-3 px-3.5 py-3">
         <button type="button" onClick={() => onUpdateVehicle({ detailsOpen: !detailsOpen }, false)} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
           <div className="flex min-w-0 items-center gap-2 text-[#0A4D82]">
-            <Car className="h-4 w-4 shrink-0" />
+            <VehicleIcon className="h-4 w-4 shrink-0" />
             <div className="min-w-0">
               <div className="truncate text-[15px] font-semibold">{vehicleLabel}</div>
               {!detailsOpen && closedSummary ? <div className="mt-0.5 truncate text-[12px] text-slate-500">{closedSummary}</div> : null}
@@ -641,11 +611,8 @@ function MultiVehicleCoverageSection({ flowType, vehicles, policyTotals, onUpdat
   };
 
   return (
-    <SectionCard title="Rincian Jaminan">
+    <SectionCard title="Rincian Jaminan" subtitle="Klik setiap baris untuk melihat penjelasan detailnya.">
       <div className="space-y-4">
-        <div>
-          <div className="text-sm leading-6 text-slate-500">Klik setiap baris untuk melihat penjelasan detailnya.</div>
-        </div>
         <div>
           <div className="text-[15px] font-semibold tracking-tight text-slate-900">Risiko yang Dijamin</div>
           <div className="mt-3">
@@ -731,7 +698,7 @@ function UploadButton({ vehicle, slot, onCapture }) {
 
 function VehicleUnderwritingCard({ flowType, vehicle, index, onUpdateVehicle }) {
   const detailsOpen = vehicle.uwDetailsOpen !== false;
-  const vehicleLabel = vehicle.title || `Kendaraan ${index + 1}`;
+  const vehicleLabel = String(vehicle.quote?.vehicleName || "").trim() || vehicle.title || `Kendaraan ${index + 1}`;
   const updateVehicleData = (patch) => onUpdateVehicle({ vehicle: { ...vehicle.vehicle, ...patch } }, false);
   const updateUnderwriting = (patch) => onUpdateVehicle({ underwriting: { ...vehicle.underwriting, ...patch } }, false);
   const updateUploads = (patch) => onUpdateVehicle({ uploads: { ...vehicle.uploads, ...patch } }, false);
@@ -850,6 +817,8 @@ export default function MultiVehicleFlow({
     () =>
       getMultiVehicleStepTwoPendingItems({
         flowType,
+        customerType: policyForm.customerType,
+        idNumber: policyForm.idNumber,
         insuredName: policyForm.insuredName,
         address: policyForm.address,
         email: policyForm.email,
@@ -857,9 +826,8 @@ export default function MultiVehicleFlow({
         coverageStartDate: policyForm.coverageStartDate,
         vehicles,
       }),
-    [flowType, policyForm.address, policyForm.coverageStartDate, policyForm.email, policyForm.insuredName, policyForm.phone, vehicles],
+    [flowType, policyForm.address, policyForm.coverageStartDate, policyForm.customerType, policyForm.email, policyForm.idNumber, policyForm.insuredName, policyForm.phone, vehicles],
   );
-  const compactStepTwoPendingItems = useMemo(() => compactVehiclePendingItems(stepTwoPendingItems), [stepTwoPendingItems]);
   const showPricing = Boolean(policyForm.quoted || step > 1);
   const canQuote = quotePendingItems.length === 0;
   const canAdvanceStepOne = canQuote && policyForm.quoted;
@@ -920,30 +888,22 @@ export default function MultiVehicleFlow({
         <SectionCard title="Informasi Calon Pemegang Polis">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <FieldLabel label="Nama Calon Pemegang Polis" required />
-              <TextInput value={policyForm.insuredName || ""} onChange={(value) => updatePolicy({ insuredName: value })} placeholder="Masukkan nama calon pemegang polis" icon={<User className="h-4 w-4" />} />
-            </div>
-            <div>
-              <FieldLabel label="Tipe Nasabah" required />
-              <SelectInput value={policyForm.customerType || ""} onChange={(value) => updatePolicy({ customerType: value })} options={CUSTOMER_TYPES} placeholder="Pilih tipe nasabah" />
-            </div>
-            <div>
-              <FieldLabel label="Nomor Handphone" required />
-              <TextInput value={policyForm.phone || ""} onChange={(value) => updatePolicy({ phone: value })} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} />
-            </div>
-            <div>
-              <FieldLabel label="Alamat Email" required />
-              <TextInput value={policyForm.email || ""} onChange={(value) => updatePolicy({ email: value })} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" />
+              <FieldLabel label={policyForm.customerType === "Perusahaan / Badan Usaha" ? "NPWP" : "NIK"} required />
+              <TextInput
+                value={policyForm.idNumber || ""}
+                onChange={(value) => updatePolicy({ idNumber: onlyDigits(value) })}
+                placeholder={policyForm.customerType === "Perusahaan / Badan Usaha" ? "NPWP" : "NIK"}
+                icon={<User className="h-4 w-4" />}
+              />
             </div>
             <div className="md:col-span-2">
               <FieldLabel label="Alamat Calon Pemegang Polis" required />
-              <TextInput value={policyForm.address || ""} onChange={(value) => updatePolicy({ address: value })} placeholder="Masukkan alamat lengkap" />
+              <TextInput value={policyForm.address || ""} onChange={(value) => updatePolicy({ address: value })} placeholder="Ketik alamat calon pemegang polis" icon={<MapPin className="h-4 w-4" />} />
             </div>
           </div>
         </SectionCard>
         <SectionCard title="Informasi Kendaraan Lanjutan">
           <div className="space-y-4">
-            <PendingItems items={compactStepTwoPendingItems} />
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" required />
@@ -1060,7 +1020,7 @@ export default function MultiVehicleFlow({
         <div className="text-[18px] font-bold text-slate-900">Informasi Calon Pemegang Polis</div>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
-            <FieldLabel label="Nama Calon Pemegang Polis" />
+            <FieldLabel label="Nama Calon Pemegang Polis" required />
             <div className="relative">
               <TextInput value={policyForm.insuredName || ""} onChange={(value) => updatePolicy({ insuredName: value, selectedCustomerCif: "", quoted: false })} placeholder={allowCustomerLookup ? "Masukkan nama calon pemegang polis atau kode CIF" : "Masukkan nama calon pemegang polis"} icon={<User className="h-4 w-4" />} />
               {allowCustomerLookup && policyForm.insuredName && customerSuggestions.length > 0 && !selectedCustomer ? (
@@ -1099,16 +1059,16 @@ export default function MultiVehicleFlow({
           </div>
           {Boolean(String(policyForm.insuredName || "").trim()) && (!allowCustomerLookup || (!selectedCustomer && !isDigitsOnly(policyForm.insuredName))) ? (
             <div>
-              <FieldLabel label="Tipe Nasabah" />
+              <FieldLabel label="Tipe Nasabah" required />
               <SelectInput value={policyForm.customerType || ""} onChange={(value) => updatePolicy({ customerType: value })} options={CUSTOMER_TYPES} placeholder="Nasabah ini perorangan atau badan usaha?" />
             </div>
           ) : null}
           <div>
-            <FieldLabel label="Nomor Handphone" />
+            <FieldLabel label="Nomor Handphone" required />
             <TextInput value={policyForm.phone || ""} onChange={(value) => updatePolicy({ phone: value })} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} />
           </div>
           <div>
-            <FieldLabel label="Alamat Email" />
+            <FieldLabel label="Alamat Email" required />
             <TextInput value={policyForm.email || ""} onChange={(value) => updatePolicy({ email: value })} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" />
           </div>
         </div>
@@ -1143,9 +1103,19 @@ export default function MultiVehicleFlow({
               className={cls("inline-flex h-11 w-12 items-center justify-center border-r border-[#D5DDE6] transition", vehicleMode === "multi" ? "bg-[#0A4D82] text-white" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]")}
             >
               <span className="relative inline-flex h-6 w-6 items-center justify-center">
-                <Car className="absolute left-0 top-0.5 h-3.5 w-3.5 opacity-70" />
-                <Car className="absolute right-0 top-0.5 h-3.5 w-3.5 opacity-70" />
-                <Car className="absolute bottom-0.5 left-1/2 h-4 w-4 -translate-x-1/2" />
+                {flowType === "motor" ? (
+                  <>
+                    <Bike className="absolute left-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+                    <Bike className="absolute right-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+                    <Bike className="absolute bottom-0.5 left-1/2 h-4 w-4 -translate-x-1/2" />
+                  </>
+                ) : (
+                  <>
+                    <Car className="absolute left-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+                    <Car className="absolute right-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+                    <Car className="absolute bottom-0.5 left-1/2 h-4 w-4 -translate-x-1/2" />
+                  </>
+                )}
               </span>
             </button>
             <button
@@ -1155,7 +1125,7 @@ export default function MultiVehicleFlow({
               onClick={onSingleVehicleMode || undefined}
               className={cls("inline-flex h-11 w-12 items-center justify-center transition", vehicleMode === "single" ? "bg-[#0A4D82] text-white" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]")}
             >
-              <Car className="h-5 w-5" />
+              {flowType === "motor" ? <Bike className="h-5 w-5" /> : <Car className="h-5 w-5" />}
             </button>
           </div>
         }

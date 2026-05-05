@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, ArrowLeft, Bell, CheckCircle2, FileText, Home, Package, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bell, CheckCircle2, FileText, Home, Package, Sparkles, Wallet } from "lucide-react";
 
 function DetailRow({ label, value }) {
   return (
@@ -110,9 +110,12 @@ export function CustomerDataJourneyShell({
               <button
                 type="button"
                 onClick={onTopAction}
-                className="hidden h-11 items-center justify-center rounded-[10px] border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:inline-flex"
+                aria-label={topActionLabel}
+                title={topActionLabel}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-white/30 bg-white/10 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:h-11 md:w-auto md:px-4"
               >
-                {topActionLabel}
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden md:ml-2 md:inline">{topActionLabel}</span>
               </button>
             ) : null}
             {guestMode ? (

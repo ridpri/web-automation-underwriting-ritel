@@ -83,7 +83,7 @@ function createDefaultUploads(flowType) {
 }
 
 export function isMultiVehicleFlowEnabled(flowType) {
-  return flowType === "motor";
+  return ["motor", "carTlo", "carComp"].includes(flowType);
 }
 
 export function createMultiVehicleDraft(flowType = "motor", index = 0, overrides = {}) {
@@ -185,7 +185,7 @@ function isValidSumInsured(flowType, value) {
 }
 
 function vehicleLabel(vehicle, index) {
-  return vehicle.title || `Kendaraan ${index + 1}`;
+  return String(vehicle?.quote?.vehicleName || "").trim() || vehicle.title || `Kendaraan ${index + 1}`;
 }
 
 export function getMultiVehicleStepOnePendingItems({ flowType = "motor", insuredName = "", phone = "", email = "", vehicles = [] } = {}) {
@@ -210,9 +210,16 @@ function hasCompleteUploads(flowType, uploads = {}) {
   return (MULTI_VEHICLE_UPLOAD_SLOTS[flowType] || []).every((slot) => Boolean(uploads[slot.key]));
 }
 
-export function getMultiVehicleStepTwoPendingItems({ flowType = "motor", insuredName = "", address = "", email = "", phone = "", coverageStartDate = "", vehicles = [] } = {}) {
+function isValidIdentityNumber(customerType, value) {
+  const digits = onlyDigits(value);
+  if (customerType === "Perusahaan / Badan Usaha") return digits.length >= 15;
+  return digits.length === 16;
+}
+
+export function getMultiVehicleStepTwoPendingItems({ flowType = "motor", customerType = "Pribadi", idNumber = "", insuredName = "", address = "", email = "", phone = "", coverageStartDate = "", vehicles = [] } = {}) {
   const items = [];
   if (!String(insuredName || "").trim()) items.push("Nama nasabah belum lengkap.");
+  if (!isValidIdentityNumber(customerType, idNumber)) items.push(customerType === "Perusahaan / Badan Usaha" ? "NPWP yang diisi minimal 15 digit." : "NIK yang diisi harus 16 digit.");
   if (!String(address || "").trim()) items.push("Alamat calon pemegang polis belum lengkap.");
   if (!isValidEmailAddress(email)) items.push("Alamat email belum lengkap.");
   if (!isValidPhoneNumber(phone)) items.push("Nomor handphone belum lengkap.");
@@ -225,6 +232,7 @@ export function getMultiVehicleStepTwoPendingItems({ flowType = "motor", insured
     if (!String(vehicleData.chassisNumber || "").trim()) items.push(`${label}: nomor rangka kendaraan belum lengkap.`);
     if (!String(vehicleData.engineNumber || "").trim()) items.push(`${label}: nomor mesin kendaraan belum lengkap.`);
     if (!String(underwriting.claimHistory || "").trim()) items.push(`${label}: riwayat klaim 3 tahun terakhir belum diisi.`);
+    if (flowType === "carComp" && !String(underwriting.existingDamageStatus || "").trim()) items.push(`${label}: kondisi kerusakan sebelum polis belum dipilih.`);
     if (!hasCompleteUploads(flowType, vehicle.uploads)) items.push(`${label}: foto kendaraan belum lengkap.`);
   });
   return items;

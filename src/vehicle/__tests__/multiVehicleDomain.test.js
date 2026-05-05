@@ -10,10 +10,10 @@ import {
 } from "../multiVehicleDomain.js";
 
 describe("multiVehicleDomain", () => {
-  it("enables multi vehicle flow for motor only", () => {
+  it("enables multi vehicle flow for all vehicle products", () => {
     assert.equal(isMultiVehicleFlowEnabled("motor"), true);
-    assert.equal(isMultiVehicleFlowEnabled("carTlo"), false);
-    assert.equal(isMultiVehicleFlowEnabled("carComp"), false);
+    assert.equal(isMultiVehicleFlowEnabled("carTlo"), true);
+    assert.equal(isMultiVehicleFlowEnabled("carComp"), true);
     assert.equal(isMultiVehicleFlowEnabled(""), false);
   });
 
@@ -143,6 +143,7 @@ describe("multiVehicleDomain", () => {
 
     const result = getMultiVehicleStepTwoPendingItems({
       insuredName: "Rama",
+      idNumber: "3173010101010001",
       address: "",
       email: "rama@example.com",
       phone: "081234567890",

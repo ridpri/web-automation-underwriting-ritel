@@ -723,6 +723,7 @@ export default function MultiPropertyFlow({
   const canQuote = stepOnePendingItems.length === 0;
   const canAdvanceStepOne = canQuote && policyForm.quoted;
   const canAdvanceStepTwo = stepTwoPendingItems.length === 0;
+  const [quoteAttempted, setQuoteAttempted] = React.useState(false);
   const canPay = Boolean(policyForm.consentApproved && policyForm.paymentMethod && !policyForm.paymentStatus);
   const customerKeyword = String(policyForm.identity || "").trim().toLowerCase();
   const customerSuggestions = customerKeyword
@@ -788,7 +789,7 @@ export default function MultiPropertyFlow({
     return (
       <div className="mx-auto mt-6 max-w-4xl px-4 md:px-6">
         <div className="space-y-5">
-          <SectionCard title="Data Pemegang Polis">
+          <SectionCard title="Informasi Calon Pemegang Polis">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <FieldLabel label={policyForm.customerType === "Badan Usaha" ? "NPWP" : "NIK"} required />
@@ -798,6 +799,7 @@ export default function MultiPropertyFlow({
           </SectionCard>
           <SectionCard title="Informasi Properti" subtitle="Lengkapi proteksi, riwayat klaim, dan foto untuk masing-masing properti.">
             <div className="space-y-4">
+              <PendingItems items={stepTwoPendingItems} />
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <FieldLabel label="Tanggal Mulai Pertanggungan" required />
@@ -810,7 +812,6 @@ export default function MultiPropertyFlow({
             </div>
           </SectionCard>
           <NoticePanel text={policyForm.notice} />
-          <PendingItems items={stepTwoPendingItems} />
           <div className="grid gap-3 md:grid-cols-2">
             <button type="button" onClick={() => setStep(1)} className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]">
               Kembali ke Simulasi Premi
@@ -1058,11 +1059,23 @@ export default function MultiPropertyFlow({
             </div>
           </SectionCard>
         ) : null}
-        <PendingItems items={stepOnePendingItems} />
+        {quoteAttempted && !policyForm.quoted ? <PendingItems items={stepOnePendingItems} /> : null}
         <NoticePanel text={policyForm.notice} />
         <div className="flex justify-stretch gap-3 sm:justify-end sm:gap-3">
           {!policyForm.quoted ? (
-            <button type="button" disabled={!canQuote} onClick={() => updatePolicy({ quoted: true, notice: "" })} className={cls("inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition", canQuote ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}>
+            <button
+              type="button"
+              onClick={() => {
+                if (!canQuote) {
+                  setQuoteAttempted(true);
+                  updatePolicy({ quoted: false, notice: "" });
+                  return;
+                }
+                setQuoteAttempted(false);
+                updatePolicy({ quoted: true, notice: "" });
+              }}
+              className="inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] bg-[#F5A623] px-5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition hover:brightness-105"
+            >
               Cek Premi
             </button>
           ) : (

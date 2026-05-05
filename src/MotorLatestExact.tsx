@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bell,
+  Bike,
   Building2,
   Camera,
   Car as CarIcon,
@@ -324,10 +325,30 @@ const MULTI_MOTOR_DEMO_QUOTES = [
   { vehicleName: "Yamaha NMAX 155 Connected", plateRegion: "D - Bandung", year: "2024", marketValue: "36500000", usage: "Pribadi", extensions: { tpl: { enabled: true, amount: 1000000 } } },
   { vehicleName: "Honda Vario 125 CBS", plateRegion: "L - Surabaya", year: "2023", marketValue: "28000000", usage: "Komersial", extensions: { srcc: { enabled: true } } },
 ];
+const MULTI_CAR_TLO_DEMO_QUOTES = [
+  { vehicleName: "Toyota Avanza 1.5 G", plateRegion: "B - Jakarta/Depok/Tangerang/Bekasi", year: "2023", marketValue: "248000000", usage: "Pribadi", extensions: { tpl: { enabled: true, amount: 25000000 } } },
+  { vehicleName: "Honda BR-V N7X Edition", plateRegion: "D - Bandung", year: "2022", marketValue: "315000000", usage: "Pribadi", extensions: { srcc: { enabled: true } } },
+  { vehicleName: "Toyota Hilux Double Cabin 2.4 G", plateRegion: "L - Surabaya", year: "2021", marketValue: "420000000", usage: "Komersial", extensions: { flood: { enabled: true } } },
+];
+const MULTI_CAR_COMP_DEMO_QUOTES = [
+  { vehicleName: "BYD Atto 3 Advanced", plateRegion: "B - Jakarta/Depok/Tangerang/Bekasi", year: "2024", marketValue: "465000000", usage: "Pribadi", extensions: { authorizedWorkshop: { enabled: true } } },
+  { vehicleName: "Hyundai Ioniq 5 Signature", plateRegion: "D - Bandung", year: "2023", marketValue: "720000000", usage: "Pribadi", extensions: { tpl: { enabled: true, amount: 25000000 } } },
+  { vehicleName: "Mitsubishi Pajero Sport Dakar", plateRegion: "L - Surabaya", year: "2022", marketValue: "610000000", usage: "Komersial", extensions: { srcc: { enabled: true } } },
+];
 const MULTI_MOTOR_DEMO_DETAILS = [
   { plateNumber: "B 4123 UYT", chassisNumber: "MH1JM8112PK123456", engineNumber: "JM81E1234567", color: "Hitam" },
   { plateNumber: "D 2218 RMA", chassisNumber: "MH3SG5620RJ234567", engineNumber: "G3L8E2345678", color: "Biru Doff" },
   { plateNumber: "L 3315 VRO", chassisNumber: "MH1JK0219PJ345678", engineNumber: "JK02E3456789", color: "Merah" },
+];
+const MULTI_CAR_TLO_DEMO_DETAILS = [
+  { plateNumber: "B 1724 AQA", chassisNumber: "MHKK1BA3JPK123456", engineNumber: "2NRFKE7654321", color: "Silver" },
+  { plateNumber: "D 1189 BRV", chassisNumber: "MHRDG3850NJ234567", engineNumber: "L15ZF2345678", color: "Putih" },
+  { plateNumber: "L 7742 HLX", chassisNumber: "MR0DB8CD1MJ345678", engineNumber: "2GDC3456789", color: "Hitam" },
+];
+const MULTI_CAR_COMP_DEMO_DETAILS = [
+  { plateNumber: "B 1458 NZX", chassisNumber: "LGXCE4CB8R1234567", engineNumber: "ATTO3EV123456", color: "Putih" },
+  { plateNumber: "D 2205 ION", chassisNumber: "KMHKR81EVPJ234567", engineNumber: "EVION2345678", color: "Abu-abu" },
+  { plateNumber: "L 9088 PJR", chassisNumber: "MMBJNKL30NJ345678", engineNumber: "4N15U3456789", color: "Hitam" },
 ];
 
 const EXT_INFO: Record<string, string> = {
@@ -438,6 +459,7 @@ function createMultiVehiclePolicyForm() {
     customerType: "Pribadi",
     phone: "",
     email: "",
+    idNumber: "",
     address: "",
     coverageStartDate: "",
     coverageEndDate: "",
@@ -1472,7 +1494,8 @@ function StepNode({ step, title, subtitle, active, done, icon, onClick }: any) {
   return <div className="relative flex flex-1 flex-col items-center text-center">{content}</div>;
 }
 
-function VehicleFlowModeSwitch({ mode, onSingle, onMulti }: { mode: VehicleObjectMode; onSingle: () => void; onMulti: () => void }) {
+function VehicleFlowModeSwitch({ mode, flowType, onSingle, onMulti }: { mode: VehicleObjectMode; flowType?: FlowType | null; onSingle: () => void; onMulti: () => void }) {
+  const VehicleIcon = flowType === "motor" ? Bike : CarIcon;
   return (
     <div className="inline-flex overflow-hidden rounded-[14px] border border-[#D5DDE6] bg-[#F8FBFE] text-[#0A4D82] shadow-sm" aria-label="Pilih jumlah kendaraan yang diasuransikan">
       <button
@@ -1483,9 +1506,9 @@ function VehicleFlowModeSwitch({ mode, onSingle, onMulti }: { mode: VehicleObjec
         className={cls("inline-flex h-11 w-12 items-center justify-center border-r border-[#D5DDE6] transition", mode === "multi" ? "bg-[#0A4D82] text-white" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]")}
       >
         <span className="relative inline-flex h-6 w-6 items-center justify-center">
-          <CarIcon className="absolute left-0 top-0.5 h-3.5 w-3.5 opacity-70" />
-          <CarIcon className="absolute right-0 top-0.5 h-3.5 w-3.5 opacity-70" />
-          <CarIcon className="absolute bottom-0.5 left-1/2 h-4 w-4 -translate-x-1/2" />
+          <VehicleIcon className="absolute left-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+          <VehicleIcon className="absolute right-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+          <VehicleIcon className="absolute bottom-0.5 left-1/2 h-4 w-4 -translate-x-1/2" />
         </span>
       </button>
       <button
@@ -1495,7 +1518,7 @@ function VehicleFlowModeSwitch({ mode, onSingle, onMulti }: { mode: VehicleObjec
         onClick={onSingle}
         className={cls("inline-flex h-11 w-12 items-center justify-center transition", mode === "single" ? "bg-[#0A4D82] text-white" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]")}
       >
-        <CarIcon className="h-5 w-5" />
+        <VehicleIcon className="h-5 w-5" />
       </button>
     </div>
   );
@@ -2097,15 +2120,24 @@ export default function MotorLatestExact({
   };
 
   const createMultiVehicleDemoDrafts = (type: FlowType, includeAdvancedData = false) => {
-    if (type !== "motor") return [createMultiVehicleDraft(type, 0)];
-    return MULTI_MOTOR_DEMO_QUOTES.map((demoQuote, index) => {
+    const demoQuotesByFlow = {
+      motor: MULTI_MOTOR_DEMO_QUOTES,
+      carTlo: MULTI_CAR_TLO_DEMO_QUOTES,
+      carComp: MULTI_CAR_COMP_DEMO_QUOTES,
+    };
+    const demoDetailsByFlow = {
+      motor: MULTI_MOTOR_DEMO_DETAILS,
+      carTlo: MULTI_CAR_TLO_DEMO_DETAILS,
+      carComp: MULTI_CAR_COMP_DEMO_DETAILS,
+    };
+    return demoQuotesByFlow[type].map((demoQuote, index) => {
       const draft = createMultiVehicleDraft(type, index, {
         id: `vehicle-${index + 1}`,
         detailsOpen: index === 0,
         uwDetailsOpen: index === 0,
       });
-      const catalogItem = getVehicleCatalogItem("motor", demoQuote.vehicleName);
-      const vehicleDetail = MULTI_MOTOR_DEMO_DETAILS[index] || {};
+      const catalogItem = getVehicleCatalogItem(type === "motor" ? "motor" : "car", demoQuote.vehicleName);
+      const vehicleDetail = demoDetailsByFlow[type][index] || {};
       const uploads = includeAdvancedData
         ? Object.keys(draft.uploads).reduce((acc: Record<string, boolean>, key) => {
             acc[key] = true;
@@ -2139,6 +2171,7 @@ export default function MotorLatestExact({
           ? {
               ...draft.underwriting,
               claimHistory: "Tidak Ada",
+              existingDamageStatus: type === "carComp" ? "none" : draft.underwriting.existingDamageStatus,
             }
           : draft.underwriting,
         uploads,
@@ -2147,7 +2180,6 @@ export default function MotorLatestExact({
   };
 
   const fillMultiVehicleDemoData = (type: FlowType, includeAdvancedData = false) => {
-    if (type !== "motor") return;
     const demoCustomer = VEHICLE_MOCK_CIF_BY_FLOW[type][0];
     const demoLookupValue = allowCustomerLookup ? `${demoCustomer.name} - ${demoCustomer.cif}` : demoCustomer.name;
 
@@ -2158,6 +2190,7 @@ export default function MotorLatestExact({
       customerType: demoCustomer.type,
       phone: demoCustomer.phone,
       email: demoCustomer.email,
+      idNumber: includeAdvancedData ? "3173010101010001" : prev.idNumber,
       address: includeAdvancedData ? "Jl. Kemang Raya No. 18, Jakarta Selatan" : prev.address,
       coverageStartDate: includeAdvancedData ? "2026-05-01" : prev.coverageStartDate,
       coverageEndDate: includeAdvancedData ? addOneYear("2026-05-01") : prev.coverageEndDate,
@@ -2245,6 +2278,7 @@ export default function MotorLatestExact({
       customerType: selected.insured.customerType || prev.customerType,
       phone: selected.insured.phone || prev.phone,
       email: selected.insured.email || prev.email,
+      idNumber: selected.insured.nik || prev.idNumber,
       address: selected.insured.address || prev.address,
       coverageStartDate: selected.quote.coverageStart || prev.coverageStartDate,
       coverageEndDate: selected.quote.coverageStart ? addOneYear(selected.quote.coverageStart) : prev.coverageEndDate,
@@ -2274,6 +2308,7 @@ export default function MotorLatestExact({
         phone: activeMultiVehiclePolicyForm.phone || next[flowType].insured.phone,
         email: activeMultiVehiclePolicyForm.email || next[flowType].insured.email,
         address: activeMultiVehiclePolicyForm.address || next[flowType].insured.address,
+        nik: activeMultiVehiclePolicyForm.idNumber || next[flowType].insured.nik,
       };
       return next;
     });
@@ -2322,6 +2357,17 @@ export default function MotorLatestExact({
     && Boolean(String(selected.quote.vehicleName || "").trim())
     && (flowType === "motor" || Boolean(selected.quote.vehicleType));
   const quoteReady = hasQuoteBasis;
+  const stepOneQuotePendingItems = [
+    !String(selected.quote.vehicleName || "").trim() ? `Pilih merek / tipe ${flowType === "motor" ? "motor" : "kendaraan"}.` : null,
+    !selected.quote.plateRegion ? "Pilih kode wilayah plat / TNKB." : null,
+    !selected.quote.year ? "Pilih tahun pembuatan kendaraan." : null,
+    selected.quote.year && !isYearEligible(flowType, selected.quote.year) ? "Tahun pembuatan kendaraan belum memenuhi ketentuan produk." : null,
+    !String(selected.quote.marketValue || "").trim() ? "Isi harga pertanggungan." : null,
+    String(selected.quote.marketValue || "").trim() && !validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) ? maxHPText(flowType) : null,
+    !selected.quote.usage ? "Pilih penggunaan kendaraan." : null,
+    flowType !== "motor" && !selected.quote.vehicleType ? "Pilih kategori OJK kendaraan." : null,
+  ].filter(Boolean) as string[];
+  const quotePendingNotice = journeyStatus.startsWith("Lengkapi data kendaraan");
   const selectedVehicleMeta = getVehicleCatalogItem(flowType === "motor" ? "motor" : "car", selected.quote.vehicleName);
   const tariffCategoryLabel = getVehicleTariffCategory(flowType, selected.quote);
   const tariffRegionLabel = getRegionLabel(selected.quote.plateRegion);
@@ -2449,6 +2495,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const vehicleFlowModeAction = supportsMultiVehicleMode ? (
     <VehicleFlowModeSwitch
       mode={vehicleObjectMode}
+      flowType={flowType}
       onSingle={switchToSingleVehicleFlow}
       onMulti={switchToMultiVehicleFlow}
     />
@@ -3254,12 +3301,15 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         {!showPremiumDetails ? (
           <button
             type="button"
-            disabled={!quoteReady}
-            onClick={() => setShowPremiumDetails(true)}
-            className={cls(
-              "inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition",
-              quoteReady ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
-            )}
+            onClick={() => {
+              if (!quoteReady) {
+                setJourneyStatus(`Lengkapi data kendaraan: ${stepOneQuotePendingItems.join(" ")}`);
+                return;
+              }
+              setJourneyStatus("");
+              setShowPremiumDetails(true);
+            }}
+            className="inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] bg-[#F5A623] px-5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
           >
             Cek Premi
           </button>
@@ -3294,6 +3344,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           </button>
         ) : null}
       </div>
+      {quotePendingNotice ? <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">{journeyStatus}</div> : null}
       {!isInternalMode && hasSharedOfferJourney ? (
         <div className="mt-3 space-y-3">
           <button
@@ -3443,7 +3494,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           <div className={showIntroHeader ? "mt-5 space-y-6" : "space-y-6"}>
             <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
               <div className="space-y-4">
-                <div className="text-[18px] font-bold tracking-tight text-slate-900">{isInternalMode ? "Data Pemegang Polis" : "Informasi Calon Pemegang Polis"}</div>
+                <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Calon Pemegang Polis</div>
                 {!isInternalMode ? (
                   <div className="grid gap-2.5 md:grid-cols-2">
                     <button
@@ -3523,7 +3574,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                 {canShowInsuredStepTwoFields ? (
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <FieldLabel label={selected.insured.customerType === "Perusahaan / Badan Usaha" ? "NPWP" : "NIK"} required={false} />
+                      <FieldLabel label={selected.insured.customerType === "Perusahaan / Badan Usaha" ? "NPWP" : "NIK"} required />
                       <TextInput value={selected.insured.nik} onChange={(value: string) => setAt(flowType, "insured.nik", value)} placeholder={selected.insured.customerType === "Perusahaan / Badan Usaha" ? "NPWP" : "NIK"} icon={<User className="h-4 w-4" />} />
                     </div>
                     <div className="md:col-span-2">
@@ -3693,6 +3744,58 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                           </div>
                         </>
                       ) : null}
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" helpText="Perlindungan asuransi berlaku 1 tahun sejak tanggal ini." />
+                        <input
+                          ref={coverageDateFieldRef}
+                          type="date"
+                          value={selected.quote.coverageStart}
+                          onChange={(event) => setAt(flowType, "quote.coverageStart", event.target.value)}
+                          className="sr-only"
+                          tabIndex={-1}
+                          aria-hidden="true"
+                        />
+                        <button
+                          type="button"
+                          onClick={openCoverageDatePicker}
+                          className={cls(
+                            "flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[12px] border border-[#D5DDE6] bg-white px-4 py-3 text-left text-[14px] transition hover:border-[#A9C7E3] hover:bg-[#F8FBFE]",
+                            selected.quote.coverageStart ? "text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.04)]" : "text-slate-400",
+                          )}
+                        >
+                          <span className={cls("block", selected.quote.coverageStart ? "font-medium text-slate-900" : "font-normal text-slate-400")}>
+                            {coveragePeriodDisplay}
+                          </span>
+                          <span className="inline-flex shrink-0 items-center rounded-full bg-[#EEF6FD] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#0A4D82]">
+                            1 Tahun
+                          </span>
+                        </button>
+                      </div>
+                      <div>
+                        <FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" />
+                        <input
+                          type="date"
+                          value={coverageEndDate}
+                          onChange={() => {}}
+                          readOnly
+                          className="h-[48px] w-full rounded-[12px] border border-[#D5DDE6] bg-slate-50 px-4 text-[14px] text-slate-600 outline-none"
+                        />
+                        {selected.quote.coverageStart ? <div className="mt-1.5 text-[12px] leading-5 text-slate-500">Berakhir pukul 12.00 siang.</div> : null}
+                      </div>
+                      <div className="md:col-span-2">
+                        <FieldLabel
+                          label="Pernah diajukan klaim asuransi dalam 3 tahun terakhir?"
+                          helpText="Klaim asuransi adalah permintaan ganti rugi ke perusahaan asuransi atas kerusakan, kehilangan, atau kejadian lain yang dijamin polis."
+                        />
+                        <SelectInput
+                          value={selected.underwriting.claimHistory}
+                          onChange={(value: string) => setAt(flowType, "underwriting.claimHistory", value)}
+                          options={CLAIM_HISTORY_OPTIONS}
+                          placeholder="Pilih jawaban yang sesuai"
+                        />
+                      </div>
                     </div>
                 </>
               </div>
@@ -3956,63 +4059,6 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               </div>
             </div>
           ) : null}
-          <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
-            <div className="space-y-4">
-              <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Pertanggungan</div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" helpText="Perlindungan asuransi berlaku 1 tahun sejak tanggal ini." />
-                  <input
-                    ref={coverageDateFieldRef}
-                    type="date"
-                    value={selected.quote.coverageStart}
-                    onChange={(event) => setAt(flowType, "quote.coverageStart", event.target.value)}
-                    className="sr-only"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  />
-                  <button
-                    type="button"
-                    onClick={openCoverageDatePicker}
-                    className={cls(
-                      "flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[12px] border border-[#D5DDE6] bg-white px-4 py-3 text-left text-[14px] transition hover:border-[#A9C7E3] hover:bg-[#F8FBFE]",
-                      selected.quote.coverageStart ? "text-slate-900 shadow-[0_8px_18px_rgba(15,23,42,0.04)]" : "text-slate-400",
-                    )}
-                  >
-                    <span className={cls("block", selected.quote.coverageStart ? "font-medium text-slate-900" : "font-normal text-slate-400")}>
-                      {coveragePeriodDisplay}
-                    </span>
-                    <span className="inline-flex shrink-0 items-center rounded-full bg-[#EEF6FD] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#0A4D82]">
-                      1 Tahun
-                    </span>
-                  </button>
-                </div>
-                <div>
-                  <FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" />
-                  <input
-                    type="date"
-                    value={coverageEndDate}
-                    onChange={() => {}}
-                    readOnly
-                    className="h-[48px] w-full rounded-[12px] border border-[#D5DDE6] bg-slate-50 px-4 text-[14px] text-slate-600 outline-none"
-                  />
-                  {selected.quote.coverageStart ? <div className="mt-1.5 text-[12px] leading-5 text-slate-500">Berakhir pukul 12.00 siang.</div> : null}
-                </div>
-                <div className="md:col-span-2">
-                  <FieldLabel
-                    label="Pernah diajukan klaim asuransi dalam 3 tahun terakhir?"
-                    helpText="Klaim asuransi adalah permintaan ganti rugi ke perusahaan asuransi atas kerusakan, kehilangan, atau kejadian lain yang dijamin polis."
-                  />
-                  <SelectInput
-                    value={selected.underwriting.claimHistory}
-                    onChange={(value: string) => setAt(flowType, "underwriting.claimHistory", value)}
-                    options={CLAIM_HISTORY_OPTIONS}
-                    placeholder="Pilih jawaban yang sesuai"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
           <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
             <div className="space-y-4">
               <div>
@@ -4304,9 +4350,12 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               <button
                 type="button"
                 onClick={fillDemoForCurrentStep}
-                className="hidden h-11 items-center justify-center rounded-[10px] border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:inline-flex"
+                aria-label="Simulasi"
+                title="Simulasi"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-white/30 bg-white/10 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:h-11 md:w-auto md:px-4"
               >
-                Simulasi
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden md:ml-2 md:inline">Simulasi</span>
               </button>
             ) : null}
             {isGuestExternalSession ? (
@@ -4599,7 +4648,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                     {showPremiumDetails ? renderCoverageSummaryCard() : null}
                     {showPremiumDetails ? renderPremiumSummaryCard(false) : null}
                     {step === 1 ? renderStepOneActions() : null}
-                    {!isInternalMode && journeyStatus && step === 1 ? (
+                    {!isInternalMode && journeyStatus && !quotePendingNotice && step === 1 ? (
                       <ActionCard>
                         <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{journeyStatus}</div>
                       </ActionCard>
