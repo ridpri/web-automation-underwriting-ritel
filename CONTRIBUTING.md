@@ -9,6 +9,7 @@ Dokumen ini menjaga kerja tim tetap rapi: production stabil, preview bisa dites,
 - Semua pekerjaan masuk lewat branch dan Pull Request.
 - Satu branch sebaiknya hanya membawa satu fitur, satu perbaikan, atau satu area kerja.
 - Jalankan `npm run verify` sebelum meminta review.
+- Jika memakai Codex, mulai dari [START_DI_SINI_CODEX.md](START_DI_SINI_CODEX.md).
 
 ## Alur Kerja Harian
 
@@ -66,4 +67,3 @@ Untuk perubahan UI penting, tambahkan juga catatan hasil cek browser atau screen
 - Jangan revert perubahan orang lain tanpa koordinasi.
 - Kalau menyentuh file lintas area, tulis alasannya di Pull Request.
 - Kalau ada konflik, selesaikan dari branch sendiri setelah menarik `main` terbaru.
-

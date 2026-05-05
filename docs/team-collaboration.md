@@ -23,8 +23,8 @@ Panduan ini menjelaskan cara beberapa orang bekerja di web yang sama tanpa mengg
 ## Workflow Pull Request
 
 1. Branch dibuat dari `main`.
-2. Developer mengerjakan satu area yang jelas.
-3. Jalankan `npm run verify`.
+2. Anggota tim mengerjakan satu area yang jelas, biasanya dibantu Codex.
+3. Jalankan `npm run verify`, atau minta Codex menjalankannya.
 4. Push branch.
 5. Buka Pull Request.
 6. Isi template Pull Request lengkap.
@@ -32,6 +32,8 @@ Panduan ini menjelaskan cara beberapa orang bekerja di web yang sama tanpa mengg
 8. Reviewer area memberi persetujuan.
 9. Merge ke `main`.
 10. Production deploy dari `main`.
+
+Jika seluruh tim memakai Codex, gunakan [../START_DI_SINI_CODEX.md](../START_DI_SINI_CODEX.md) sebagai panduan utama dan [codex-prompt-bank.md](codex-prompt-bank.md) sebagai daftar prompt siap pakai.
 
 ## Checklist Sebelum Merge
 
@@ -91,4 +93,3 @@ Contoh pembagian sprint:
    - `/external/motor`
 4. Catat perubahan utama di release notes.
 5. Deploy production dari `main`.
-
