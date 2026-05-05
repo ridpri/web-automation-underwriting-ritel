@@ -42,10 +42,11 @@ const PUBLIC_GUEST_JOURNEYS = new Set([
   "property-all-risk-external",
   "motor-external",
   "car-tlo-external",
+  "mobil-comp",
   "self-care-portal",
   "self-care-lookup",
 ]);
-const DISABLED_PUBLIC_JOURNEYS = new Set(["mobil-comp"]);
+const DISABLED_PUBLIC_JOURNEYS = new Set([]);
 
 function readStoredSessionRole() {
   if (typeof window === "undefined") return null;

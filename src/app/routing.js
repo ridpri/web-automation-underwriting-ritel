@@ -13,16 +13,19 @@ export const ROUTE_DEFINITIONS = [
   { path: "/external/property-all-risk", journey: "property-all-risk-external", sessionRole: "external" },
   { path: "/external/motor", journey: "motor-external", sessionRole: "external" },
   { path: "/external/car-tlo", journey: "car-tlo-external", sessionRole: "external" },
+  { path: "/external/car-comprehensive", journey: "mobil-comp", sessionRole: "external" },
 
   { path: "/guest/property", journey: "property-external", sessionRole: "guest" },
   { path: "/guest/property-all-risk", journey: "property-all-risk-external", sessionRole: "guest" },
   { path: "/guest/motor", journey: "motor-external", sessionRole: "guest" },
   { path: "/guest/car-tlo", journey: "car-tlo-external", sessionRole: "guest" },
+  { path: "/guest/car-comprehensive", journey: "mobil-comp", sessionRole: "guest" },
 
   { path: "/offer/property", journey: "property-external", sessionRole: "guest", offer: true },
   { path: "/offer/property-all-risk", journey: "property-all-risk-external", sessionRole: "guest", offer: true },
   { path: "/offer/motor", journey: "motor-external", sessionRole: "guest", offer: true },
   { path: "/offer/car-tlo", journey: "car-tlo-external", sessionRole: "guest", offer: true },
+  { path: "/offer/car-comprehensive", journey: "mobil-comp", sessionRole: "guest", offer: true },
 
   { path: "/self-care", journey: "self-care-portal", sessionRole: "external" },
   { path: "/self-care/lookup", journey: "self-care-lookup", sessionRole: "guest" },

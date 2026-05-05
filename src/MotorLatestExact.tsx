@@ -34,6 +34,7 @@ import { OfferShareModal } from "./components/OfferShareModal.jsx";
 import { PremiumBreakdown, PremiumPriceHero, ProposalRow } from "./components/PremiumSummaryBlocks.jsx";
 import { SentOffersHistoryModal, UserPillMenu } from "./components/UserPillMenu.jsx";
 import { VehicleYearPicker } from "./components/VehicleYearPicker.jsx";
+import { getCanonicalPathForJourney } from "./app/routing.js";
 import { createEmptyDocumentCheck, createPhotoEvidence, createTransactionAuthority, evaluateDocumentRead, summarizeFraudSignals } from "./platform/securityControls.js";
 import { findVehicleSuggestions, getVehicleCatalogItem, getVehicleCatalogItems } from "./vehicleCatalog.js";
 import MultiVehicleFlow from "./vehicle/MultiVehicleFlow.jsx";
@@ -556,10 +557,12 @@ function replaceVehicleShareContextInUrl({ view = "", viewer = "", shareData = n
 }
 function getJourneyShareUrl(journeyKey: string, params: any = {}) {
   if (typeof window === "undefined") return `?journey=${journeyKey}`;
-  const url = new URL(window.location.href);
-  ["journey", "role", "view", "viewer", "share", "referral", "sender", "customer", "offer"].forEach((key) => {
-    url.searchParams.delete(key);
-  });
+  const role = params.role || "guest";
+  const routeParams = new URLSearchParams();
+  if (params.view) routeParams.set("view", params.view);
+  if (params.shareData) routeParams.set("share", "1");
+  const url = new URL(window.location.origin);
+  url.pathname = getCanonicalPathForJourney(journeyKey, role, routeParams);
   url.searchParams.set("journey", journeyKey);
   if (params.role) url.searchParams.set("role", params.role);
   if (params.view) url.searchParams.set("view", params.view);
@@ -1849,6 +1852,7 @@ export default function MotorLatestExact({
   const [viewerMode, setViewerMode] = useState<"internal" | "customer">(entryMode === "internal" ? "internal" : "customer");
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
   const [hasSharedOfferJourney, setHasSharedOfferJourney] = useState(false);
+  const [sharedOfferEntryView, setSharedOfferEntryView] = useState<"offer-indicative" | "offer-final" | "payment">("offer-indicative");
   const [vehicleObjectMode, setVehicleObjectMode] = useState<VehicleObjectMode>("single");
   const [flows, setFlows] = useState<Record<FlowType, FlowState>>({
     motor: createFlowState("motor"),
@@ -2058,6 +2062,7 @@ export default function MotorLatestExact({
       const next: any = JSON.parse(JSON.stringify(prev));
       next[type].ui.dataMode = "manual";
       next[type].ui.stnkMode = "manual";
+      if (type === "carComp") next[type].stnkRead = true;
       next[type].insured = {
         ...next[type].insured,
         customerType: demoCustomer.type,
@@ -2365,7 +2370,7 @@ export default function MotorLatestExact({
     !String(selected.quote.marketValue || "").trim() ? "Isi harga pertanggungan." : null,
     String(selected.quote.marketValue || "").trim() && !validateMaxHP(flowType, Number(selected.quote.marketValue || 0)) ? maxHPText(flowType) : null,
     !selected.quote.usage ? "Pilih penggunaan kendaraan." : null,
-    flowType !== "motor" && !selected.quote.vehicleType ? "Pilih kategori OJK kendaraan." : null,
+    flowType !== "motor" && !selected.quote.vehicleType ? "Pilih merek / tipe kendaraan dari database." : null,
   ].filter(Boolean) as string[];
   const quotePendingNotice = journeyStatus.startsWith("Lengkapi data kendaraan");
   const selectedVehicleMeta = getVehicleCatalogItem(flowType === "motor" ? "motor" : "car", selected.quote.vehicleName);
@@ -2375,7 +2380,7 @@ export default function MotorLatestExact({
   const shouldShowTariffSummary = Boolean(
     isInternalMode &&
       selected.quote.plateRegion &&
-      (flowType === "motor" || selected.quote.marketValue || selected.quote.vehicleType),
+      (flowType === "motor" || selected.quote.vehicleType),
   );
   const tariffInfoSummary = tariffRegionLabel
     ? `Kendaraan ini termasuk dalam ${tariffRegionLabel} dengan ${tariffCategoryLabel}.`
@@ -2520,10 +2525,10 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     [flowType, operatingRecord, selected?.insured.fullName, selected?.quote.plateRegion, selected?.vehicle.plateNumber, sessionName, step],
   );
   const shareJourneyKey = flowType === "motor" ? "motor-external" : flowType === "carTlo" ? "car-tlo-external" : "mobil-comp";
-  const sharedOfferView = isInternalMode && step === 2 && readyForNextStage ? "payment" : "offer-indicative";
+  const shareTargetView = isInternalMode && step === 2 && readyForNextStage ? "offer-final" : "offer-indicative";
   const shareUrl = getJourneyShareUrl(shareJourneyKey, {
     role: "guest",
-    view: sharedOfferView,
+    view: shareTargetView,
     viewer: "customer",
     shareData: {
       flowType,
@@ -2550,6 +2555,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
       }),
     [documentChecks, evidence, flowType],
   );
+  const isFinalSharedOffer = isSharedCustomerPreview && sharedOfferEntryView === "offer-final";
 
   useEffect(() => {
     operatingSignalRef.current = onOperatingSignal;
@@ -2637,10 +2643,11 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     if (entryMode !== "external" || !flowType) return;
     const { view, viewer, shareData, shareToken } = readVehicleShareContextFromUrl();
     const sharedOffer = shareData?.offer;
-    const requestedView = view === "payment" ? "payment" : "offer-indicative";
+    const requestedView = view === "payment" || view === "offer-final" ? view : "offer-indicative";
     const nextStep = requestedView === "payment" ? 3 : 1;
     if (!sharedOffer || shareData?.flowType !== flowType) {
       setHasSharedOfferJourney(false);
+      setSharedOfferEntryView("offer-indicative");
       setViewerMode("customer");
       setStep(1);
       setShowPremiumDetails(false);
@@ -2652,6 +2659,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     }
     const shareHydrationKey = `${flowType}:${shareToken}:${viewer}:${view}`;
     setHasSharedOfferJourney(true);
+    setSharedOfferEntryView(requestedView);
     setViewerMode(viewer === "internal" ? "internal" : "customer");
     setStep(nextStep);
     setShowPremiumDetails(true);
@@ -3266,14 +3274,14 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                 type="button"
                 onClick={() => {
                   setJourneyStatus("");
-                  setStep(2);
+                  setStep(isFinalSharedOffer ? 3 : 2);
                 }}
                 className="flex h-[48px] w-full items-center justify-center rounded-[12px] bg-[#F5A623] px-5 text-sm font-semibold text-white shadow-sm hover:brightness-105"
               >
-                Isi Data Lanjutan
+                {isFinalSharedOffer ? "Lanjut ke Pembayaran" : "Isi Data Lanjutan"}
               </button>
             </div>
-            <div className="mt-3 flex flex-col items-center gap-2">
+            {!isFinalSharedOffer ? <div className="mt-3 flex flex-col items-center gap-2">
               <button
                 type="button"
                 onClick={() => setJourneyStatus("Tim asuransi akan membantu menindaklanjuti penawaran kendaraan ini.")}
@@ -3288,7 +3296,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               >
                 Tidak mau melanjutkan penawaran
               </button>
-            </div>
+            </div> : null}
           </div>
         </div>
       </div>
@@ -4305,7 +4313,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         shareLabel={shareLabel}
         productIcon={<Shield className="h-5 w-5" />}
         onOpenIndicativeOffer={
-          sharedOfferView === "offer-indicative"
+          shareTargetView === "offer-indicative"
             ? () => {
                 setShowOfferShareModal(false);
                 openOfferPreview(shareUrl);
@@ -4313,7 +4321,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             : null
         }
         onOpenFinalOffer={
-          sharedOfferView === "payment"
+          shareTargetView === "offer-final"
             ? () => {
                 setShowOfferShareModal(false);
                 openOfferPreview(shareUrl);

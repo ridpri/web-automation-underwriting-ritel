@@ -33,6 +33,7 @@ import { getPropertyExtensions, getPropertyVariant } from "./propertyProductConf
 import { CustomerDataJourneyShell } from "./components/CustomerDataJourneyShell.jsx";
 import { OfferShareModal } from "./components/OfferShareModal.jsx";
 import { PremiumBreakdown, PremiumPriceHero } from "./components/PremiumSummaryBlocks.jsx";
+import { getCanonicalPathForJourney } from "./app/routing.js";
 import MultiPropertyFlow from "./property/MultiPropertyFlow.jsx";
 import {
   createMultiPropertyDraft,
@@ -370,7 +371,14 @@ function createReferralCode(senderName, transactionId) {
 
 function getShareUrl(view, params = {}) {
   if (typeof window === "undefined") return "about:blank";
-  const url = new URL(window.location.href);
+  const role = params.role || "guest";
+  const routeParams = new URLSearchParams();
+  routeParams.set("view", view || "offer-indicative");
+  if (params.offer) routeParams.set("offer", "1");
+  const url = new URL(window.location.origin);
+  if (params.journey) {
+    url.pathname = getCanonicalPathForJourney(params.journey, role, routeParams);
+  }
   url.searchParams.set("view", view || "offer-indicative");
   Object.entries(params).forEach(([key, value]) => {
     if (value) url.searchParams.set(key, value);
@@ -411,6 +419,11 @@ function readShareContextFromUrl() {
 function openShareWindow(targetUrl) {
   if (typeof window === "undefined") return;
   window.open(targetUrl, "_blank", "noopener,noreferrer");
+}
+
+function openOfferPreview(targetUrl) {
+  if (typeof window === "undefined" || !targetUrl) return;
+  window.location.assign(targetUrl);
 }
 
 function replaceViewerModeInUrl(viewerMode) {
@@ -3013,7 +3026,7 @@ export default function PropertyStepOneFrontendCompact({
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <SentOffersModal open={showSentOffers} onClose={() => setShowSentOffers(false)} />
-      <IndicationModal open={showIndicationModal} onClose={() => { setShowIndicationModal(false); setShareFeedback(""); }} onOpenIndicativeOffer={() => { setExternalViewerMode("customer"); setShowIndicationModal(false); setExternalView("offer-indicative"); openShareWindow(shareUrl); }} onOpenFinalOffer={internalStep === 2 ? () => { setExternalViewerMode("customer"); setShowIndicationModal(false); setExternalView("offer-final"); openShareWindow(shareUrl); } : null} customerName={effectiveCustomerName} shareUrl={shareUrl} onShowQrInfo={() => setQrInfoVisible((prev) => !prev)} onCopyLink={handleCopyLink} copyStatus={shareFeedback} shareLabel={activeVariant.shareLabel} shareSubject={activeVariant.shareSubject} />
+      <IndicationModal open={showIndicationModal} onClose={() => { setShowIndicationModal(false); setShareFeedback(""); }} onOpenIndicativeOffer={() => { setExternalViewerMode("customer"); setShowIndicationModal(false); openOfferPreview(shareUrl); }} onOpenFinalOffer={internalStep === 2 ? () => { setExternalViewerMode("customer"); setShowIndicationModal(false); openOfferPreview(shareUrl); } : null} customerName={effectiveCustomerName} shareUrl={shareUrl} onShowQrInfo={() => setQrInfoVisible((prev) => !prev)} onCopyLink={handleCopyLink} copyStatus={shareFeedback} shareLabel={activeVariant.shareLabel} shareSubject={activeVariant.shareSubject} />
 
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
         <div className="mx-auto flex max-w-[1800px] items-center justify-between px-4 py-3 md:px-6">

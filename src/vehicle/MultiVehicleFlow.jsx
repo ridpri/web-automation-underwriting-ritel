@@ -38,7 +38,6 @@ const MIN_YEAR_COMP = CURRENT_YEAR - 15;
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
 const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
 const VEHICLE_USAGES = ["Pribadi", "Komersial"];
-const CAR_CATEGORY_OPTIONS = ["Angkutan Penumpang", "Angkutan Barang", "Bis"];
 const DEFAULT_CAR_TPL_AMOUNT = 25000000;
 const DEFAULT_CAR_PA_AMOUNT = 10000000;
 const DEFAULT_MOTOR_TPL_AMOUNT = 1000000;
@@ -69,25 +68,23 @@ const EXTENSION_GROUPS = {
     { id: "quake", label: "Jaminan Gempa Bumi", type: "toggle" },
   ],
   carTlo: [
-    { id: "tpl", label: "Tanggung Jawab Hukum Pihak Ketiga", type: "amount" },
-    { id: "driverPa", label: "Kecelakaan Diri Pengemudi", type: "amount" },
-    { id: "passengerPa", label: "Kecelakaan Diri Penumpang", type: "amount-seat" },
-    { id: "srcc", label: "Kerusuhan & Huru-hara", type: "toggle" },
-    { id: "ts", label: "Terorisme", type: "toggle" },
-    { id: "flood", label: "Banjir", type: "toggle" },
-    { id: "quake", label: "Gempa Bumi", type: "toggle" },
-    { id: "equipment", label: "Perlengkapan Tambahan", type: "equipment" },
+    { id: "tpl", label: "Jaminan Tanggung Jawab Hukum terhadap Pihak Ketiga", type: "amount" },
+    { id: "driverPa", label: "Jaminan Kecelakaan Diri Pengemudi", type: "amount" },
+    { id: "passengerPa", label: "Jaminan Kecelakaan Diri Penumpang", type: "amount-seat" },
+    { id: "srcc", label: "Jaminan Kerusuhan & Huru-hara", type: "toggle" },
+    { id: "ts", label: "Jaminan Terorisme", type: "toggle" },
+    { id: "flood", label: "Jaminan Banjir", type: "toggle" },
+    { id: "quake", label: "Jaminan Gempa Bumi", type: "toggle" },
   ],
   carComp: [
-    { id: "tpl", label: "Tanggung Jawab Hukum Pihak Ketiga", type: "amount" },
-    { id: "driverPa", label: "Kecelakaan Diri Pengemudi", type: "amount" },
-    { id: "passengerPa", label: "Kecelakaan Diri Penumpang", type: "amount-seat" },
-    { id: "srcc", label: "Kerusuhan & Huru-hara", type: "toggle" },
-    { id: "ts", label: "Terorisme", type: "toggle" },
-    { id: "flood", label: "Banjir", type: "toggle" },
-    { id: "quake", label: "Gempa Bumi", type: "toggle" },
-    { id: "equipment", label: "Perlengkapan Tambahan", type: "equipment" },
-    { id: "authorizedWorkshop", label: "Perbaikan Bengkel Authorized", type: "toggle" },
+    { id: "tpl", label: "Jaminan Tanggung Jawab Hukum terhadap Pihak Ketiga", type: "amount" },
+    { id: "driverPa", label: "Jaminan Kecelakaan Diri Pengemudi", type: "amount" },
+    { id: "passengerPa", label: "Jaminan Kecelakaan Diri Penumpang", type: "amount-seat" },
+    { id: "srcc", label: "Jaminan Kerusuhan & Huru-hara", type: "toggle" },
+    { id: "ts", label: "Jaminan Terorisme", type: "toggle" },
+    { id: "flood", label: "Jaminan Banjir", type: "toggle" },
+    { id: "quake", label: "Jaminan Gempa Bumi", type: "toggle" },
+    { id: "authorizedWorkshop", label: "Perbaikan di Bengkel Authorized", type: "toggle" },
   ],
 };
 
@@ -112,7 +109,7 @@ function FieldLabel({ label, required, helpText }) {
     <div className="mb-1.5 flex items-center gap-2">
       <label className="text-[13px] font-semibold text-slate-800">
         {label}
-        {required ? <span className="text-[#E66A1E]"> *</span> : null}
+        {required ? <span className="whitespace-nowrap text-[#E66A1E]">&nbsp;*</span> : null}
       </label>
       {helpText ? (
         <button
@@ -290,7 +287,7 @@ function VehicleAutocomplete({ flowType, vehicle, onUpdateQuote }) {
     const matched = getVehicleCatalogItem(catalogType, value);
     onUpdateQuote({
       vehicleName: value,
-      vehicleType: matched?.ojkCategory || vehicle.quote.vehicleType || "",
+      vehicleType: matched?.ojkCategory || "",
       vehicleFuelType: matched?.fuelType || "",
       vehicleBodyType: matched?.bodyType || "",
     });
@@ -401,7 +398,7 @@ function VehicleQuoteCard({ flowType, vehicle, quote, index, canRemove, onUpdate
   const usageSummary = vehicleUsageSummaryText(vehicle.quote.usage);
   const tariffRegionLabel = getTariffRegionLabel(vehicle.quote.plateRegion);
   const tariffCategoryLabel = getTariffCategoryLabel(flowType, vehicle.quote);
-  const tariffInfoSummary = tariffRegionLabel ? `Kendaraan ini termasuk dalam ${tariffRegionLabel} dengan ${tariffCategoryLabel}.` : "";
+  const tariffInfoSummary = tariffRegionLabel && (flowType === "motor" || vehicle.quote.vehicleType) ? `Kendaraan ini termasuk dalam ${tariffRegionLabel} dengan ${tariffCategoryLabel}.` : "";
   return (
     <div data-vehicle-accordion className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
       <div className="flex items-center gap-3 px-3.5 py-3">
@@ -480,12 +477,6 @@ function VehicleQuoteCard({ flowType, vehicle, quote, index, canRemove, onUpdate
                 ) : null}
               </div>
             </div>
-            {flowType !== "motor" ? (
-              <div>
-                <FieldLabel label="Kategori OJK Kendaraan" required />
-                <SelectInput value={vehicle.quote.vehicleType} onChange={(value) => updateQuote({ vehicleType: value })} options={CAR_CATEGORY_OPTIONS} placeholder="Pilih kategori kendaraan" />
-              </div>
-            ) : null}
           </div>
         </div>
       ) : null}
@@ -703,9 +694,28 @@ function UploadButton({ vehicle, slot, onCapture }) {
 function VehicleUnderwritingCard({ flowType, vehicle, index, onUpdateVehicle }) {
   const detailsOpen = vehicle.uwDetailsOpen !== false;
   const vehicleLabel = String(vehicle.quote?.vehicleName || "").trim() || vehicle.title || `Kendaraan ${index + 1}`;
+  const existingDamageStatus = vehicle.underwriting.existingDamageStatus || "";
+  const equipmentState = vehicle.quote.extensions?.equipment || {};
+  const equipmentStatus = equipmentState.status || (equipmentState.enabled || equipmentState.amount || equipmentState.description || equipmentState.inclusion ? "yes" : "none");
+  const equipmentInclusion = equipmentState.inclusion || "";
   const updateVehicleData = (patch) => onUpdateVehicle({ vehicle: { ...vehicle.vehicle, ...patch } }, false);
   const updateUnderwriting = (patch) => onUpdateVehicle({ underwriting: { ...vehicle.underwriting, ...patch } }, false);
   const updateUploads = (patch) => onUpdateVehicle({ uploads: { ...vehicle.uploads, ...patch } }, false);
+  const updateEquipment = (patch) => onUpdateVehicle(
+    {
+      quote: {
+        ...vehicle.quote,
+        extensions: {
+          ...vehicle.quote.extensions,
+          equipment: {
+            ...equipmentState,
+            ...patch,
+          },
+        },
+      },
+    },
+    false,
+  );
   const slots = MULTI_VEHICLE_UPLOAD_SLOTS[flowType] || MULTI_VEHICLE_UPLOAD_SLOTS.motor;
   const uploadCount = slots.filter((slot) => vehicle.uploads?.[slot.key]).length;
   const closedSummary = [vehicle.vehicle.plateNumber || "TNKB belum diisi", vehicle.underwriting.claimHistory ? `Klaim: ${vehicle.underwriting.claimHistory}` : "", `${uploadCount}/${slots.length} foto`].filter(Boolean).join(" - ");
@@ -743,28 +753,136 @@ function VehicleUnderwritingCard({ flowType, vehicle, index, onUpdateVehicle }) 
               <TextInput value={vehicle.vehicle.engineNumber} onChange={(value) => updateVehicleData({ engineNumber: value.toUpperCase() })} placeholder="Masukkan nomor mesin" />
             </div>
             <div>
-              <FieldLabel label="Riwayat Klaim 3 Tahun Terakhir" required />
-              <SelectInput value={vehicle.underwriting.claimHistory} onChange={(value) => updateUnderwriting({ claimHistory: value })} options={CLAIM_HISTORY_OPTIONS} placeholder="Pilih riwayat klaim" />
+              <FieldLabel
+                label="Pernah diajukan klaim asuransi dalam 3 tahun terakhir?"
+                required
+                helpText="Klaim asuransi adalah permintaan ganti rugi ke perusahaan asuransi atas kerusakan, kehilangan, atau kejadian lain yang dijamin polis."
+              />
+              <SelectInput value={vehicle.underwriting.claimHistory} onChange={(value) => updateUnderwriting({ claimHistory: value })} options={CLAIM_HISTORY_OPTIONS} placeholder="Pilih jawaban yang sesuai" />
             </div>
-            {flowType === "carComp" ? (
-              <div>
-                <FieldLabel label="Kondisi kerusakan sebelum polis" required />
-                <SelectInput
-                  value={vehicle.underwriting.existingDamageStatus}
-                  onChange={(value) => updateUnderwriting({ existingDamageStatus: value })}
-                  options={[
-                    { label: "Tidak ada kerusakan", value: "none" },
-                    { label: "Ada kerusakan", value: "yes" },
-                  ]}
-                  placeholder="Pilih kondisi kendaraan"
-                />
-              </div>
-            ) : null}
             <div>
               <FieldLabel label="Kontak di Lokasi" />
               <TextInput value={vehicle.vehicle.contactOnLocation} onChange={(value) => updateVehicleData({ contactOnLocation: value })} placeholder="Nama kontak kendaraan" icon={<Phone className="h-4 w-4" />} />
             </div>
           </div>
+          {flowType !== "motor" ? (
+            <div className="mt-4 rounded-xl border border-[#D8E1EA] bg-white p-3">
+              <div className="text-[14px] font-bold text-slate-900">Perlengkapan Tambahan</div>
+              <div className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                Aksesori atau perangkat non-standar yang bukan bawaan pabrik. Pilih apakah nilainya sudah termasuk dalam harga pertanggungan utama agar premi tidak dihitung dua kali.
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => updateEquipment({ status: "none", enabled: false, amount: "", inclusion: "", declaredValue: "", description: "" })}
+                  className={cls(
+                    "flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition",
+                    equipmentStatus !== "yes" ? "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]" : "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]",
+                  )}
+                >
+                  <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", equipmentStatus !== "yes" ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300")}>
+                    {equipmentStatus !== "yes" ? <CheckCircle2 className="h-3 w-3" /> : null}
+                  </span>
+                  <span>
+                    <span className="block text-[13px] font-bold">Tidak ada perlengkapan tambahan</span>
+                    <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Harga pertanggungan hanya untuk kendaraan standar pabrik.</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateEquipment({ status: "yes", description: equipmentState.description || "", inclusion: equipmentInclusion || "included" })}
+                  className={cls(
+                    "flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition",
+                    equipmentStatus === "yes" ? "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]" : "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]",
+                  )}
+                >
+                  <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", equipmentStatus === "yes" ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300")}>
+                    {equipmentStatus === "yes" ? <CheckCircle2 className="h-3 w-3" /> : null}
+                  </span>
+                  <span>
+                    <span className="block text-[13px] font-bold">Ada perlengkapan tambahan</span>
+                    <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Rinci perlengkapan agar dapat dicatat dalam SPAU.</span>
+                  </span>
+                </button>
+              </div>
+              {equipmentStatus === "yes" ? (
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <FieldLabel label="Rincian perlengkapan tambahan" required />
+                    <TextInput value={equipmentState.description || ""} onChange={(value) => updateEquipment({ description: value })} placeholder="Contoh: head unit, dashcam, roof rack" />
+                  </div>
+                  <div>
+                    <FieldLabel label="Status nilai perlengkapan" required />
+                    <SelectInput
+                      value={equipmentInclusion}
+                      onChange={(value) => {
+                        if (value === "included") updateEquipment({ inclusion: value, enabled: false, amount: "" });
+                        else updateEquipment({ inclusion: value, enabled: Boolean(parseNumber(equipmentState.amount)), amount: equipmentState.amount || "" });
+                      }}
+                      options={[
+                        { label: "Nilai sudah termasuk harga pertanggungan", value: "included" },
+                        { label: "Ingin dijamin sebagai tambahan", value: "additional" },
+                      ]}
+                      placeholder="Pilih status nilai"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel label={equipmentInclusion === "additional" ? "Nilai yang ingin dijamin" : "Estimasi nilai perlengkapan"} required={equipmentInclusion === "additional"} />
+                    <CurrencyInput
+                      value={equipmentInclusion === "additional" ? equipmentState.amount : equipmentState.declaredValue}
+                      onChange={(value) => {
+                        if (equipmentInclusion === "additional") updateEquipment({ amount: value, enabled: parseNumber(value) > 0 });
+                        else updateEquipment({ declaredValue: value });
+                      }}
+                      placeholder="Nilai perlengkapan"
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {flowType === "carComp" ? (
+            <div className="mt-4 rounded-xl border border-[#D8E1EA] bg-white p-3">
+              <div className="text-[14px] font-bold text-slate-900">Kondisi Kendaraan Sebelum Polis</div>
+              <div className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                Pilih apakah kendaraan sudah memiliki kerusakan sebelum polis aktif.
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => updateUnderwriting({ existingDamageStatus: "none" })}
+                  className={cls(
+                    "flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition",
+                    existingDamageStatus === "none" ? "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]" : "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]",
+                  )}
+                >
+                  <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", existingDamageStatus === "none" ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300")}>
+                    {existingDamageStatus === "none" ? <CheckCircle2 className="h-3 w-3" /> : null}
+                  </span>
+                  <span>
+                    <span className="block text-[13px] font-bold">Tidak ada kerusakan sebelum polis</span>
+                    <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Tidak perlu unggah foto kerusakan.</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateUnderwriting({ existingDamageStatus: "yes" })}
+                  className={cls(
+                    "flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition",
+                    existingDamageStatus === "yes" ? "border-[#0A4D82] bg-[#F0F7FD] text-[#0A4D82]" : "border-[#D8E1EA] bg-white text-slate-700 hover:border-[#A9C7E3]",
+                  )}
+                >
+                  <span className={cls("mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border", existingDamageStatus === "yes" ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-300")}>
+                    {existingDamageStatus === "yes" ? <CheckCircle2 className="h-3 w-3" /> : null}
+                  </span>
+                  <span>
+                    <span className="block text-[13px] font-bold">Ada kerusakan sebelum polis</span>
+                    <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Catat sebagai kondisi awal kendaraan.</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          ) : null}
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {slots.map((slot) => (
               <UploadButton key={slot.key} vehicle={vehicle} slot={slot} onCapture={() => updateUploads({ [slot.key]: true })} />

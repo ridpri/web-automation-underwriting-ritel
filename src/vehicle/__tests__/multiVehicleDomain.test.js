@@ -105,7 +105,7 @@ describe("multiVehicleDomain", () => {
       "Kendaraan 2: tahun kendaraan melewati batas usia produk.",
       "Kendaraan 2: isi harga pertanggungan yang valid.",
       "Kendaraan 2: pilih penggunaan kendaraan.",
-      "Kendaraan 2: pilih kategori OJK kendaraan.",
+      "Kendaraan 2: pilih merek / tipe kendaraan dari database.",
     ]);
   });
 

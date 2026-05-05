@@ -201,7 +201,7 @@ export function getMultiVehicleStepOnePendingItems({ flowType = "motor", insured
     if (!isYearEligible(flowType, quote.year)) items.push(`${label}: tahun kendaraan melewati batas usia produk.`);
     if (!isValidSumInsured(flowType, quote.marketValue)) items.push(`${label}: isi harga pertanggungan yang valid.`);
     if (!String(quote.usage || "").trim()) items.push(`${label}: pilih penggunaan kendaraan.`);
-    if (flowType !== "motor" && !String(quote.vehicleType || "").trim()) items.push(`${label}: pilih kategori OJK kendaraan.`);
+    if (flowType !== "motor" && !String(quote.vehicleType || "").trim()) items.push(`${label}: pilih merek / tipe kendaraan dari database.`);
   });
   return items;
 }
