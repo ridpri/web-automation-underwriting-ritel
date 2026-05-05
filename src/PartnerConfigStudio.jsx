@@ -145,8 +145,8 @@ const PORTAL_PRODUCT_CARDS = [
   {
     family: "health-group",
     title: "Trip Guard",
-    category: "Kecelakaan Diri",
-    description: "Atur konfigurasi partner untuk perjalanan grup, peserta, klausula, dan ringkasan approval.",
+    category: "Perjalanan",
+    description: "Atur konfigurasi partner untuk perjalanan grup, peserta, wording, dan ringkasan approval.",
     image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=900&q=80",
     defaultBlueprint: "Trip Guard Basic",
     defaultProduct: "Trip Guard",
@@ -155,7 +155,7 @@ const PORTAL_PRODUCT_CARDS = [
   {
     family: "property-group",
     title: "Edu Protect",
-    category: "Kecelakaan Diri",
+    category: "Properti",
     description: "Atur blanket asset, lokasi, nilai pertanggungan, dan pola endorsement partner.",
     image: "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=900&q=80",
     defaultBlueprint: "Edu Protect Basic",
@@ -174,9 +174,21 @@ const PORTAL_PRODUCT_CARDS = [
   },
 ];
 
+const PRODUCT_ROUTE_SLUGS = {
+  "group-pa": "life-guard",
+  "health-group": "trip-guard",
+  "property-group": "edu-protect",
+  "travel-group": "travel-safe",
+};
+const PRODUCT_FAMILY_BY_ROUTE_SLUG = Object.fromEntries(
+  Object.entries(PRODUCT_ROUTE_SLUGS).map(([family, slug]) => [slug, family])
+);
+const STEP_ROUTE_SLUGS = ["informasi-umum", "obyek-pertanggungan", "wording-klausula", "ringkasan"];
+const STEP_INDEX_BY_ROUTE_SLUG = Object.fromEntries(STEP_ROUTE_SLUGS.map((slug, index) => [slug, index]));
+
 const CLAUSE_LIBRARY = [
   "Klausula 72 Jam",
-  "Usia Peserta 5â€“24 Tahun",
+  "Usia Peserta 5-24 Tahun",
   "Periode Tunggu 7 Hari",
   "Data Realisasi Dapat Diunggah Massal",
   "Endorsement Penambahan Peserta",
@@ -307,7 +319,7 @@ const FIELD_HELPERS = {
   "Nomor Polis Induk / Nomor PKS": "Isi nomor polis induk atau PKS.",
   "Plan": "Pilih plan yang berlaku.",
   "Rate Dasar (‰)": "Isi rate dasar.",
-  "Rate Premi (â€°)": "Isi rate premi.",
+  "Rate Premi (‰)": "Isi rate premi.",
   "Biaya Admin": "Isi biaya admin.",
   "Biaya Polis": "Isi biaya polis.",
   "Biaya Meterai (Sesuai STAR)": "Isi biaya meterai yang berlaku.",
@@ -607,15 +619,26 @@ function safeReadUrlState() {
   try {
     const params = new URLSearchParams(window.location.search);
     const stepParam = params.get("pc_step");
+    const cleanSegments = window.location.pathname
+      .replace(/\/+$/g, "")
+      .split("/")
+      .filter(Boolean);
+    const partnerIndex = cleanSegments.findIndex((item, index) => item === "partner-config" && cleanSegments[index - 1] === "admin");
+    const cleanProductSlug = partnerIndex >= 0 ? cleanSegments[partnerIndex + 1] || "" : "";
+    const cleanStepSlug = partnerIndex >= 0 ? cleanSegments[partnerIndex + 2] || "" : "";
+    const cleanFamily = PRODUCT_FAMILY_BY_ROUTE_SLUG[cleanProductSlug] || null;
+    const cleanStepIndex = Object.prototype.hasOwnProperty.call(STEP_INDEX_BY_ROUTE_SLUG, cleanStepSlug)
+      ? STEP_INDEX_BY_ROUTE_SLUG[cleanStepSlug]
+      : null;
     return {
       familyFilter: params.get("pc_family_filter") || null,
       scopeFilter: params.get("pc_scope") || null,
       statusFilter: params.get("pc_status") || null,
       search: params.get("pc_search") || null,
       selectedId: params.get("pc_id") || null,
-      stepIndex: stepParam !== null && Number.isFinite(Number(stepParam)) ? Number(stepParam) : null,
-      portalView: params.get("pc_view") || null,
-      selectedFamily: params.get("pc_family") || null,
+      stepIndex: cleanStepIndex ?? (stepParam !== null && Number.isFinite(Number(stepParam)) ? Number(stepParam) : null),
+      portalView: cleanFamily ? "studio" : params.get("pc_view") || (partnerIndex >= 0 ? "catalog" : null),
+      selectedFamily: cleanFamily || params.get("pc_family") || null,
       catalogSearch: params.get("pc_catalog") || null,
     };
   } catch {
@@ -626,15 +649,19 @@ function safeReadUrlState() {
 function writeUrlState(state) {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
+  const cleanFamily = state.portalView === "studio" && state.selectedId ? state.selectedFamily : "";
+  const productSlug = PRODUCT_ROUTE_SLUGS[cleanFamily] || "";
+  const stepSlug = productSlug ? STEP_ROUTE_SLUGS[state.stepIndex ?? 0] || STEP_ROUTE_SLUGS[0] : "";
+  url.pathname = productSlug ? `/admin/partner-config/${productSlug}/${stepSlug}` : "/admin/partner-config";
   const entries = {
     pc_family_filter: state.familyFilter && state.familyFilter !== "all" ? state.familyFilter : null,
     pc_scope: state.scopeFilter && state.scopeFilter !== "all" ? state.scopeFilter : null,
     pc_status: state.statusFilter && state.statusFilter !== "Semua" ? state.statusFilter : null,
     pc_search: state.search || null,
-    pc_id: state.selectedId || null,
-    pc_step: state.portalView === "studio" && state.selectedId ? String(state.stepIndex ?? 0) : null,
-    pc_view: state.portalView && state.portalView !== "catalog" ? state.portalView : null,
-    pc_family: state.selectedFamily || null,
+    pc_id: null,
+    pc_step: null,
+    pc_view: null,
+    pc_family: null,
     pc_catalog: state.catalogSearch || null,
   };
   Object.entries(entries).forEach(([key, value]) => {
@@ -1152,13 +1179,16 @@ function fixDisplayText(value) {
   return String(value || "")
     .replace(/Ã¢â‚¬Â¢/g, "-")
     .replace(/Ã¢â‚¬â€œ/g, "-")
-    .replace(/Ã¢â‚¬Â°/g, "â€°");
+    .replace(/Ã¢â‚¬Â°/g, "‰")
+    .replace(/â€¢/g, "-")
+    .replace(/â€“/g, "-")
+    .replace(/â€°/g, "‰");
 }
 
 function getRoleLabel(role) {
-  if (role === "Maker") return "ROM (Maker)";
-  if (role === "Checker") return "Admin UDW (Checker)";
-  if (role === "Approval") return "HO UDW (Approval)";
+  if (role === "Maker") return "ROM";
+  if (role === "Checker") return "Admin UDW";
+  if (role === "Approval") return "HO UDW";
   return "Pilih Peran";
 }
 
@@ -1837,7 +1867,7 @@ const SEED_CONFIGS = [
   {
     id: "cfg-gns-property",
     family: "property-group",
-    title: "Garasi Niaga â€¢ Dealer Blanket",
+    title: "Edu Protect - Dealer Blanket",
     partnerName: "PT Garasi Niaga Sentosa",
     productName: "Dealer Asset Blanket",
     version: "v1.0",
@@ -1944,19 +1974,28 @@ function PartnerConfigStudio({
 }) {
   const cached = safeReadStorage();
   const urlState = safeReadUrlState();
+  const initialConfigs = cached?.configs || SEED_CONFIGS;
+  const initialSelectedFamily = urlState.selectedFamily || cached?.selectedFamily || "";
+  const initialSelectedId =
+    urlState.portalView === "catalog"
+      ? null
+      : urlState.selectedId ||
+        (initialSelectedFamily ? initialConfigs.find((item) => item.family === initialSelectedFamily)?.id : null) ||
+        cached?.selectedId ||
+        null;
 
-  const [configs, setConfigs] = useState(cached?.configs || SEED_CONFIGS);
+  const [configs, setConfigs] = useState(initialConfigs);
   const [familyFilter, setFamilyFilter] = useState(urlState.familyFilter || cached?.familyFilter || "all");
   const [scopeFilter, setScopeFilter] = useState(urlState.scopeFilter || cached?.scopeFilter || "all");
   const [statusFilter, setStatusFilter] = useState(urlState.statusFilter || cached?.statusFilter || "Semua");
   const [search, setSearch] = useState(urlState.search || cached?.search || "");
-  const [selectedId, setSelectedId] = useState(urlState.selectedId || cached?.selectedId || null);
+  const [selectedId, setSelectedId] = useState(initialSelectedId);
   const [stepIndex, setStepIndex] = useState(urlState.stepIndex ?? cached?.stepIndex ?? 0);
   const [roleState, setRoleState] = useState(cached?.role || initialRole);
   const [portalView, setPortalView] = useState(
     urlState.portalView || (cached?.portalView === "studio" && (urlState.selectedId || cached?.selectedId) ? "studio" : "catalog")
   );
-  const [selectedFamily, setSelectedFamily] = useState(urlState.selectedFamily || cached?.selectedFamily || "");
+  const [selectedFamily, setSelectedFamily] = useState(initialSelectedFamily);
   const [catalogSearch, setCatalogSearch] = useState(urlState.catalogSearch || cached?.catalogSearch || "");
   const [toast, setToast] = useState("");
   const [headerAccountMenuOpen, setHeaderAccountMenuOpen] = useState(false);
@@ -2764,6 +2803,7 @@ function PartnerConfigStudio({
     const fieldRules = getOperationalFieldRules(selectedConfig);
     const normalizedPreview = buildNormalizedPreview(selectedConfig);
     const reviewPendingItems = getPendingItems(selectedConfig);
+    const pendingItems = reviewPendingItems;
     const isLifeGuard = selectedConfig.family === "group-pa";
     const isTripTravelGuard = ["health-group", "travel-group"].includes(selectedConfig.family);
     const lifeGuardComputed = isLifeGuard ? getLifeGuardComputed(master) : null;
@@ -3630,7 +3670,7 @@ function PartnerConfigStudio({
                   onChange={(value) => patchSection("master", { sumInsured: value })}
                 />
               </FormField>
-              <FormField label="Rate Dasar (â€°)" required>
+              <FormField label="Rate Dasar (‰)" required>
                 <TextInput
                   value={master.baseRate}
                   onChange={(value) => patchSection("master", { baseRate: value })}
@@ -3895,7 +3935,7 @@ function PartnerConfigStudio({
 
                   {row.target ? (
                     <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                      {FIELD_MAP[row.target]?.label || row.target} â€¢ {FIELD_MAP[row.target]?.help || "Field inti di core system"}
+                      {FIELD_MAP[row.target]?.label || row.target} - {FIELD_MAP[row.target]?.help || "Field inti di core system"}
                     </div>
                   ) : null}
                 </div>
@@ -4239,8 +4279,6 @@ function PartnerConfigStudio({
       );
     }
 
-    const pendingItems = getPendingItems(selectedConfig);
-
     return (
       <div className="space-y-4">
         <SectionCard
@@ -4371,7 +4409,7 @@ function PartnerConfigStudio({
                 <div className="rounded-2xl border border-slate-200 bg-white p-3">
                   <div className="text-sm font-bold text-slate-900">{item.action}</div>
                   <div className="mt-1 text-xs text-slate-500">
-                    {item.actor} â€¢ {item.at}
+                    {item.actor} - {item.at}
                   </div>
                 </div>
               </div>
@@ -4565,7 +4603,8 @@ function PartnerConfigStudio({
       <div className="min-h-screen bg-[#f4f7fa] text-slate-800">
         <AppProductHeader
           sessionName={sessionName}
-          sessionRoleLabel={sessionRoleLabel}
+          role={role}
+          onRoleChange={updateRole}
           accountInitials={accountMeta.initials}
           onHome={exitToShell}
           accountMenuOpen={headerAccountMenuOpen}
@@ -4623,7 +4662,7 @@ function PartnerConfigStudio({
                   <div className="flex flex-wrap items-center justify-center gap-3">
                     <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/95 p-1.5 shadow-lg shadow-black/10 backdrop-blur">
                       <div className="flex items-center px-2">
-                        <span className="mr-2 whitespace-nowrap text-[9px] font-black uppercase text-slate-400">Ganti Peran:</span>
+                        <span className="mr-2 whitespace-nowrap text-[9px] font-black uppercase text-slate-400">Peran:</span>
                         <select
                           value={role}
                           onChange={(event) => updateRole(event.target.value)}
@@ -5596,7 +5635,8 @@ function PartnerConfigStudio({
       <div className="min-h-screen bg-[#f4f7fa] text-slate-800">
         <AppProductHeader
           sessionName={sessionName}
-          sessionRoleLabel={sessionRoleLabel}
+          role={role}
+          onRoleChange={updateRole}
           accountInitials={accountMeta.initials}
           onHome={exitToShell}
           accountMenuOpen={headerAccountMenuOpen}
@@ -5654,7 +5694,7 @@ function PartnerConfigStudio({
                   <div className="flex flex-wrap items-center justify-center gap-3">
                     <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/95 p-1.5 shadow-lg shadow-black/10 backdrop-blur">
                       <div className="flex items-center px-2">
-                        <span className="mr-2 whitespace-nowrap text-[9px] font-black uppercase text-slate-400">Ganti Peran:</span>
+                        <span className="mr-2 whitespace-nowrap text-[9px] font-black uppercase text-slate-400">Peran:</span>
                         <select
                           value={role}
                           onChange={(event) => updateRole(event.target.value)}
@@ -6401,7 +6441,7 @@ function PartnerConfigStudio({
             <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200 md:p-8">
               <div className="inline-flex items-center gap-2 rounded-full bg-[#EEF5FB] px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[#0A4D82]">
                 <Lock className="h-3.5 w-3.5" />
-                View as
+                Peran
               </div>
               <div className="mt-4 text-[30px] font-black tracking-tight text-slate-950 md:text-[40px]">
                 Mulai dari login role, baru lanjut ke empat produk
@@ -6473,7 +6513,8 @@ function PartnerConfigStudio({
       <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
         <AppProductHeader
           sessionName={sessionName}
-          sessionRoleLabel={sessionRoleLabel}
+          role={role}
+          onRoleChange={updateRole}
           accountInitials={accountMeta.initials}
           onHome={exitToShell}
           accountMenuOpen={headerAccountMenuOpen}
@@ -6527,14 +6568,6 @@ function PartnerConfigStudio({
     );
   }
 
-  if (selectedConfig?.family === "group-pa") {
-    return renderLifeGuardStudio();
-  }
-
-  if (selectedConfig?.family === "travel-group") {
-    return renderTravelSafeStudio();
-  }
-
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <div>
@@ -6560,7 +6593,7 @@ function PartnerConfigStudio({
 
                   <div className="flex shrink-0 flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-white">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">Peran</span>
                       <select
                         value={role}
                         onChange={(event) => updateRole(event.target.value)}
@@ -6698,7 +6731,8 @@ function PartnerConfigStudio({
           <div className="pb-52 lg:pb-8">
             <AppProductHeader
               sessionName={sessionName}
-              sessionRoleLabel={sessionRoleLabel}
+              role={role}
+              onRoleChange={updateRole}
               accountInitials={accountMeta.initials}
               onHome={exitToShell}
               accountMenuOpen={headerAccountMenuOpen}
@@ -7320,7 +7354,8 @@ function TravelSafeBenefitSummaryCard({ rows = [], emptyText = "Belum ada perlua
 
 function AppProductHeader({
   sessionName,
-  sessionRoleLabel,
+  role,
+  onRoleChange,
   accountInitials,
   onHome,
   accountMenuOpen,
@@ -7329,14 +7364,14 @@ function AppProductHeader({
 }) {
   return (
     <header className="sticky top-0 z-30 bg-[#0A4D82] shadow-sm">
-      <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4">
+      <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-2 px-4 py-3 md:gap-4 md:px-6 md:py-4">
         <div className="flex min-w-0 items-center gap-3 text-white md:gap-6">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-sm bg-[#091E42] md:h-8 md:w-8">
               <div className="absolute left-0 top-0 h-full w-full bg-[linear-gradient(135deg,#D71920_0%,#D71920_42%,transparent_42%,transparent_100%)]" />
               <div className="absolute bottom-0 right-0 h-3.5 w-3.5 bg-white" />
             </div>
-            <div className="text-[12px] font-black leading-[0.95] md:text-[18px]">
+            <div className="hidden text-[12px] font-black leading-[0.95] sm:block md:text-[18px]">
               Danantara
               <div className="-mt-0.5 md:-mt-1">Indonesia</div>
             </div>
@@ -7364,22 +7399,30 @@ function AppProductHeader({
           </button>
         </div>
 
-        <div className="relative flex items-center gap-2 md:gap-3">
-          <button
-            type="button"
-            className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm"
-          >
-            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
-            <span className="max-w-[132px] truncate">{sessionRoleLabel}</span>
-            <ChevronDown className="h-4 w-4 text-white/85" />
-          </button>
+        <div className="relative flex min-w-0 items-center justify-end gap-2 md:gap-3">
+          <div className="inline-flex h-11 min-w-[132px] items-center justify-between gap-2 rounded-[10px] border border-white/20 bg-white/10 px-2.5 py-2 text-sm font-medium text-white shadow-sm md:min-w-[180px] md:px-3">
+            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70 sm:inline">Peran</span>
+            <select
+              value={role}
+              onChange={(event) => onRoleChange?.(event.target.value)}
+              className="min-w-0 flex-1 appearance-none bg-transparent pr-5 text-[12px] font-semibold text-white outline-none md:text-sm"
+              aria-label="Pilih peran internal"
+            >
+              {ROLE_OPTIONS.map((item) => (
+                <option key={item} value={item} className="text-slate-900">
+                  {getRoleLabel(item)}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none -ml-5 h-4 w-4 text-white/85" />
+          </div>
           <button
             type="button"
             aria-expanded={accountMenuOpen}
             aria-haspopup="menu"
             aria-controls="partner-account-menu"
             onClick={onToggleAccountMenu}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4"
+            className="hidden h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:inline-flex md:px-4"
           >
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">
               {accountInitials}

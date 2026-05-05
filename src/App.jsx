@@ -272,7 +272,10 @@ export default function App() {
     const win = typeof window !== "undefined" ? window : null;
     if (!win) return;
     const url = new URL(win.location.href);
-    const canonicalPath = getCanonicalPathForJourney(resolvedActiveJourney, sessionRole, url.searchParams);
+    const canonicalPath =
+      resolvedActiveJourney === "partner-config" && url.pathname.startsWith("/admin/partner-config")
+        ? url.pathname
+        : getCanonicalPathForJourney(resolvedActiveJourney, sessionRole, url.searchParams);
     url.pathname = canonicalPath;
     url.searchParams.delete("journey");
     const publicUrlSessionRole = resolveUrlSessionRole(sessionRole);

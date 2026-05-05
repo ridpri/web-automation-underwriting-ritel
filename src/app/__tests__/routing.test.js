@@ -54,6 +54,14 @@ describe("app routing", () => {
     assert.equal(getCanonicalPathForJourney("internal-workspace", "internal"), "/workspace");
   });
 
+  it("keeps partner config product subroutes on the internal partner journey", () => {
+    assert.deepEqual(resolveRouteFromPath("/admin/partner-config/travel-safe/ringkasan"), {
+      path: "/admin/partner-config",
+      journey: "partner-config",
+      sessionRole: "internal",
+    });
+  });
+
   it("removes role query when the path already encodes the role", () => {
     assert.equal(shouldKeepRoleQuery("internal", "/internal/property"), false);
     assert.equal(shouldKeepRoleQuery("external", "/external/property"), false);

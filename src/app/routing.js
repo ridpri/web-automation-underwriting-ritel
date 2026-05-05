@@ -40,7 +40,11 @@ function normalizePath(pathname = "/") {
 }
 
 export function resolveRouteFromPath(pathname = "/") {
-  return PATH_ROUTE_LOOKUP.get(normalizePath(pathname)) || null;
+  const normalized = normalizePath(pathname);
+  if (normalized === "/admin/partner-config" || normalized.startsWith("/admin/partner-config/")) {
+    return PATH_ROUTE_LOOKUP.get("/admin/partner-config") || null;
+  }
+  return PATH_ROUTE_LOOKUP.get(normalized) || null;
 }
 
 function hasOfferContext(searchParams) {
