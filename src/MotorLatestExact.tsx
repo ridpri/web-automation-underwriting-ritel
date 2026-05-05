@@ -319,6 +319,16 @@ const DEMO_MODEL_LABELS: Record<FlowType, string> = {
   carComp: "BYD Atto 3 Advanced",
   carTlo: "Toyota Avanza 1.5 G",
 };
+const MULTI_MOTOR_DEMO_QUOTES = [
+  { vehicleName: "Honda BeAT CBS", plateRegion: "B - Jakarta/Depok/Tangerang/Bekasi", year: "2025", marketValue: "20000000", usage: "Pribadi" },
+  { vehicleName: "Yamaha NMAX 155 Connected", plateRegion: "D - Bandung", year: "2024", marketValue: "36500000", usage: "Pribadi", extensions: { tpl: { enabled: true, amount: 1000000 } } },
+  { vehicleName: "Honda Vario 125 CBS", plateRegion: "L - Surabaya", year: "2023", marketValue: "28000000", usage: "Komersial", extensions: { srcc: { enabled: true } } },
+];
+const MULTI_MOTOR_DEMO_DETAILS = [
+  { plateNumber: "B 4123 UYT", chassisNumber: "MH1JM8112PK123456", engineNumber: "JM81E1234567", color: "Hitam" },
+  { plateNumber: "D 2218 RMA", chassisNumber: "MH3SG5620RJ234567", engineNumber: "G3L8E2345678", color: "Biru Doff" },
+  { plateNumber: "L 3315 VRO", chassisNumber: "MH1JK0219PJ345678", engineNumber: "JK02E3456789", color: "Merah" },
+];
 
 const EXT_INFO: Record<string, string> = {
   tpl: "Menjamin tanggung jawab hukum Tertanggung atas kerugian pihak ketiga yang secara langsung disebabkan oleh Kendaraan Bermotor yang dipertanggungkan akibat risiko yang dijamin polis, termasuk kerusakan harta benda, biaya pengobatan, cedera badan, dan/atau kematian.",
@@ -2086,8 +2096,89 @@ export default function MotorLatestExact({
 
   };
 
+  const createMultiVehicleDemoDrafts = (type: FlowType, includeAdvancedData = false) => {
+    if (type !== "motor") return [createMultiVehicleDraft(type, 0)];
+    return MULTI_MOTOR_DEMO_QUOTES.map((demoQuote, index) => {
+      const draft = createMultiVehicleDraft(type, index, {
+        id: `vehicle-${index + 1}`,
+        detailsOpen: index === 0,
+        uwDetailsOpen: index === 0,
+      });
+      const catalogItem = getVehicleCatalogItem("motor", demoQuote.vehicleName);
+      const vehicleDetail = MULTI_MOTOR_DEMO_DETAILS[index] || {};
+      const uploads = includeAdvancedData
+        ? Object.keys(draft.uploads).reduce((acc: Record<string, boolean>, key) => {
+            acc[key] = true;
+            return acc;
+          }, {})
+        : draft.uploads;
+
+      return {
+        ...draft,
+        title: `Kendaraan ${index + 1}`,
+        quote: {
+          ...draft.quote,
+          ...demoQuote,
+          vehicleName: catalogItem?.label || demoQuote.vehicleName,
+          vehicleType: catalogItem?.ojkCategory || "",
+          vehicleFuelType: catalogItem?.fuelType || "",
+          vehicleBodyType: catalogItem?.bodyType || "",
+          extensions: {
+            ...draft.quote.extensions,
+            ...(demoQuote.extensions || {}),
+          },
+        },
+        vehicle: includeAdvancedData
+          ? {
+              ...draft.vehicle,
+              ...vehicleDetail,
+              contactOnLocation: VEHICLE_MOCK_CIF_BY_FLOW[type][0].name,
+            }
+          : draft.vehicle,
+        underwriting: includeAdvancedData
+          ? {
+              ...draft.underwriting,
+              claimHistory: "Tidak Ada",
+            }
+          : draft.underwriting,
+        uploads,
+      };
+    });
+  };
+
+  const fillMultiVehicleDemoData = (type: FlowType, includeAdvancedData = false) => {
+    if (type !== "motor") return;
+    const demoCustomer = VEHICLE_MOCK_CIF_BY_FLOW[type][0];
+    const demoLookupValue = allowCustomerLookup ? `${demoCustomer.name} - ${demoCustomer.cif}` : demoCustomer.name;
+
+    setActiveMultiVehicles(createMultiVehicleDemoDrafts(type, includeAdvancedData));
+    setActiveMultiVehiclePolicyForm((prev: any) => ({
+      ...prev,
+      insuredName: demoLookupValue,
+      customerType: demoCustomer.type,
+      phone: demoCustomer.phone,
+      email: demoCustomer.email,
+      address: includeAdvancedData ? "Jl. Kemang Raya No. 18, Jakarta Selatan" : prev.address,
+      coverageStartDate: includeAdvancedData ? "2026-05-01" : prev.coverageStartDate,
+      coverageEndDate: includeAdvancedData ? addOneYear("2026-05-01") : prev.coverageEndDate,
+      selectedCustomerCif: isInternalMode ? demoCustomer.cif : prev.selectedCustomerCif,
+      quoted: includeAdvancedData ? true : false,
+      paymentStatus: "",
+      notice: "",
+    }));
+    if (isInternalMode) {
+      setSelectedCustomers((prev) => ({ ...prev, [type]: demoCustomer }));
+    }
+    setJourneyStatus("");
+    setCheckoutStatus("");
+  };
+
   const fillDemoForCurrentStep = () => {
     if (!flowType) return;
+    if (supportsMultiVehicleMode && vehicleObjectMode === "multi") {
+      fillMultiVehicleDemoData(flowType, step > 1);
+      return;
+    }
     if (step === 1) {
       fillStepOneDemoData(flowType);
       return;
@@ -2192,41 +2283,7 @@ export default function MotorLatestExact({
     setJourneyStatus("");
     setCheckoutStatus("");
   };
-  const runTopMultiVehicleSimulation = () => {
-    if (!flowType) return;
-    const examples = [
-      { vehicleName: "Honda Beat 110", plateRegion: "Wilayah 2", year: "2025", marketValue: "20000000", usage: "Pribadi" },
-      { vehicleName: "Yamaha NMAX 155", plateRegion: "Wilayah 1", year: "2024", marketValue: "30000000", usage: "Pribadi" },
-      { vehicleName: "Honda Vario 125", plateRegion: "Wilayah 3", year: "2023", marketValue: "25000000", usage: "Komersial" },
-    ];
-    setActiveMultiVehicles(
-      examples.map((quote, index) => {
-        const draft = createMultiVehicleDraft(flowType, index, { id: `vehicle-${index + 1}`, detailsOpen: index === 0 });
-        return {
-          ...draft,
-          title: `Kendaraan ${index + 1}`,
-          quote: {
-            ...draft.quote,
-            ...quote,
-          },
-        };
-      }),
-    );
-    setActiveMultiVehiclePolicyForm((prev: any) => ({
-      ...prev,
-      quoted: false,
-      notice: "",
-      paymentStatus: "",
-    }));
-    setStep(1);
-    setJourneyStatus("");
-    setCheckoutStatus("");
-  };
   const handleStepOneClick = () => {
-    if (supportsMultiVehicleMode && vehicleObjectMode === "multi") {
-      runTopMultiVehicleSimulation();
-      return;
-    }
     setStep(1);
   };
   useEffect(() => {

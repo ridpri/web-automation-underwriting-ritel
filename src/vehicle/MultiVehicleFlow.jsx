@@ -48,13 +48,25 @@ Penggunaan Pribadi berarti kendaraan digunakan untuk keperluan pribadi dan bukan
 
 Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.`;
 
+const EXTENSION_INFO = {
+  tpl: "Menjamin tanggung jawab hukum Tertanggung atas kerugian pihak ketiga yang secara langsung disebabkan oleh Kendaraan Bermotor yang dipertanggungkan akibat risiko yang dijamin polis, termasuk kerusakan harta benda, biaya pengobatan, cedera badan, dan/atau kematian.",
+  srcc: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh kerusuhan, pemogokan, penghalangan bekerja, tawuran, huru-hara, pembangkitan rakyat tanpa penggunaan senjata api, revolusi tanpa penggunaan senjata api, pencegahan terkait risiko tersebut, serta penjarahan yang terjadi selama kerusuhan atau huru-hara.",
+  ts: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh makar, terorisme, sabotase, atau tindakan pencegahan yang berkaitan dengan risiko tersebut.",
+  flood: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh angin topan, badai, hujan es, banjir, genangan air, dan/atau tanah longsor.",
+  quake: "Menjamin kerugian atau kerusakan kendaraan yang secara langsung disebabkan oleh gempa bumi, tsunami, dan/atau letusan gunung berapi.",
+  driverPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan terhadap pengemudi di dalam kendaraan yang secara langsung disebabkan oleh kecelakaan Kendaraan Bermotor akibat risiko yang dijamin polis.",
+  passengerPa: "Menjamin cedera badan, kematian, dan/atau biaya pengobatan terhadap penumpang di dalam kendaraan yang secara langsung disebabkan oleh kecelakaan Kendaraan Bermotor akibat risiko yang dijamin polis.",
+  equipment: "Menjamin peralatan atau perlengkapan non-standar yang dirinci jenis, jumlah, dan harga pertanggungannya dalam polis sebagai bagian dari kendaraan yang dipertanggungkan.",
+  authorizedWorkshop: "Memberikan fasilitas perbaikan kendaraan di bengkel resmi sesuai merek kendaraan.",
+};
+
 const EXTENSION_GROUPS = {
   motor: [
-    { id: "tpl", label: "Tanggung Jawab Hukum Pihak Ketiga", type: "amount" },
-    { id: "srcc", label: "Kerusuhan & Huru-hara", type: "toggle" },
-    { id: "ts", label: "Terorisme", type: "toggle" },
-    { id: "flood", label: "Banjir", type: "toggle" },
-    { id: "quake", label: "Gempa Bumi", type: "toggle" },
+    { id: "tpl", label: "Jaminan Tanggung Jawab Hukum terhadap Pihak Ketiga", type: "amount" },
+    { id: "srcc", label: "Jaminan Kerusuhan & Huru-hara", type: "toggle" },
+    { id: "ts", label: "Jaminan Terorisme", type: "toggle" },
+    { id: "flood", label: "Jaminan Banjir", type: "toggle" },
+    { id: "quake", label: "Jaminan Gempa Bumi", type: "toggle" },
   ],
   carTlo: [
     { id: "tpl", label: "Tanggung Jawab Hukum Pihak Ketiga", type: "amount" },
@@ -275,9 +287,26 @@ function mainCoverText(flowType) {
     return "Menjamin kerugian atau kerusakan pada kendaraan bermotor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, perbuatan jahat, pencurian, dan kebakaran sesuai ketentuan polis.";
   }
   if (flowType === "motor") {
-    return "Menjamin kerugian total per sepeda motor akibat tabrakan, benturan, terbalik, tergelincir, perbuatan jahat, pencurian, dan kebakaran apabila biaya perbaikan atau penggantian mencapai sekurang-kurangnya 75% dari harga sebenarnya sesaat sebelum kejadian.";
+    return "Menjamin kerugian total pada sepeda motor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, terperosok, perbuatan jahat, pencurian, dan kebakaran, apabila biaya perbaikan, penggantian, atau pemulihan mencapai sekurang-kurangnya 75% dari harga sebenarnya sesaat sebelum kejadian. Kehilangan karena pencurian dijamin bila sepeda motor tidak ditemukan dalam waktu 60 hari sejak terjadinya pencurian.";
   }
   return "Menjamin kerugian total per kendaraan bermotor akibat tabrakan, benturan, terbalik, tergelincir, perbuatan jahat, pencurian, dan kebakaran apabila biaya perbaikan atau penggantian mencapai sekurang-kurangnya 75% dari harga sebenarnya sesaat sebelum kejadian.";
+}
+
+function mainDeductibleText(flowType) {
+  if (flowType === "motor") return "Kerugian total: Rp150.000. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
+  return "Mengikuti kategori kendaraan. Kehilangan karena pencurian: 5% dari harga pertanggungan.";
+}
+
+function extensionDeductibleText(flowType, itemId) {
+  if (itemId === "tpl" || itemId === "driverPa" || itemId === "passengerPa") return "Tanpa risiko sendiri saat klaim.";
+  if (itemId === "srcc" || itemId === "ts") return "10% dari nilai yang disetujui, paling sedikit Rp500.000,- per kejadian.";
+  if (itemId === "flood" || itemId === "quake") return "10% dari nilai kerugian, minimum Rp500.000,-- untuk setiap kejadian.";
+  if (itemId === "equipment" || itemId === "authorizedWorkshop") return "Mengikuti ketentuan pertanggungan utama.";
+  return flowType === "motor" ? "" : "Mengikuti ketentuan pertanggungan utama.";
+}
+
+function deductibleIsDirectText(text) {
+  return String(text || "").trim().toLowerCase().startsWith("tanpa risiko sendiri");
 }
 
 function VehicleAutocomplete({ flowType, vehicle, onUpdateQuote }) {
@@ -492,51 +521,52 @@ function VehicleQuoteCard({ flowType, vehicle, quote, index, canRemove, onUpdate
 
 function GuaranteeCard({ title, premium, expanded, onToggle, children }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[#D8E1EA] bg-[#F8FBFE]">
-      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
-        <div className="flex min-w-0 items-start gap-3">
-          <Shield className="mt-0.5 h-5 w-5 shrink-0 text-[#0A4D82]" />
-          <div className="min-w-0">
-            <div className="truncate text-[16px] font-bold text-[#0A4D82]">{title}</div>
-            {premium ? <div className="mt-0.5 text-sm text-slate-500">Premi: {premium}</div> : null}
-          </div>
+    <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
+      <div className="flex items-center gap-3 px-3.5 py-3">
+        <div className="flex h-5 w-5 items-center justify-center rounded border border-[#0A4D82] bg-[#0A4D82]/10 text-[#0A4D82]">
+          <Shield className="h-3.5 w-3.5" />
         </div>
-        <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
-      </button>
-      {expanded ? <div className="border-t border-[#D6E0EA] bg-white px-4 py-3 text-sm leading-6 text-slate-700">{children}</div> : null}
+        <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[#0A4D82]">
+              <div className="truncate text-[14px] font-medium leading-[1.35]">{title}</div>
+            </div>
+            {premium ? <div className="mt-0.5 text-[12px] font-normal text-slate-500">Premi: {premium}</div> : null}
+          </div>
+          <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
+        </button>
+      </div>
+      {expanded ? <div className="border-t border-[#D6E0EA] px-3.5 py-3">{children}</div> : null}
     </div>
   );
 }
 
-function ExtensionGuaranteeRow({ item, premium, enabled, expanded, onToggleChecked, onToggleExpand }) {
+function ExtensionGuaranteeRow({ item, premium, coverageAmount, enabled, expanded, onToggleChecked, onToggleExpand, detail, deductible, extra }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[#D8E1EA] bg-[#F8FBFE]">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <button
-          type="button"
-          aria-label={`${enabled ? "Hapus" : "Pilih"} ${item.label}`}
-          onClick={onToggleChecked}
-          className={cls(
-            "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] border bg-white transition",
-            enabled ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-400 text-transparent hover:border-[#0A4D82]",
-          )}
-        >
-          <CheckCircle2 className="h-4 w-4" />
-        </button>
+    <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
+      <div className="flex items-center gap-3 px-3.5 py-3">
+        <input type="checkbox" checked={enabled} onChange={onToggleChecked} aria-label={`${enabled ? "Hapus" : "Pilih"} ${item.label}`} className="h-5 w-5 rounded border-slate-300 text-[#0A4D82] focus:ring-[#0A4D82]" />
         <button type="button" onClick={onToggleExpand} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
-          <div className="flex min-w-0 items-start gap-3">
-            <Shield className="mt-0.5 h-5 w-5 shrink-0 text-[#0A4D82]" />
-            <div className="min-w-0">
-              <div className="truncate text-[16px] font-bold text-[#0A4D82]">{item.label}</div>
-              <div className="mt-0.5 text-sm text-slate-500">Premi: {premium}</div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[#0A4D82]">
+              <Shield className="h-4 w-4 shrink-0" />
+              <div className="truncate text-[14px] font-medium leading-[1.35]">{item.label}</div>
             </div>
+            <div className="mt-0.5 text-[12px] font-normal text-slate-500">Premi: {premium}</div>
+            {coverageAmount ? <div className="mt-0.5 text-[12px] font-normal text-slate-500">Nilai pertanggungan: {coverageAmount}</div> : null}
           </div>
           <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
         </button>
       </div>
       {expanded ? (
-        <div className="border-t border-[#D6E0EA] bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-          Perluasan ini berlaku untuk kendaraan yang dipilih dalam polis dan dihitung dari profil masing-masing kendaraan.
+        <div className="border-t border-[#D6E0EA] px-3.5 py-3">
+          <div className="whitespace-pre-line text-[12.5px] leading-5 text-slate-700">{detail}</div>
+          {deductible ? (
+            <div className="mt-2 text-[12px] leading-5 text-slate-600">
+              {deductibleIsDirectText(deductible) ? deductible : <><span className="font-medium text-slate-700">Risiko sendiri saat klaim:</span> {deductible}</>}
+            </div>
+          ) : null}
+          {extra ? <div className="mt-3 rounded-xl border border-[#D8E1EA] bg-white/85 p-3">{extra}</div> : null}
         </div>
       ) : null}
     </div>
@@ -555,17 +585,32 @@ function MultiVehicleCoverageSection({ flowType, vehicles, policyTotals, onUpdat
     return vehicles.reduce((sum, vehicle) => sum + Number(getExtensionFee(vehicle.quote, id) || 0), 0);
   };
   const isExtensionEnabledForAll = (id) => vehicles.some((vehicle) => Boolean(vehicle.quote.extensions?.[id]?.enabled));
-  const toggleExtensionForAll = (item) => {
-    const nextEnabled = !isExtensionEnabledForAll(item.id);
+  const getFirstExtensionValue = (id, field, fallback = "") => {
+    const firstVehicle = vehicles.find((vehicle) => vehicle.quote.extensions?.[id]);
+    return firstVehicle?.quote.extensions?.[id]?.[field] || fallback;
+  };
+  const getExtensionCoverageAmount = (item) => {
+    if (item.id === "tpl") return getFirstExtensionValue(item.id, "amount", flowType === "motor" ? DEFAULT_MOTOR_TPL_AMOUNT : DEFAULT_CAR_TPL_AMOUNT);
+    if (item.id === "driverPa" || item.id === "passengerPa") return getFirstExtensionValue(item.id, "amount", DEFAULT_CAR_PA_AMOUNT);
+    if (item.id === "equipment") return getFirstExtensionValue(item.id, "amount", "");
+    return "";
+  };
+  const getExtensionCoverageText = (item) => {
+    if (!["tpl", "driverPa", "passengerPa", "equipment"].includes(item.id)) return "";
+    const amount = parseNumber(getExtensionCoverageAmount(item));
+    return amount > 0 ? `Rp ${formatRupiah(amount)}` : "";
+  };
+  const getCoverageInputLabel = (item) => {
+    if (item.id === "tpl") return "Nilai pertanggungan pihak ketiga";
+    if (item.id === "driverPa") return "Nilai pertanggungan pengemudi";
+    if (item.id === "passengerPa") return "Nilai pertanggungan per penumpang";
+    if (item.id === "equipment") return "Nilai perlengkapan";
+    return "Nilai pertanggungan";
+  };
+  const updateExtensionForAll = (item, patch) => {
     vehicles.forEach((vehicle) => {
       const extensions = vehicle.quote.extensions || {};
       const current = extensions[item.id] || {};
-      const defaults =
-        item.type === "amount"
-          ? { amount: current.amount || (flowType === "motor" ? DEFAULT_MOTOR_TPL_AMOUNT : DEFAULT_CAR_TPL_AMOUNT) }
-          : item.type === "amount-seat"
-            ? { amount: current.amount || DEFAULT_CAR_PA_AMOUNT, seats: current.seats || "4" }
-            : {};
       onUpdateVehicle(
         vehicle.id,
         {
@@ -575,8 +620,7 @@ function MultiVehicleCoverageSection({ flowType, vehicles, policyTotals, onUpdat
               ...extensions,
               [item.id]: {
                 ...current,
-                ...defaults,
-                enabled: nextEnabled,
+                ...patch,
               },
             },
           },
@@ -584,6 +628,16 @@ function MultiVehicleCoverageSection({ flowType, vehicles, policyTotals, onUpdat
         false,
       );
     });
+  };
+  const toggleExtensionForAll = (item) => {
+    const nextEnabled = !isExtensionEnabledForAll(item.id);
+    const defaults =
+      item.type === "amount"
+        ? { amount: getExtensionCoverageAmount(item) || (flowType === "motor" ? DEFAULT_MOTOR_TPL_AMOUNT : DEFAULT_CAR_TPL_AMOUNT) }
+        : item.type === "amount-seat"
+          ? { amount: getExtensionCoverageAmount(item) || DEFAULT_CAR_PA_AMOUNT, seats: getFirstExtensionValue(item.id, "seats", "4") }
+          : {};
+    updateExtensionForAll(item, { ...defaults, enabled: nextEnabled });
   };
 
   return (
@@ -593,15 +647,15 @@ function MultiVehicleCoverageSection({ flowType, vehicles, policyTotals, onUpdat
           <div className="text-sm leading-6 text-slate-500">Klik setiap baris untuk melihat penjelasan detailnya.</div>
         </div>
         <div>
-          <div className="text-[17px] font-bold tracking-tight text-slate-900">Jaminan Utama</div>
+          <div className="text-[15px] font-semibold tracking-tight text-slate-900">Risiko yang Dijamin</div>
           <div className="mt-3">
             <GuaranteeCard title={mainCoverTitle(flowType)} premium={`Rp ${formatRupiah(policyTotals.mainPremium)}`} expanded={Boolean(expandedRows.main)} onToggle={() => toggleRow("main")}>
-              <div>{mainCoverText(flowType)}</div>
-              <div className="mt-3">
-                <span className="font-semibold text-slate-900">Risiko sendiri saat klaim:</span> {flowType === "motor" ? "Rp150.000." : "Mengikuti kategori kendaraan."}
+              <div className="whitespace-pre-line text-[12.5px] leading-5 text-slate-700">{mainCoverText(flowType)}</div>
+              <div className="mt-2 text-[12px] leading-5 text-slate-600">
+                <span className="font-medium text-slate-700">Risiko sendiri saat klaim:</span> {mainDeductibleText(flowType)}
               </div>
               <div className="mt-3 border-t border-slate-200 pt-3">
-                <div className="text-sm font-medium text-slate-500">Rincian premi per kendaraan</div>
+                <div className="text-[12px] font-medium leading-5 text-slate-600">Rincian premi per kendaraan</div>
                 <div className="mt-2 divide-y divide-slate-100">
                   {vehicles.map((vehicle, index) => {
                     const quote = policyTotals.vehicleQuotes[index] || {};
@@ -619,19 +673,42 @@ function MultiVehicleCoverageSection({ flowType, vehicles, policyTotals, onUpdat
           </div>
         </div>
         <div>
-          <div className="text-[17px] font-bold tracking-tight text-slate-900">Perluasan Jaminan</div>
-          <div className="mt-3 space-y-2.5">
-            {extensionItems.map((item) => (
-              <ExtensionGuaranteeRow
-                key={item.id}
-                item={item}
-                premium={`Rp ${formatRupiah(getExtensionPreviewPremium(item.id))}`}
-                enabled={isExtensionEnabledForAll(item.id)}
-                expanded={Boolean(expandedRows[item.id])}
-                onToggleChecked={() => toggleExtensionForAll(item)}
-                onToggleExpand={() => toggleRow(item.id)}
-              />
-            ))}
+          <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
+          <div className="mt-4 space-y-2.5">
+            {extensionItems.map((item) => {
+              const coverageAmount = getExtensionCoverageAmount(item);
+              return (
+                <ExtensionGuaranteeRow
+                  key={item.id}
+                  item={item}
+                  premium={`Rp ${formatRupiah(getExtensionPreviewPremium(item.id))}`}
+                  coverageAmount={getExtensionCoverageText(item)}
+                  enabled={isExtensionEnabledForAll(item.id)}
+                  expanded={Boolean(expandedRows[item.id])}
+                  onToggleChecked={() => toggleExtensionForAll(item)}
+                  onToggleExpand={() => toggleRow(item.id)}
+                  detail={EXTENSION_INFO[item.id] || "Perluasan ini berlaku untuk kendaraan yang dipilih dalam polis dan dihitung dari profil masing-masing kendaraan."}
+                  deductible={extensionDeductibleText(flowType, item.id)}
+                  extra={item.type === "amount" ? (
+                    <div className="max-w-md">
+                      <FieldLabel label={getCoverageInputLabel(item)} required={false} />
+                      <CurrencyInput value={coverageAmount} onChange={(value) => updateExtensionForAll(item, { amount: value })} placeholder="Nilai pertanggungan" />
+                    </div>
+                  ) : item.type === "amount-seat" ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <FieldLabel label={getCoverageInputLabel(item)} required={false} />
+                        <CurrencyInput value={coverageAmount} onChange={(value) => updateExtensionForAll(item, { amount: value })} placeholder="Nilai pertanggungan" />
+                      </div>
+                      <div>
+                        <FieldLabel label="Jumlah penumpang yang dijamin" required={false} />
+                        <TextInput value={getFirstExtensionValue(item.id, "seats", "4")} onChange={(value) => updateExtensionForAll(item, { seats: onlyDigits(value) || "1" })} placeholder="Kursi" inputMode="numeric" />
+                      </div>
+                    </div>
+                  ) : null}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
