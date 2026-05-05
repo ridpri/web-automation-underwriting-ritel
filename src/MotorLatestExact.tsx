@@ -36,7 +36,7 @@ import { VehicleYearPicker } from "./components/VehicleYearPicker.jsx";
 import { createEmptyDocumentCheck, createPhotoEvidence, createTransactionAuthority, evaluateDocumentRead, summarizeFraudSignals } from "./platform/securityControls.js";
 import { findVehicleSuggestions, getVehicleCatalogItem, getVehicleCatalogItems } from "./vehicleCatalog.js";
 import MultiVehicleFlow from "./vehicle/MultiVehicleFlow.jsx";
-import { createMultiVehicleDraft } from "./vehicle/multiVehicleDomain.js";
+import { createMultiVehicleDraft, isMultiVehicleFlowEnabled } from "./vehicle/multiVehicleDomain.js";
 
 const CURRENT_YEAR = 2026;
 const MIN_YEAR_TLO = CURRENT_YEAR - 20;
@@ -1454,7 +1454,7 @@ function StepNode({ step, title, subtitle, active, done, icon, onClick }: any) {
   );
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className="relative flex flex-1 flex-col items-center text-center">
+      <button type="button" onClick={onClick} className="relative flex flex-1 cursor-pointer flex-col items-center text-center">
         {content}
       </button>
     );
@@ -1464,24 +1464,28 @@ function StepNode({ step, title, subtitle, active, done, icon, onClick }: any) {
 
 function VehicleFlowModeSwitch({ mode, onSingle, onMulti }: { mode: VehicleObjectMode; onSingle: () => void; onMulti: () => void }) {
   return (
-    <div className="inline-flex rounded-[12px] border border-[#D5DDE6] bg-[#F8FBFE] p-1 text-[#0A4D82] shadow-sm" aria-label="Pilih jumlah kendaraan yang diasuransikan">
-      <button
-        type="button"
-        aria-label="Satu Kendaraan"
-        title="Satu Kendaraan"
-        onClick={onSingle}
-        className={cls("inline-flex h-9 w-9 items-center justify-center rounded-[9px] transition", mode === "single" ? "bg-[#0A4D82] text-white shadow-sm" : "text-slate-500 hover:bg-white hover:text-[#0A4D82]")}
-      >
-        <CarIcon className="h-4 w-4" />
-      </button>
+    <div className="inline-flex overflow-hidden rounded-[14px] border border-[#D5DDE6] bg-[#F8FBFE] text-[#0A4D82] shadow-sm" aria-label="Pilih jumlah kendaraan yang diasuransikan">
       <button
         type="button"
         aria-label="Beberapa Kendaraan"
         title="Beberapa Kendaraan"
         onClick={onMulti}
-        className={cls("inline-flex h-9 w-9 items-center justify-center rounded-[9px] transition", mode === "multi" ? "bg-[#0A4D82] text-white shadow-sm" : "text-slate-500 hover:bg-white hover:text-[#0A4D82]")}
+        className={cls("inline-flex h-11 w-12 items-center justify-center border-r border-[#D5DDE6] transition", mode === "multi" ? "bg-[#0A4D82] text-white" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]")}
       >
-        <Package className="h-4 w-4" />
+        <span className="relative inline-flex h-6 w-6 items-center justify-center">
+          <CarIcon className="absolute left-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+          <CarIcon className="absolute right-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+          <CarIcon className="absolute bottom-0.5 left-1/2 h-4 w-4 -translate-x-1/2" />
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label="Satu Kendaraan"
+        title="Satu Kendaraan"
+        onClick={onSingle}
+        className={cls("inline-flex h-11 w-12 items-center justify-center transition", mode === "single" ? "bg-[#0A4D82] text-white" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]")}
+      >
+        <CarIcon className="h-5 w-5" />
       </button>
     </div>
   );
@@ -2118,6 +2122,7 @@ export default function MotorLatestExact({
   const isInternalMode = entryMode === "internal";
   const activeMultiVehiclePolicyForm = flowType ? multiVehiclePolicyForms[flowType] : createMultiVehiclePolicyForm();
   const activeMultiVehicles = flowType ? multiVehicles[flowType] : [];
+  const supportsMultiVehicleMode = isMultiVehicleFlowEnabled(flowType);
   const setActiveMultiVehiclePolicyForm = (updater: any) => {
     if (!flowType) return;
     setMultiVehiclePolicyForms((prev) => ({
@@ -2141,6 +2146,7 @@ export default function MotorLatestExact({
     });
   const switchToMultiVehicleFlow = () => {
     if (!flowType) return;
+    if (!supportsMultiVehicleMode) return;
     const firstVehicle = buildSingleVehicleAsMultiDraft(flowType);
     setActiveMultiVehiclePolicyForm((prev: any) => ({
       ...prev,
@@ -2186,6 +2192,48 @@ export default function MotorLatestExact({
     setJourneyStatus("");
     setCheckoutStatus("");
   };
+  const runTopMultiVehicleSimulation = () => {
+    if (!flowType) return;
+    const examples = [
+      { vehicleName: "Honda Beat 110", plateRegion: "Wilayah 2", year: "2025", marketValue: "20000000", usage: "Pribadi" },
+      { vehicleName: "Yamaha NMAX 155", plateRegion: "Wilayah 1", year: "2024", marketValue: "30000000", usage: "Pribadi" },
+      { vehicleName: "Honda Vario 125", plateRegion: "Wilayah 3", year: "2023", marketValue: "25000000", usage: "Komersial" },
+    ];
+    setActiveMultiVehicles(
+      examples.map((quote, index) => {
+        const draft = createMultiVehicleDraft(flowType, index, { id: `vehicle-${index + 1}`, detailsOpen: index === 0 });
+        return {
+          ...draft,
+          title: `Kendaraan ${index + 1}`,
+          quote: {
+            ...draft.quote,
+            ...quote,
+          },
+        };
+      }),
+    );
+    setActiveMultiVehiclePolicyForm((prev: any) => ({
+      ...prev,
+      quoted: false,
+      notice: "",
+      paymentStatus: "",
+    }));
+    setStep(1);
+    setJourneyStatus("");
+    setCheckoutStatus("");
+  };
+  const handleStepOneClick = () => {
+    if (supportsMultiVehicleMode && vehicleObjectMode === "multi") {
+      runTopMultiVehicleSimulation();
+      return;
+    }
+    setStep(1);
+  };
+  useEffect(() => {
+    if (!supportsMultiVehicleMode && vehicleObjectMode === "multi") {
+      setVehicleObjectMode("single");
+    }
+  }, [supportsMultiVehicleMode, vehicleObjectMode]);
   const authenticatedExternalProfile =
     entryMode === "external" && sessionProfile?.authenticated ? sessionProfile : null;
   const isAuthenticatedExternalJourney = Boolean(authenticatedExternalProfile);
@@ -2338,16 +2386,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const dataComplete = selected ? !!(selected.insured.customerType && selected.insured.fullName && selected.insured.address && selected.insured.email && selected.insured.phone && selected.vehicle.plateNumber && selected.vehicle.chassisNumber && selected.vehicle.engineNumber) : false;
   const periodComplete = selected ? !!(selected.quote.coverageStart && selected.quote.coverageEnd) : false;
   const readyForNextStage = !!(selected && calc && uploadsComplete && equipmentRequirementMet && stnkPhotoComplete && dataComplete && periodComplete && calc.status !== "Need Review");
-  const isMultiVehicleMode = vehicleObjectMode === "multi";
+  const isMultiVehicleMode = supportsMultiVehicleMode && vehicleObjectMode === "multi";
   const canOpenStepTwo = isMultiVehicleMode ? Boolean(activeMultiVehiclePolicyForm.quoted) : showPremiumDetails;
   const canOpenStepThree = isMultiVehicleMode ? step > 2 : step > 1 && readyForNextStage;
-  const vehicleFlowModeAction = (
+  const vehicleFlowModeAction = supportsMultiVehicleMode ? (
     <VehicleFlowModeSwitch
       mode={vehicleObjectMode}
       onSingle={switchToSingleVehicleFlow}
       onMulti={switchToMultiVehicleFlow}
     />
-  );
+  ) : null;
   const canIssue = !!(readyForNextStage && selected.agree && selected.paymentMethod);
   const coverageEndDate = selected?.quote?.coverageStart ? addOneYear(selected.quote.coverageStart) : "";
   const coverageStartDisplay = selected?.quote?.coverageStart ? formatDisplayDate(new Date(`${selected.quote.coverageStart}T00:00:00`)) : "-";
@@ -3318,8 +3366,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     const stnkConfidenceLabel = documentChecks[flowType].stnk.confidence
       ? `${Math.round(documentChecks[flowType].stnk.confidence * 100)}%`
       : "-";
-    const canShowInsuredStepTwoFields = selected.ui.dataMode !== "scan" || selected.ktpRead;
-    const canShowStnkVehicleFields = selected.ui.stnkMode !== "scan" || selected.stnkRead;
+    const canShowInsuredStepTwoFields = isInternalMode || selected.ui.dataMode !== "scan" || selected.ktpRead;
+    const canShowStnkVehicleFields = isInternalMode || selected.ui.stnkMode !== "scan" || selected.stnkRead;
 
     return (
       <ActionCard className={showIntroHeader ? "rounded-[28px]" : ""}>
@@ -3338,31 +3386,33 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           <div className={showIntroHeader ? "mt-5 space-y-6" : "space-y-6"}>
             <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
               <div className="space-y-4">
-                <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Calon Pemegang Polis</div>
-                <div className="grid gap-2.5 md:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => setAt(flowType, "ui.dataMode", "scan")}
-                    className={cls(
-                      "rounded-[14px] border px-4 py-2.5 text-left transition",
-                      selected.ui.dataMode === "scan" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
-                    )}
-                  >
-                    <div className="text-[14px] font-semibold text-[#0A4D82]">Gunakan Foto KTP</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAt(flowType, "ui.dataMode", "manual")}
-                    className={cls(
-                      "rounded-[14px] border px-4 py-2.5 text-left transition",
-                      selected.ui.dataMode === "manual" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
-                    )}
-                  >
-                    <div className="text-[14px] font-semibold text-[#0A4D82]">Isi Manual</div>
-                  </button>
-                </div>
+                <div className="text-[18px] font-bold tracking-tight text-slate-900">{isInternalMode ? "Data Pemegang Polis" : "Informasi Calon Pemegang Polis"}</div>
+                {!isInternalMode ? (
+                  <div className="grid gap-2.5 md:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setAt(flowType, "ui.dataMode", "scan")}
+                      className={cls(
+                        "rounded-[14px] border px-4 py-2.5 text-left transition",
+                        selected.ui.dataMode === "scan" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
+                      )}
+                    >
+                      <div className="text-[14px] font-semibold text-[#0A4D82]">Gunakan Foto KTP</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAt(flowType, "ui.dataMode", "manual")}
+                      className={cls(
+                        "rounded-[14px] border px-4 py-2.5 text-left transition",
+                        selected.ui.dataMode === "manual" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
+                      )}
+                    >
+                      <div className="text-[14px] font-semibold text-[#0A4D82]">Isi Manual</div>
+                    </button>
+                  </div>
+                ) : null}
 
-                {selected.ui.dataMode === "scan" ? (
+                {!isInternalMode && selected.ui.dataMode === "scan" ? (
                   <div className="rounded-[16px] border border-[#D8E1EA] bg-white px-4 py-3">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div className={cls("text-[13px] font-medium", selected.ktpRead ? "text-emerald-700" : "text-slate-600")}>
@@ -3456,31 +3506,33 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             <div className="rounded-[16px] border border-[#D8E1EA] bg-[#F8FBFE] px-4 py-4 md:px-5">
               <div className="space-y-4">
                 <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Kendaraan Lanjutan</div>
-                <div className={cls("grid gap-2.5", flowType === "carComp" ? "md:grid-cols-1" : "md:grid-cols-2")}>
-                  <button
-                    type="button"
-                    onClick={() => setAt(flowType, "ui.stnkMode", "scan")}
-                    className={cls(
-                      "rounded-[14px] border px-4 py-2.5 text-left transition",
-                      selected.ui.stnkMode === "scan" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
-                    )}
-                  >
-                    <div className="text-[14px] font-semibold text-[#0A4D82]">Gunakan Foto STNK</div>
-                  </button>
-                  {flowType !== "carComp" ? (
+                {!isInternalMode ? (
+                  <div className={cls("grid gap-2.5", flowType === "carComp" ? "md:grid-cols-1" : "md:grid-cols-2")}>
                     <button
                       type="button"
-                      onClick={() => setAt(flowType, "ui.stnkMode", "manual")}
+                      onClick={() => setAt(flowType, "ui.stnkMode", "scan")}
                       className={cls(
                         "rounded-[14px] border px-4 py-2.5 text-left transition",
-                        selected.ui.stnkMode === "manual" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
+                        selected.ui.stnkMode === "scan" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
                       )}
                     >
-                      <div className="text-[14px] font-semibold text-[#0A4D82]">Isi Manual</div>
+                      <div className="text-[14px] font-semibold text-[#0A4D82]">Gunakan Foto STNK</div>
                     </button>
-                  ) : null}
-                </div>
-                {selected.ui.stnkMode === "scan" ? (
+                    {flowType !== "carComp" ? (
+                      <button
+                        type="button"
+                        onClick={() => setAt(flowType, "ui.stnkMode", "manual")}
+                        className={cls(
+                          "rounded-[14px] border px-4 py-2.5 text-left transition",
+                          selected.ui.stnkMode === "manual" ? "border-[#0A4D82] bg-white" : "border-slate-200 bg-white",
+                        )}
+                      >
+                        <div className="text-[14px] font-semibold text-[#0A4D82]">Isi Manual</div>
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+                {!isInternalMode && selected.ui.stnkMode === "scan" ? (
                   <div className="rounded-[16px] border border-[#D8E1EA] bg-white px-4 py-3">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div className={cls("text-[13px] font-medium", selected.stnkRead ? "text-emerald-700" : "text-slate-600")}>
@@ -3851,8 +3903,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             <div className="space-y-4">
               <div className="text-[18px] font-bold tracking-tight text-slate-900">Informasi Pertanggungan</div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <FieldLabel label="Tanggal Mulai Perlindungan" helpText="Perlindungan asuransi berlaku 1 tahun sejak tanggal ini." />
+                <div>
+                  <FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" helpText="Perlindungan asuransi berlaku 1 tahun sejak tanggal ini." />
                   <input
                     ref={coverageDateFieldRef}
                     type="date"
@@ -3877,11 +3929,17 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       1 Tahun
                     </span>
                   </button>
-                  {selected.quote.coverageStart ? (
-                    <div className="mt-1.5 text-[12px] leading-5 text-slate-500">
-                      Berlaku sampai pukul 12.00 siang pada {coverageEndDisplay}.
-                    </div>
-                  ) : null}
+                </div>
+                <div>
+                  <FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" />
+                  <input
+                    type="date"
+                    value={coverageEndDate}
+                    onChange={() => {}}
+                    readOnly
+                    className="h-[48px] w-full rounded-[12px] border border-[#D5DDE6] bg-slate-50 px-4 text-[14px] text-slate-600 outline-none"
+                  />
+                  {selected.quote.coverageStart ? <div className="mt-1.5 text-[12px] leading-5 text-slate-500">Berakhir pukul 12.00 siang.</div> : null}
                 </div>
                 <div className="md:col-span-2">
                   <FieldLabel
@@ -4270,7 +4328,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               <div className="mx-auto mt-6 max-w-[860px] rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-[960px] md:p-5">
                 <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5">
                   <div className="flex flex-col gap-5 md:flex-row md:gap-5">
-                    <StepNode step="Langkah 1" title={stepOneTitle} subtitle={step === 1 ? "Sedang dibuka" : "Selesai"} active={step === 1} done={step > 1} icon={<FileText className="h-4 w-4" />} onClick={() => setStep(1)} />
+                    <StepNode step="Langkah 1" title={stepOneTitle} subtitle={step === 1 ? "Sedang dibuka" : "Selesai"} active={step === 1} done={step > 1} icon={<FileText className="h-4 w-4" />} onClick={handleStepOneClick} />
                     <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
                     <StepNode
                       step="Langkah 2"
@@ -4299,7 +4357,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             </div>
           </div>
 
-          <div className={showSidebar ? "mx-auto max-w-[1280px] px-4 pb-12 md:px-6" : isMultiVehicleMode ? "mx-auto mt-6 max-w-[1280px] px-4 pb-12 md:px-6" : "mx-auto mt-6 max-w-[860px] px-4 pb-12 md:px-6"}>
+          <div className={showSidebar ? "mx-auto max-w-[1280px] px-4 pb-12 md:px-6" : isMultiVehicleMode && step === 3 && !isInternalMode ? "mx-auto mt-6 max-w-[1280px] px-4 pb-12 md:px-6" : "mx-auto mt-6 max-w-[860px] px-4 pb-12 md:px-6"}>
             <div className={showSidebar ? "grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]" : "space-y-5"}>
               <div className="space-y-5">
                 {isMultiVehicleMode ? (
@@ -4315,18 +4373,10 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                     setVehicles={setActiveMultiVehicles}
                     customerOptions={currentFlowCustomers || []}
                     flowModeAction={vehicleFlowModeAction}
+                    vehicleMode={vehicleObjectMode}
+                    onSingleVehicleMode={switchToSingleVehicleFlow}
+                    onMultiVehicleMode={switchToMultiVehicleFlow}
                   />
-                ) : null}
-                {!isMultiVehicleMode && !isSharedCustomerPreview ? (
-                  <ActionCard>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="text-[18px] font-bold text-slate-900">Objek Pertanggungan</div>
-                        <div className="mt-1 text-sm leading-6 text-slate-500">Pilih satu kendaraan atau beberapa kendaraan dalam satu polis.</div>
-                      </div>
-                      {vehicleFlowModeAction}
-                    </div>
-                  </ActionCard>
                 ) : null}
                 {!isMultiVehicleMode && step === 1 ? (
                   <>
@@ -4430,9 +4480,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       </ActionCard>
                     ) : null}
 
-                    <ActionCard>
-                      <div className="text-[18px] font-bold text-slate-900">Informasi Kendaraan</div>
-                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <SectionCard title="Informasi Kendaraan" action={vehicleFlowModeAction}>
+                      <div className="grid gap-4 md:grid-cols-2">
                         <div>
                           <FieldLabel label={flowType === "motor" ? "Merek / Tipe Motor" : "Merek / Tipe Mobil"} />
                           <VehicleAutocomplete
@@ -4487,7 +4536,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                           </div>
                         </div>
                       </div>
-                    </ActionCard>
+                    </SectionCard>
 
                     {showPremiumDetails ? renderInternalCarCompLoadingSetting() : null}
                     {showPremiumDetails ? renderCoverageSummaryCard() : null}
@@ -4503,7 +4552,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                   </>
                 ) : null}
 
-                {!isMultiVehicleMode && step === 2 ? renderStepTwoContent(true) : null}
+                {!isMultiVehicleMode && step === 2 ? renderStepTwoContent(!isInternalMode) : null}
                 {!isMultiVehicleMode && isInternalMode && step === 2 ? renderInternalStepTwoActions() : null}
                 {!isMultiVehicleMode && !isInternalMode && step === 2 ? renderExternalStepTwoActions() : null}
 

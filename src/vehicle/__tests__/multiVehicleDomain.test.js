@@ -6,9 +6,17 @@ import {
   createMultiVehicleDraft,
   getMultiVehicleStepOnePendingItems,
   getMultiVehicleStepTwoPendingItems,
+  isMultiVehicleFlowEnabled,
 } from "../multiVehicleDomain.js";
 
 describe("multiVehicleDomain", () => {
+  it("enables multi vehicle flow for motor only", () => {
+    assert.equal(isMultiVehicleFlowEnabled("motor"), true);
+    assert.equal(isMultiVehicleFlowEnabled("carTlo"), false);
+    assert.equal(isMultiVehicleFlowEnabled("carComp"), false);
+    assert.equal(isMultiVehicleFlowEnabled(""), false);
+  });
+
   it("calculates one policy total from multiple motor vehicles", () => {
     const vehicles = [
       createMultiVehicleDraft("motor", 0, {

@@ -650,13 +650,18 @@ function StepNode({ step, title, subtitle, active, done, icon, onClick }) {
 }
 
 function PropertyFlowModeSwitch({ mode, onSingle, onMulti }) {
+  const itemClass = (active) =>
+    cls(
+      "inline-flex h-10 w-10 items-center justify-center transition first:rounded-l-[12px] last:rounded-r-[12px]",
+      active ? "bg-[#0A4D82] text-white shadow-sm" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]"
+    );
   return (
-    <div className="inline-flex rounded-[12px] border border-[#D5DDE6] bg-[#F8FBFE] p-1 text-[#0A4D82] shadow-sm" aria-label="Pilih jumlah properti yang diasuransikan">
-      <button type="button" aria-label="Satu Properti" title="Satu Properti" onClick={onSingle} className={cls("inline-flex h-9 w-9 items-center justify-center rounded-[9px] transition", mode === "single" ? "bg-[#0A4D82] text-white shadow-sm" : "text-slate-500 hover:bg-white hover:text-[#0A4D82]")}>
-        <Home className="h-4 w-4" />
-      </button>
-      <button type="button" aria-label="Beberapa Properti" title="Beberapa Properti" onClick={onMulti} className={cls("inline-flex h-9 w-9 items-center justify-center rounded-[9px] transition", mode === "multi" ? "bg-[#0A4D82] text-white shadow-sm" : "text-slate-500 hover:bg-white hover:text-[#0A4D82]")}>
+    <div className="inline-flex overflow-hidden rounded-[14px] border border-[#C8D6E5] bg-white text-[#0A4D82] shadow-sm divide-x divide-[#DDE6F0]" aria-label="Pilih jumlah properti yang diasuransikan">
+      <button type="button" aria-label="Beberapa Properti" title="Beberapa Properti" onClick={onMulti} className={itemClass(mode === "multi")}>
         <Building2 className="h-4 w-4" />
+      </button>
+      <button type="button" aria-label="Satu Properti" title="Satu Properti" onClick={onSingle} className={itemClass(mode === "single")}>
+        <Home className="h-4 w-4" />
       </button>
     </div>
   );
@@ -687,18 +692,31 @@ function SummarySidebarShell({ title = "Ringkasan", children }) {
 }
 
 function SummarySidebarAlert({ items, successText }) {
+  const [expanded, setExpanded] = React.useState(false);
   if (items.length) {
     return (
-      <div className="rounded-xl border border-[#F0D8A8] bg-[#FFF7E8] p-3 text-[12px] leading-[1.45] text-[#8A6830]">
-        <div className="font-semibold text-[#8A6830]">Yang masih perlu dilengkapi</div>
-        <div className="mt-1.5 space-y-1.5">
-          {items.map((item) => (
-            <div key={item} className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#C1892E]" />
-              <span>{item}</span>
+      <div className="rounded-xl border border-[#F0D8A8] bg-[#FFF7E8] text-[12px] leading-[1.45] text-[#8A6830]">
+        <button type="button" onClick={() => setExpanded((value) => !value)} className="flex w-full items-start justify-between gap-2 px-3 py-2.5 text-left">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 font-semibold text-[#8A6830]">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-[#C1892E]" />
+              <span>Yang masih perlu dilengkapi</span>
+              <span className="rounded-full bg-[#F8E6BF] px-2 py-0.5 text-[10px] font-bold">{items.length}</span>
             </div>
-          ))}
-        </div>
+            {!expanded ? <div className="mt-1 truncate text-[#8A6830]/85">{items[0]}</div> : null}
+          </div>
+          <ChevronDown className={cls("mt-0.5 h-3.5 w-3.5 shrink-0 text-[#8A6830] transition", expanded && "rotate-180")} />
+        </button>
+        {expanded ? (
+          <div className="space-y-1.5 border-t border-[#F0D8A8] px-3 py-2.5">
+            {items.map((item) => (
+              <div key={item} className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#C1892E]" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -3083,7 +3101,9 @@ export default function PropertyStepOneFrontendCompact({
               setProperties={setMultiProperties}
               derivePropertyType={(value) => derivePropertyTypeFromOccupancy(value, availablePropertyTypes)}
               customerOptions={MOCK_CIF}
-              flowModeAction={<PropertyFlowModeSwitch mode={propertyFlowMode} onSingle={switchToSinglePropertyFlow} onMulti={switchToMultiPropertyFlow} />}
+              flowMode={propertyFlowMode}
+              onSingleFlow={switchToSinglePropertyFlow}
+              onMultiFlow={switchToMultiPropertyFlow}
             />
           ) : internalStep === 1 ? (
             <div className={cls("mx-auto px-4 md:px-6", showStepOneSummarySidebar ? "max-w-[1280px]" : "max-w-4xl")}>
@@ -3116,9 +3136,9 @@ export default function PropertyStepOneFrontendCompact({
                             <SelectInput value={form.occupancy} onChange={(value) => setField("occupancy", value)} options={availableOccupancyOptions} placeholder="Pilih penggunaan properti yang diasuransikan" />
                           </div>
                           {showOccupancyCode ? (
-                            <div className="self-end rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2.5">
-                              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">Kode Okupasi</div>
-                              <div className="mt-1 text-sm font-semibold text-[#0A4D82]">{occupancyCode}</div>
+                            <div className="self-end pb-3 text-sm text-slate-500">
+                              <span>Kode Okupasi: </span>
+                              <span className="font-semibold text-[#0A4D82]">{occupancyCode}</span>
                             </div>
                           ) : null}
                         </div>

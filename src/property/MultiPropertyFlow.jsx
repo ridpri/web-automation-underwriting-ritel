@@ -3,9 +3,11 @@ import {
   AlertTriangle,
   Building2,
   Camera,
+  Check,
   CheckCircle2,
   ChevronDown,
   Flame,
+  Home,
   Mail,
   MapPin,
   Phone,
@@ -13,8 +15,10 @@ import {
   Search,
   Shield,
   Trash2,
+  Upload,
   User,
   Wallet,
+  X,
 } from "lucide-react";
 
 import {
@@ -22,6 +26,7 @@ import {
   createMultiPropertyDraft,
   deriveConstructionClass,
   FLAMMABLE_MATERIAL_OPTIONS,
+  getPrimaryCoverageBreakdown,
   getMultiPropertyStepOnePendingItems,
   getMultiPropertyStepTwoPendingItems,
   isOfficeFloorCountRequiredForProperty,
@@ -188,18 +193,32 @@ function SummaryRow({ label, value, strong = false, inverted = false }) {
 }
 
 function PendingItems({ items }) {
+  const [expanded, setExpanded] = React.useState(false);
   if (!items.length) return null;
+  const preview = items[0];
   return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-      <div className="font-semibold">Yang masih perlu dilengkapi</div>
-      <div className="mt-2 space-y-2">
-        {items.map((item) => (
-          <div key={item} className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{item}</span>
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+      <button type="button" onClick={() => setExpanded((value) => !value)} className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Yang masih perlu dilengkapi</span>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">{items.length}</span>
           </div>
-        ))}
-      </div>
+          {!expanded ? <div className="mt-1 truncate text-[12px] text-amber-800">{preview}</div> : null}
+        </div>
+        <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-amber-800 transition", expanded && "rotate-180")} />
+      </button>
+      {expanded ? (
+        <div className="space-y-2 border-t border-amber-200 px-4 py-3">
+          {items.map((item) => (
+            <div key={item} className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -209,7 +228,37 @@ function NoticePanel({ text }) {
   return <div className="rounded-2xl border border-[#CFE0F0] bg-[#F8FBFE] px-4 py-3 text-sm text-[#0A4D82]">{text}</div>;
 }
 
+function PropertyFlowActionToolbar({ mode, onSingle, onMulti, onAdd, onUpload }) {
+  const itemClass = (active) =>
+    cls(
+      "inline-flex h-10 w-10 items-center justify-center transition first:rounded-l-[12px] last:rounded-r-[12px]",
+      active ? "bg-[#0A4D82] text-white shadow-sm" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]"
+    );
+  return (
+    <div className="inline-flex overflow-hidden rounded-[14px] border border-[#C8D6E5] bg-white text-[#0A4D82] shadow-sm divide-x divide-[#DDE6F0]" aria-label="Aksi objek properti">
+      {mode === "multi" ? (
+        <>
+          <button type="button" aria-label="Upload daftar properti" title="Upload daftar properti" onClick={onUpload} className={itemClass(false)}>
+            <Upload className="h-4 w-4" />
+          </button>
+          <button type="button" aria-label="Tambah Properti" title="Tambah Properti" onClick={onAdd} className={itemClass(false)}>
+            <Plus className="h-4 w-4" />
+          </button>
+        </>
+      ) : null}
+      <button type="button" aria-label="Beberapa Properti" title="Beberapa Properti" onClick={onMulti} className={itemClass(mode === "multi")}>
+        <Building2 className="h-4 w-4" />
+      </button>
+      <button type="button" aria-label="Satu Properti" title="Satu Properti" onClick={onSingle} className={itemClass(mode === "single")}>
+        <Home className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 function ObjectRowsEditor({ property, onUpdateObjectRow, onAddObjectRow, onRemoveObjectRow, objectTypeOptions }) {
+  const [pendingDeleteRowId, setPendingDeleteRowId] = React.useState("");
+
   return (
     <div className="rounded-xl border border-[#D5DDE6] bg-[#FAFBFC] p-4">
       <div className="flex items-center justify-between gap-3">
@@ -220,18 +269,48 @@ function ObjectRowsEditor({ property, onUpdateObjectRow, onAddObjectRow, onRemov
         </button>
       </div>
       <div className="mt-3 space-y-2.5">
-        {(property.objectRows || []).map((row) => (
-          <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
-            <div className="grid gap-2.5 lg:grid-cols-[170px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-center">
+        {(property.objectRows || []).map((row) => {
+          const pendingDelete = pendingDeleteRowId === row.id;
+          return (
+            <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
+              <div className={cls("grid gap-2.5 lg:items-center", pendingDelete ? "lg:grid-cols-[170px_minmax(0,1fr)_minmax(0,1.2fr)_130px]" : "lg:grid-cols-[170px_minmax(0,1fr)_minmax(0,1.2fr)_40px]")}>
               <SelectInput value={row.type} onChange={(value) => onUpdateObjectRow(row.id, { type: value })} options={objectTypeOptions} placeholder="Jenis objek" />
               <CurrencyInput value={row.amount} onChange={(value) => onUpdateObjectRow(row.id, { amount: value })} placeholder="Harga pertanggungan" />
               <TextInput value={row.note} onChange={(value) => onUpdateObjectRow(row.id, { note: value })} placeholder="Keterangan objek" />
-              <button type="button" onClick={() => onRemoveObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {pendingDelete ? (
+                <div className="flex h-[44px] items-center justify-end gap-1.5">
+                  <span className="hidden text-[11px] font-semibold text-rose-600 lg:inline">Hapus?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRemoveObjectRow(row.id);
+                      setPendingDeleteRowId("");
+                    }}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
+                    aria-label="Konfirmasi hapus objek"
+                    title="Konfirmasi hapus objek"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingDeleteRowId("")}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50"
+                    aria-label="Batal hapus objek"
+                    title="Batal hapus objek"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setPendingDeleteRowId(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" aria-label="Hapus objek" title="Hapus objek">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -276,6 +355,59 @@ function PolicyGuaranteeRows({ selectedGuarantees, expandedRows, policyTotals, e
   );
 }
 
+function PolicyPrimaryCoverageCard({ productConfig, policyTotals, properties = [], showPricing, expanded, onToggle }) {
+  const PrimaryIcon = productConfig.key === "property-all-risk" ? Shield : Flame;
+  const breakdown = getPrimaryCoverageBreakdown(policyTotals);
+  const constructionClasses = Array.from(new Set(properties.map((property) => property.constructionClass).filter(Boolean)));
+  const deductibleText =
+    constructionClasses.length === 1 && constructionClasses[0] === "Kelas 1"
+      ? productConfig.primaryCoverageDeductibleClassOne
+      : constructionClasses.length === 1
+        ? productConfig.primaryCoverageDeductibleOther
+        : `Mengikuti kelas konstruksi masing-masing properti. Kelas 1: ${productConfig.primaryCoverageDeductibleClassOne} Kelas 2/3: ${productConfig.primaryCoverageDeductibleOther}`;
+  return (
+    <div>
+      <div className="text-[15px] font-semibold tracking-tight text-slate-900">Jaminan Utama</div>
+      <div className="mt-3 rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
+        <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left">
+          <div className="flex min-w-0 items-start gap-2 text-[#0A4D82]">
+            <PrimaryIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0">
+              <div className="truncate text-[15px] font-semibold">{productConfig.primaryCoverageTitle}</div>
+              <div className="mt-0.5 text-[12px] text-slate-500">{productConfig.primaryCoveragePremiumLabel}: {showPricing ? `Rp ${formatRupiah(breakdown.totalPremium)}` : "-"}</div>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center text-[#0A4D82]">
+            <ChevronDown className={cls("h-4 w-4 text-slate-500 transition", expanded && "rotate-180")} />
+          </div>
+        </button>
+        {expanded ? (
+          <div className="border-t border-[#D6E0EA] bg-white px-3.5 py-3">
+            <div className="text-[13px] leading-6 text-slate-700">{productConfig.primaryCoverageDescription}</div>
+            <div className="mt-2 text-[12px] leading-6 text-slate-600">
+              <span className="font-semibold text-slate-700">Risiko sendiri saat klaim: </span>
+              {deductibleText}
+            </div>
+            {breakdown.items.length ? (
+              <div className="mt-2 border-t border-slate-200 pt-1.5">
+                <div className="mb-0.5 text-[12px] font-semibold leading-4 text-slate-500">Rincian premi per properti</div>
+                <div className="divide-y divide-slate-100">
+                  {breakdown.items.map((item) => (
+                    <div key={item.propertyId || item.title} className="flex items-center justify-between gap-3 py-1.5 text-[12.5px] leading-4">
+                      <div className="min-w-0 truncate font-semibold text-slate-900">{item.title}</div>
+                      <div className="shrink-0 font-semibold text-[#0A4D82]">{showPricing ? `Rp ${formatRupiah(item.premium)}` : "-"}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function PropertyQuoteCard({
   property,
   quote,
@@ -287,8 +419,6 @@ function PropertyQuoteCard({
   occupancyOptions,
   objectTypeOptions,
   selectedGuarantees,
-  productConfig,
-  showPricing,
   derivePropertyType,
   onUpdateProperty,
   onRemoveProperty,
@@ -296,10 +426,11 @@ function PropertyQuoteCard({
   onAddObjectRow,
   onRemoveObjectRow,
 }) {
-  const PrimaryIcon = productConfig.key === "property-all-risk" ? Shield : Flame;
+  const [confirmRemoveProperty, setConfirmRemoveProperty] = React.useState(false);
   const detailsOpen = property.detailsOpen !== false;
-  const propertyLabel = property.title || `Properti ${index + 1}`;
-  const closedSummary = [property.locationSearch, property.occupancy, quote.totalValue > 0 ? `Rp ${formatRupiah(quote.totalValue)}` : ""].filter(Boolean).join(" - ");
+  const fallbackPropertyLabel = property.title || `Properti ${index + 1}`;
+  const propertyLabel = String(property.locationSearch || "").trim() || fallbackPropertyLabel;
+  const closedSummary = [property.occupancy, quote.totalValue > 0 ? `Rp ${formatRupiah(quote.totalValue)}` : ""].filter(Boolean).join(" - ");
   const constructionInfo = (constructionGuide || []).find((item) => item.title === property.constructionClass);
   const showOfficeFloorField = isOfficeFloorCountRequiredForProperty(property);
   const showEarthquakeFloorField = shouldShowEarthquakeFloorInputForProperty(property, selectedGuarantees);
@@ -321,9 +452,21 @@ function PropertyQuoteCard({
           <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", detailsOpen && "rotate-180")} />
         </button>
         {canRemove ? (
-          <button type="button" onClick={onRemoveProperty} aria-label={`Hapus ${propertyLabel}`} title={`Hapus ${propertyLabel}`} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-slate-300 bg-white text-slate-500 hover:bg-slate-50">
-            <Trash2 className="h-4 w-4" />
-          </button>
+          confirmRemoveProperty ? (
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span className="hidden text-[11px] font-semibold text-rose-600 sm:inline">Hapus?</span>
+              <button type="button" onClick={onRemoveProperty} aria-label={`Konfirmasi hapus ${propertyLabel}`} title={`Konfirmasi hapus ${propertyLabel}`} className="inline-flex h-8 w-8 items-center justify-center rounded-[9px] border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100">
+                <Check className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={() => setConfirmRemoveProperty(false)} aria-label={`Batal hapus ${propertyLabel}`} title={`Batal hapus ${propertyLabel}`} className="inline-flex h-8 w-8 items-center justify-center rounded-[9px] border border-slate-300 bg-white text-slate-500 hover:bg-slate-50">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setConfirmRemoveProperty(true)} aria-label={`Hapus ${propertyLabel}`} title={`Hapus ${propertyLabel}`} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-slate-300 bg-white text-slate-500 hover:bg-slate-50">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )
         ) : null}
       </div>
 
@@ -377,11 +520,11 @@ function PropertyQuoteCard({
               <FieldLabel label="Alamat / Lokasi Objek" required />
               <TextInput value={property.locationSearch || ""} onChange={(value) => onUpdateProperty({ locationSearch: value })} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} />
               <div className="mt-2 flex flex-wrap gap-2.5">
-                <button type="button" onClick={() => onUpdateProperty({ locationSearch: `Lokasi GPS tersimulasi - ${propertyLabel}` })} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <button type="button" onClick={() => onUpdateProperty({ locationSearch: `Lokasi GPS tersimulasi - ${fallbackPropertyLabel}` })} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
                   <MapPin className="h-4 w-4" />
                   Ambil Lokasi Sekarang
                 </button>
-                <button type="button" onClick={() => onUpdateProperty({ locationSearch: `Pin peta tersimulasi - ${propertyLabel}` })} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <button type="button" onClick={() => onUpdateProperty({ locationSearch: `Pin peta tersimulasi - ${fallbackPropertyLabel}` })} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
                   <MapPin className="h-4 w-4" />
                   Pilih di Peta
                 </button>
@@ -391,18 +534,6 @@ function PropertyQuoteCard({
 
           <div className="mt-4">
             <ObjectRowsEditor property={property} objectTypeOptions={objectTypeOptions} onUpdateObjectRow={onUpdateObjectRow} onAddObjectRow={onAddObjectRow} onRemoveObjectRow={onRemoveObjectRow} />
-          </div>
-
-          <div className="mt-4 rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
-            <div className="flex items-center gap-3 px-3.5 py-3">
-              <div className="flex h-5 w-5 items-center justify-center rounded border border-[#0A4D82] bg-[#0A4D82]/10 text-[#0A4D82]">
-                <PrimaryIcon className="h-3.5 w-3.5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[15px] font-semibold text-[#0A4D82]">{productConfig.primaryCoverageTitle}</div>
-                <div className="mt-0.5 text-[12px] text-slate-500">Premi: {showPricing ? `Rp ${formatRupiah(quote.basePremium)}` : "-"}</div>
-              </div>
-            </div>
           </div>
 
           {showEarthquakeFloorField ? (
@@ -444,9 +575,9 @@ function PropertyUnderwritingCard({ property, index, customerType, onUpdatePrope
   const updateUploads = (patch) => onUpdateProperty({ uploads: { ...property.uploads, ...patch } }, false);
   const fireProtectionItems = Array.isArray(uwForm.fireProtectionItems) ? uwForm.fireProtectionItems : [];
   const detailsOpen = property.uwDetailsOpen !== false;
-  const propertyLabel = property.title || `Properti ${index + 1}`;
+  const propertyLabel = String(property.locationSearch || "").trim() || property.title || `Properti ${index + 1}`;
   const uploadCount = UPLOAD_SLOTS.filter((slot) => property.uploads?.[slot.key]).length;
-  const closedSummary = [property.locationSearch || "Alamat properti belum diisi", uwForm.claimHistory ? `Klaim: ${uwForm.claimHistory}` : "", `${uploadCount}/${UPLOAD_SLOTS.length} foto`].filter(Boolean).join(" - ");
+  const closedSummary = [uwForm.claimHistory ? `Klaim: ${uwForm.claimHistory}` : "", `${uploadCount}/${UPLOAD_SLOTS.length} foto`].filter(Boolean).join(" - ");
   return (
     <div data-property-underwriting-accordion className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
       <div data-property-underwriting-header className="flex items-center gap-3 px-3.5 py-3">
@@ -558,7 +689,9 @@ export default function MultiPropertyFlow({
   setProperties,
   derivePropertyType,
   customerOptions = [],
-  flowModeAction = null,
+  flowMode = "multi",
+  onSingleFlow = () => {},
+  onMultiFlow = () => {},
 }) {
   const isInternalMode = entryMode === "internal";
   const policySelectedGuarantees = useMemo(() => ({ ...DEFAULT_SELECTED_GUARANTEES, ...(policyForm.selectedGuarantees || {}) }), [policyForm.selectedGuarantees]);
@@ -623,6 +756,9 @@ export default function MultiPropertyFlow({
     setProperties((prev) => prev.map((property) => ({ ...property, detailsOpen: false })).concat(createMultiPropertyDraft(prev.length, { detailsOpen: true })));
     updatePolicy({ quoted: false, paymentStatus: "" });
   };
+  const uploadPropertyList = () => {
+    updatePolicy({ quoted: false, notice: "Upload daftar properti belum terhubung. Gunakan tombol tambah untuk menambahkan properti satu per satu." });
+  };
   const removeProperty = (propertyId) => {
     setProperties((prev) => (prev.length === 1 ? prev : prev.filter((property) => property.id !== propertyId).map((property, index) => ({ ...property, title: `Properti ${index + 1}`, detailsOpen: index === 0 ? property.detailsOpen !== false : property.detailsOpen }))));
     updatePolicy({ quoted: false, paymentStatus: "" });
@@ -658,15 +794,10 @@ export default function MultiPropertyFlow({
                 <FieldLabel label={policyForm.customerType === "Badan Usaha" ? "NPWP" : "NIK"} required />
                 <TextInput value={policyForm.idNumber || ""} onChange={(value) => updatePolicy({ idNumber: onlyDigits(value) })} placeholder={policyForm.customerType === "Badan Usaha" ? "Masukkan NPWP" : "Masukkan NIK"} icon={<User className="h-4 w-4" />} />
               </div>
-              <div>
-                <FieldLabel label="Tipe Nasabah" required />
-                <SelectInput value={policyForm.customerType || ""} onChange={(value) => updatePolicy({ customerType: value })} options={customerTypes} placeholder="Pilih tipe nasabah" />
-              </div>
             </div>
           </SectionCard>
           <SectionCard title="Informasi Properti" subtitle="Lengkapi proteksi, riwayat klaim, dan foto untuk masing-masing properti.">
             <div className="space-y-4">
-              <PendingItems items={stepTwoPendingItems} />
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <FieldLabel label="Tanggal Mulai Pertanggungan" required />
@@ -679,6 +810,7 @@ export default function MultiPropertyFlow({
             </div>
           </SectionCard>
           <NoticePanel text={policyForm.notice} />
+          <PendingItems items={stepTwoPendingItems} />
           <div className="grid gap-3 md:grid-cols-2">
             <button type="button" onClick={() => setStep(1)} className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]">
               Kembali ke Simulasi Premi
@@ -848,13 +980,13 @@ export default function MultiPropertyFlow({
         <SectionCard
           title="Informasi Properti"
           action={
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <button type="button" onClick={addProperty} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                <Plus className="h-4 w-4" />
-                Tambah Properti
-              </button>
-              {flowModeAction}
-            </div>
+            <PropertyFlowActionToolbar
+              mode={flowMode}
+              onSingle={onSingleFlow}
+              onMulti={onMultiFlow}
+              onAdd={addProperty}
+              onUpload={uploadPropertyList}
+            />
           }
         >
           <div className="space-y-4">
@@ -871,8 +1003,6 @@ export default function MultiPropertyFlow({
                 occupancyOptions={occupancyOptions}
                 objectTypeOptions={objectTypeOptions}
                 selectedGuarantees={policySelectedGuarantees}
-                productConfig={productConfig}
-                showPricing={showPricing}
                 derivePropertyType={derivePropertyType}
                 onUpdateProperty={(patch, resetQuote) => updateProperty(property.id, patch, resetQuote)}
                 onRemoveProperty={() => removeProperty(property.id)}
@@ -884,16 +1014,31 @@ export default function MultiPropertyFlow({
           </div>
         </SectionCard>
         {policyForm.quoted ? (
-          <SectionCard title="Perluasan Jaminan Polis" subtitle="Pilih sekali untuk seluruh properti dalam polis ini. Premi perluasan dihitung gabungan dari semua properti.">
-            <PolicyGuaranteeRows
-              selectedGuarantees={policySelectedGuarantees}
-              expandedRows={policyExpandedGuarantees}
-              policyTotals={policyTotals}
-              extensionOptions={extensionOptions}
-              showPricing={showPricing}
-              onToggleGuarantee={togglePolicyGuarantee}
-              onToggleExpand={togglePolicyGuaranteeExpanded}
-            />
+          <SectionCard title="Rincian Jaminan" subtitle="Klik setiap baris untuk melihat penjelasan detailnya.">
+            <div className="space-y-7">
+              <PolicyPrimaryCoverageCard
+                productConfig={productConfig}
+                policyTotals={policyTotals}
+                properties={properties}
+                showPricing={showPricing}
+                expanded={Boolean(policyForm.primaryCoverageBreakdownOpen)}
+                onToggle={() => updatePolicy({ primaryCoverageBreakdownOpen: !policyForm.primaryCoverageBreakdownOpen })}
+              />
+              <div>
+                <div className="text-[15px] font-semibold tracking-tight text-slate-900">Perluasan Jaminan</div>
+                <div className="mt-3">
+                  <PolicyGuaranteeRows
+                    selectedGuarantees={policySelectedGuarantees}
+                    expandedRows={policyExpandedGuarantees}
+                    policyTotals={policyTotals}
+                    extensionOptions={extensionOptions}
+                    showPricing={showPricing}
+                    onToggleGuarantee={togglePolicyGuarantee}
+                    onToggleExpand={togglePolicyGuaranteeExpanded}
+                  />
+                </div>
+              </div>
+            </div>
           </SectionCard>
         ) : null}
         {showPricing ? (

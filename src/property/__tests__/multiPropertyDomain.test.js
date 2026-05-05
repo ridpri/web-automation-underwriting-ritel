@@ -6,6 +6,7 @@ import {
   createMultiPropertyDraft,
   deriveConstructionClass,
   FLAMMABLE_MATERIAL_OPTIONS,
+  getPrimaryCoverageBreakdown,
   getMultiPropertyStepOnePendingItems,
   getMultiPropertyStepTwoPendingItems,
   ROOF_MATERIAL_OPTIONS,
@@ -112,6 +113,37 @@ describe("multiPropertyDomain", () => {
     assert.equal(result.stampDuty, 10_000);
   });
 
+  it("prepares one primary coverage summary with optional property breakdown", () => {
+    const properties = [
+      createMultiPropertyDraft(0, {
+        title: "Gudang Utama",
+        propertyType: "Ruko",
+        occupancy: "Ritel / Toko",
+        constructionClass: "Kelas 1",
+        objectRows: [{ id: "obj-1", type: "Bangunan", amount: "1.000.000.000", note: "" }],
+      }),
+      createMultiPropertyDraft(1, {
+        title: "Toko Cabang",
+        propertyType: "Rumah Tinggal",
+        occupancy: "Hunian",
+        constructionClass: "Kelas 1",
+        objectRows: [{ id: "obj-1", type: "Bangunan", amount: "500.000.000", note: "" }],
+      }),
+    ];
+
+    const policyTotals = calculateMultiPropertyPolicy(properties, extensions);
+    const result = getPrimaryCoverageBreakdown(policyTotals);
+
+    assert.equal(result.totalPremium, policyTotals.basePremium);
+    assert.deepEqual(
+      result.items.map((item) => [item.title, item.premium]),
+      [
+        ["Gudang Utama", 2_650_000],
+        ["Toko Cabang", 925_000],
+      ],
+    );
+  });
+
   it("returns step one pending items by property", () => {
     const properties = [
       createMultiPropertyDraft(0, {
@@ -165,7 +197,7 @@ describe("multiPropertyDomain", () => {
       constructionInputMode: "guided",
     });
 
-    assert.deepEqual(result, ["Properti 1: lengkapi panduan konstruksi."]);
+    assert.deepEqual(result, ["Jl. Melati 1: lengkapi panduan konstruksi."]);
   });
 
   it("validates floor count from shared earthquake guarantee", () => {
@@ -189,7 +221,7 @@ describe("multiPropertyDomain", () => {
       selectedGuarantees: { earthquake: true },
     });
 
-    assert.deepEqual(result, ["Properti 1: lengkapi jumlah lantai untuk perluasan Gempa Bumi."]);
+    assert.deepEqual(result, ["Ruko Blok A: lengkapi jumlah lantai untuk perluasan Gempa Bumi."]);
   });
 
   it("requires office floor count as property data without duplicating earthquake input", () => {
@@ -211,13 +243,13 @@ describe("multiPropertyDomain", () => {
       properties,
     };
 
-    assert.deepEqual(getMultiPropertyStepOnePendingItems(baseRequest), ["Properti 1: lengkapi jumlah lantai untuk properti kantor."]);
+    assert.deepEqual(getMultiPropertyStepOnePendingItems(baseRequest), ["Gedung Sudirman: lengkapi jumlah lantai untuk properti kantor."]);
     assert.deepEqual(
       getMultiPropertyStepOnePendingItems({
         ...baseRequest,
         selectedGuarantees: { earthquake: true },
       }),
-      ["Properti 1: lengkapi jumlah lantai untuk properti kantor."],
+      ["Gedung Sudirman: lengkapi jumlah lantai untuk properti kantor."],
     );
   });
 

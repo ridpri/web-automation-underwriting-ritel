@@ -139,7 +139,7 @@ export function shouldShowEarthquakeFloorInputForProperty(property, selectedGuar
   return isFloorRelevantForProperty(property, selectedGuarantees) && !isOfficeFloorCountRequiredForProperty(property);
 }
 
-export function calculatePropertyQuote(property, extensionOptions = [], selectedGuarantees) {
+export function calculatePropertyQuote(property, extensionOptions = [], selectedGuarantees, index = 0) {
   const totalValue = calculatePropertyValue(property);
   const hasQuoteBasis = Boolean(property.occupancy) && Boolean(property.constructionClass) && totalValue > 0;
   const baseRate = property.propertyType === "Rumah Tinggal" ? 0.00185 : 0.00265;
@@ -153,7 +153,7 @@ export function calculatePropertyQuote(property, extensionOptions = [], selected
     : 0;
   return {
     propertyId: property.id,
-    title: property.title,
+    title: propertyLabel(property, index),
     totalValue,
     basePremium,
     extensionPremium,
@@ -163,7 +163,7 @@ export function calculatePropertyQuote(property, extensionOptions = [], selected
 }
 
 export function calculateMultiPropertyPolicy(properties = [], extensionOptions = [], selectedGuarantees) {
-  const propertyQuotes = properties.map((property) => calculatePropertyQuote(property, extensionOptions, selectedGuarantees));
+  const propertyQuotes = properties.map((property, index) => calculatePropertyQuote(property, extensionOptions, selectedGuarantees, index));
   const hasAnyQuoteBasis = propertyQuotes.some((item) => item.hasQuoteBasis);
   const hasEarthquake = selectedGuarantees ? Boolean(selectedGuarantees.earthquake) : properties.some((property) => property.selectedGuarantees?.earthquake);
   const stampDuty = hasAnyQuoteBasis ? 10000 + (hasEarthquake ? 10000 : 0) : 0;
@@ -177,6 +177,19 @@ export function calculateMultiPropertyPolicy(properties = [], extensionOptions =
     extensionPremium,
     stampDuty,
     totalPremium: basePremium + extensionPremium + stampDuty,
+  };
+}
+
+export function getPrimaryCoverageBreakdown(policyTotals = {}) {
+  const propertyQuotes = Array.isArray(policyTotals.propertyQuotes) ? policyTotals.propertyQuotes : [];
+  return {
+    totalPremium: Number(policyTotals.basePremium || 0),
+    items: propertyQuotes.map((quote, index) => ({
+      propertyId: quote.propertyId,
+      title: quote.title || `Properti ${index + 1}`,
+      totalValue: Number(quote.totalValue || 0),
+      premium: Number(quote.basePremium || 0),
+    })),
   };
 }
 
@@ -195,6 +208,8 @@ function hasValidObjectRows(property) {
 }
 
 function propertyLabel(property, index) {
+  const location = String(property.locationSearch || "").trim();
+  if (location) return location;
   return property.title || `Properti ${index + 1}`;
 }
 

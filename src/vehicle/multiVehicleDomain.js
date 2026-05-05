@@ -82,6 +82,10 @@ function createDefaultUploads(flowType) {
   return Object.fromEntries((MULTI_VEHICLE_UPLOAD_SLOTS[flowType] || MULTI_VEHICLE_UPLOAD_SLOTS.motor).map((slot) => [slot.key, false]));
 }
 
+export function isMultiVehicleFlowEnabled(flowType) {
+  return flowType === "motor";
+}
+
 export function createMultiVehicleDraft(flowType = "motor", index = 0, overrides = {}) {
   const vehicleNumber = index + 1;
   const defaultQuote = {

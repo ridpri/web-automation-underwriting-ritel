@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   AlertTriangle,
   Camera,
@@ -13,11 +13,14 @@ import {
   Search,
   Shield,
   Trash2,
+  Upload,
   User,
   Wallet,
 } from "lucide-react";
 
-import { PLATES, addOneYear } from "../motorDomain.js";
+import { PLATES, addOneYear, getExtensionFee, getRegion } from "../motorDomain.js";
+import { VehicleYearPicker } from "../components/VehicleYearPicker.jsx";
+import { PremiumBreakdown, PremiumPriceHero, ProposalRow } from "../components/PremiumSummaryBlocks.jsx";
 import { findVehicleSuggestions, getVehicleCatalogItem } from "../vehicleCatalog.js";
 import {
   calculateMultiVehiclePolicy,
@@ -29,6 +32,9 @@ import {
 } from "./multiVehicleDomain.js";
 
 const CUSTOMER_TYPES = ["Pribadi", "Perusahaan / Badan Usaha"];
+const CURRENT_YEAR = 2026;
+const MIN_YEAR_TLO = CURRENT_YEAR - 20;
+const MIN_YEAR_COMP = CURRENT_YEAR - 15;
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
 const PAYMENT_OPTIONS = ["Virtual Account", "Kartu Kredit", "Transfer Bank"];
 const VEHICLE_USAGES = ["Pribadi", "Komersial"];
@@ -36,6 +42,11 @@ const CAR_CATEGORY_OPTIONS = ["Angkutan Penumpang", "Angkutan Barang", "Bis"];
 const DEFAULT_CAR_TPL_AMOUNT = 25000000;
 const DEFAULT_CAR_PA_AMOUNT = 10000000;
 const DEFAULT_MOTOR_TPL_AMOUNT = 1000000;
+const VEHICLE_USAGE_HELP_TEXT = `Kendaraan ini digunakan untuk apa?
+
+Penggunaan Pribadi berarti kendaraan digunakan untuk keperluan pribadi dan bukan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.
+
+Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.`;
 
 const EXTENSION_GROUPS = {
   motor: [
@@ -72,6 +83,10 @@ function cls(...args) {
   return args.filter(Boolean).join(" ");
 }
 
+function isDigitsOnly(value) {
+  return /^\d+$/.test(String(value || "").trim());
+}
+
 function formatRupiah(value) {
   return new Intl.NumberFormat("id-ID").format(Number(value || 0));
 }
@@ -87,7 +102,16 @@ function FieldLabel({ label, required, helpText }) {
         {label}
         {required ? <span className="text-[#E66A1E]"> *</span> : null}
       </label>
-      {helpText ? <span className="text-[11px] font-medium text-slate-500">{helpText}</span> : null}
+      {helpText ? (
+        <button
+          type="button"
+          title={helpText}
+          aria-label={helpText}
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#BFD0E0] bg-white text-[12px] font-semibold text-[#5E7BA6]"
+        >
+          i
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -168,6 +192,10 @@ function SectionCard({ title, subtitle, action, children }) {
   );
 }
 
+function ActionCard({ children }) {
+  return <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4 shadow-sm md:p-5">{children}</div>;
+}
+
 function SummaryRow({ label, value, strong = false }) {
   return (
     <div className="flex items-start justify-between gap-4 py-2 text-sm">
@@ -178,20 +206,78 @@ function SummaryRow({ label, value, strong = false }) {
 }
 
 function PendingItems({ items }) {
+  const [expanded, setExpanded] = React.useState(false);
   if (!items.length) return null;
+  const preview = items[0];
   return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-      <div className="font-semibold">Yang masih perlu dilengkapi</div>
-      <div className="mt-2 space-y-2">
-        {items.map((item) => (
-          <div key={item} className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{item}</span>
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+      <button type="button" onClick={() => setExpanded((value) => !value)} className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Yang masih perlu dilengkapi</span>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">{items.length}</span>
           </div>
-        ))}
-      </div>
+          {!expanded ? <div className="mt-1 truncate text-[12px] text-amber-800">{preview}</div> : null}
+        </div>
+        <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-amber-800 transition", expanded && "rotate-180")} />
+      </button>
+      {expanded ? (
+        <div className="space-y-2 border-t border-amber-200 px-4 py-3">
+          {items.map((item) => (
+            <div key={item} className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function compactVehiclePendingItems(items = []) {
+  const grouped = new Map();
+  const compacted = [];
+  items.forEach((item) => {
+    const text = String(item || "").trim();
+    const match = text.match(/^(Kendaraan \d+):\s*(.+)$/);
+    if (!match) {
+      compacted.push(text);
+      return;
+    }
+    const vehicleLabel = match[1];
+    const detail = match[2].replace(/\.$/, "");
+    if (!grouped.has(vehicleLabel)) grouped.set(vehicleLabel, []);
+    grouped.get(vehicleLabel).push(detail);
+  });
+  grouped.forEach((details, vehicleLabel) => {
+    compacted.push(`${vehicleLabel}: ${details.join(", ")}.`);
+  });
+  return compacted;
+}
+
+function formatQuotePendingNotice(items = []) {
+  const compacted = compactVehiclePendingItems(items);
+  if (!compacted.length) return "";
+  const shownItems = compacted.slice(0, 2).join(" ");
+  const remainingCount = compacted.length - 2;
+  return `Lengkapi data kendaraan sebelum simulasi premi: ${shownItems}${remainingCount > 0 ? ` dan ${remainingCount} kendaraan lainnya.` : ""}`;
+}
+
+function mainCoverTitle(flowType) {
+  if (flowType === "carComp") return "Jaminan Utama (Comprehensive)";
+  return "Jaminan Utama (TLO)";
+}
+
+function mainCoverText(flowType) {
+  if (flowType === "carComp") {
+    return "Menjamin kerugian atau kerusakan pada kendaraan bermotor yang secara langsung disebabkan oleh tabrakan, benturan, terbalik, tergelincir, perbuatan jahat, pencurian, dan kebakaran sesuai ketentuan polis.";
+  }
+  if (flowType === "motor") {
+    return "Menjamin kerugian total per sepeda motor akibat tabrakan, benturan, terbalik, tergelincir, perbuatan jahat, pencurian, dan kebakaran apabila biaya perbaikan atau penggantian mencapai sekurang-kurangnya 75% dari harga sebenarnya sesaat sebelum kejadian.";
+  }
+  return "Menjamin kerugian total per kendaraan bermotor akibat tabrakan, benturan, terbalik, tergelincir, perbuatan jahat, pencurian, dan kebakaran apabila biaya perbaikan atau penggantian mencapai sekurang-kurangnya 75% dari harga sebenarnya sesaat sebelum kejadian.";
 }
 
 function VehicleAutocomplete({ flowType, vehicle, onUpdateQuote }) {
@@ -209,7 +295,7 @@ function VehicleAutocomplete({ flowType, vehicle, onUpdateQuote }) {
   };
   return (
     <>
-      <TextInput value={vehicle.quote.vehicleName} onChange={updateVehicleName} placeholder={flowType === "motor" ? "Pilih merek / tipe motor" : "Pilih merek / tipe mobil"} icon={<Search className="h-4 w-4" />} listId={listId} />
+      <TextInput value={vehicle.quote.vehicleName} onChange={updateVehicleName} placeholder={flowType === "motor" ? "Sepeda motor ini merek dan tipenya apa?" : "Mobil ini merek dan tipenya apa?"} icon={<Search className="h-4 w-4" />} listId={listId} />
       <datalist id={listId}>
         {suggestions.map((item) => (
           <option key={item.label} value={item.label} />
@@ -217,6 +303,35 @@ function VehicleAutocomplete({ flowType, vehicle, onUpdateQuote }) {
       </datalist>
     </>
   );
+}
+
+function vehicleUsageSummaryText(usage) {
+  if (usage === "Pribadi") {
+    return "Penggunaan Pribadi berarti kendaraan digunakan untuk keperluan pribadi dan bukan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.";
+  }
+  if (usage === "Komersial") {
+    return "Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.";
+  }
+  return "";
+}
+
+function getTariffRegionLabel(plateRegion) {
+  const directRegion = String(plateRegion || "").match(/Wilayah\s+[123]/i)?.[0];
+  if (directRegion) return directRegion.replace(/wilayah/i, "Wilayah");
+  return plateRegion ? `Wilayah ${getRegion(plateRegion)}` : "";
+}
+
+function getTariffCategoryLabel(flowType, quote) {
+  if (flowType === "motor") return "Kategori 8";
+  const category = String(quote.vehicleType || "");
+  if (category === "Angkutan Barang") return "Kategori 6";
+  if (category === "Bis") return "Kategori 7";
+  const value = Number(quote.marketValue || 0);
+  if (value <= 125000000) return "Kategori 1";
+  if (value <= 200000000) return "Kategori 2";
+  if (value <= 400000000) return "Kategori 3";
+  if (value <= 800000000) return "Kategori 4";
+  return "Kategori 5";
 }
 
 function ToggleExtensionButton({ checked, onClick, label }) {
@@ -277,9 +392,13 @@ function VehicleExtensionEditor({ flowType, vehicle, onUpdateQuote }) {
 
 function VehicleQuoteCard({ flowType, vehicle, quote, index, canRemove, onUpdateVehicle, onRemoveVehicle }) {
   const detailsOpen = vehicle.detailsOpen !== false;
-  const vehicleLabel = vehicle.title || `Kendaraan ${index + 1}`;
+  const vehicleLabel = String(vehicle.quote.vehicleName || "").trim() || vehicle.title || `Kendaraan ${index + 1}`;
   const closedSummary = [vehicle.quote.vehicleName, vehicle.quote.plateRegion, quote.marketValue > 0 ? `Rp ${formatRupiah(quote.marketValue)}` : ""].filter(Boolean).join(" - ");
   const updateQuote = (patch) => onUpdateVehicle({ quote: { ...vehicle.quote, ...patch } });
+  const usageSummary = vehicleUsageSummaryText(vehicle.quote.usage);
+  const tariffRegionLabel = getTariffRegionLabel(vehicle.quote.plateRegion);
+  const tariffCategoryLabel = getTariffCategoryLabel(flowType, vehicle.quote);
+  const tariffInfoSummary = tariffRegionLabel ? `Kendaraan ini termasuk dalam ${tariffRegionLabel} dengan ${tariffCategoryLabel}.` : "";
   return (
     <div data-vehicle-accordion className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
       <div className="flex items-center gap-3 px-3.5 py-3">
@@ -317,16 +436,46 @@ function VehicleQuoteCard({ flowType, vehicle, quote, index, canRemove, onUpdate
               </datalist>
             </div>
             <div>
-              <FieldLabel label="Tahun Pembuatan Kendaraan" required />
-              <TextInput value={vehicle.quote.year} onChange={(value) => updateQuote({ year: onlyDigits(value) })} placeholder="Contoh: 2025" inputMode="numeric" />
+              <FieldLabel label="Tahun Pembuatan Kendaraan" required helpText="Sesuai tahun pembuatan/manufacture year pada STNK." />
+              <VehicleYearPicker
+                value={vehicle.quote.year}
+                onChange={(value) => updateQuote({ year: value })}
+                minYear={flowType === "carComp" ? MIN_YEAR_COMP : MIN_YEAR_TLO}
+                maxYear={CURRENT_YEAR}
+                placeholder="Kendaraan ini dibuat tahun berapa?"
+              />
             </div>
             <div>
-              <FieldLabel label="Harga Pertanggungan" required />
-              <CurrencyInput value={vehicle.quote.marketValue} onChange={(value) => updateQuote({ marketValue: value })} placeholder="Harga pasar wajar kendaraan" />
+              <FieldLabel label="Harga Pertanggungan" required helpText="Harga pertanggungan adalah nilai kendaraan yang diasuransikan. Isi sesuai harga pasar wajar kendaraan saat ini, karena nilai ini menjadi dasar perhitungan premi dan batas ganti rugi sesuai ketentuan polis." />
+              <TextInput
+                value={vehicle.quote.marketValue ? formatRupiah(Number(String(vehicle.quote.marketValue).replace(/[^0-9]/g, ""))) : ""}
+                onChange={(value) => updateQuote({ marketValue: String(value).replace(/[^0-9]/g, "") })}
+                placeholder={flowType === "motor" ? "Berapa harga pertanggungan sepeda motor ini?" : "Berapa harga pertanggungan mobil ini?"}
+                inputMode="numeric"
+              />
             </div>
-            <div>
-              <FieldLabel label="Penggunaan Kendaraan" required />
-              <SelectInput value={vehicle.quote.usage} onChange={(value) => updateQuote({ usage: value })} options={VEHICLE_USAGES} placeholder="Pilih penggunaan kendaraan" />
+            <div className="md:col-span-2">
+              <div className="md:max-w-[760px]">
+                <div className="min-w-0">
+                  <FieldLabel label="Penggunaan Kendaraan" required helpText={VEHICLE_USAGE_HELP_TEXT} />
+                  <SelectInput value={vehicle.quote.usage} onChange={(value) => updateQuote({ usage: value })} options={VEHICLE_USAGES} placeholder="Kendaraan ini digunakan untuk apa?" />
+                </div>
+                {vehicle.quote.usage === "Pribadi" && usageSummary ? (
+                  <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600">
+                    <span className="font-semibold text-slate-800">Penggunaan Pribadi</span> berarti kendaraan digunakan untuk keperluan pribadi dan bukan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.
+                  </div>
+                ) : null}
+                {vehicle.quote.usage === "Komersial" && usageSummary ? (
+                  <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600">
+                    <span className="font-semibold text-slate-800">Penggunaan Komersial</span> berarti kendaraan digunakan untuk disewakan atau menerima balas jasa, misalnya untuk ojek, kurir berbayar, layanan antar, atau sewa kendaraan.
+                  </div>
+                ) : null}
+                {tariffInfoSummary ? (
+                  <div className="mt-3 rounded-xl border border-[#D5DDE6] bg-[#F8FBFE] px-3 py-2 text-sm leading-6 text-slate-600">
+                    <span className="font-semibold text-[#0A4D82]">{tariffInfoSummary}</span>
+                  </div>
+                ) : null}
+              </div>
             </div>
             {flowType !== "motor" ? (
               <div>
@@ -335,20 +484,158 @@ function VehicleQuoteCard({ flowType, vehicle, quote, index, canRemove, onUpdate
               </div>
             ) : null}
           </div>
-
-          <div className="mt-4">
-            <VehicleExtensionEditor flowType={flowType} vehicle={vehicle} onUpdateQuote={updateQuote} />
-          </div>
-
-          <div className="mt-4 rounded-[10px] bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200">
-            <div className="flex flex-col gap-1.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-              <span>Premi Kendaraan</span>
-              <span className="break-words text-left text-[18px] font-bold text-[#E8A436] sm:text-right">Rp {formatRupiah(quote.totalBeforeStamp)}</span>
-            </div>
-          </div>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function GuaranteeCard({ title, premium, expanded, onToggle, children }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-[#D8E1EA] bg-[#F8FBFE]">
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
+        <div className="flex min-w-0 items-start gap-3">
+          <Shield className="mt-0.5 h-5 w-5 shrink-0 text-[#0A4D82]" />
+          <div className="min-w-0">
+            <div className="truncate text-[16px] font-bold text-[#0A4D82]">{title}</div>
+            {premium ? <div className="mt-0.5 text-sm text-slate-500">Premi: {premium}</div> : null}
+          </div>
+        </div>
+        <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
+      </button>
+      {expanded ? <div className="border-t border-[#D6E0EA] bg-white px-4 py-3 text-sm leading-6 text-slate-700">{children}</div> : null}
+    </div>
+  );
+}
+
+function ExtensionGuaranteeRow({ item, premium, enabled, expanded, onToggleChecked, onToggleExpand }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-[#D8E1EA] bg-[#F8FBFE]">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <button
+          type="button"
+          aria-label={`${enabled ? "Hapus" : "Pilih"} ${item.label}`}
+          onClick={onToggleChecked}
+          className={cls(
+            "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] border bg-white transition",
+            enabled ? "border-[#0A4D82] bg-[#0A4D82] text-white" : "border-slate-400 text-transparent hover:border-[#0A4D82]",
+          )}
+        >
+          <CheckCircle2 className="h-4 w-4" />
+        </button>
+        <button type="button" onClick={onToggleExpand} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
+          <div className="flex min-w-0 items-start gap-3">
+            <Shield className="mt-0.5 h-5 w-5 shrink-0 text-[#0A4D82]" />
+            <div className="min-w-0">
+              <div className="truncate text-[16px] font-bold text-[#0A4D82]">{item.label}</div>
+              <div className="mt-0.5 text-sm text-slate-500">Premi: {premium}</div>
+            </div>
+          </div>
+          <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
+        </button>
+      </div>
+      {expanded ? (
+        <div className="border-t border-[#D6E0EA] bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+          Perluasan ini berlaku untuk kendaraan yang dipilih dalam polis dan dihitung dari profil masing-masing kendaraan.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MultiVehicleCoverageSection({ flowType, vehicles, policyTotals, onUpdateVehicle }) {
+  const [expandedRows, setExpandedRows] = useState({ main: false });
+  const toggleRow = (key) => setExpandedRows((prev) => ({ ...prev, [key]: !prev[key] }));
+  const extensionItems = EXTENSION_GROUPS[flowType] || EXTENSION_GROUPS.motor;
+  const extensionFeeKey = (id) => `${id}Fee`;
+  const getExtensionPremium = (id) =>
+    policyTotals.vehicleQuotes.reduce((sum, item) => sum + Number(item.details?.[extensionFeeKey(id)] || 0), 0);
+  const getExtensionPreviewPremium = (id) => {
+    if (flowType !== "motor") return getExtensionPremium(id);
+    return vehicles.reduce((sum, vehicle) => sum + Number(getExtensionFee(vehicle.quote, id) || 0), 0);
+  };
+  const isExtensionEnabledForAll = (id) => vehicles.some((vehicle) => Boolean(vehicle.quote.extensions?.[id]?.enabled));
+  const toggleExtensionForAll = (item) => {
+    const nextEnabled = !isExtensionEnabledForAll(item.id);
+    vehicles.forEach((vehicle) => {
+      const extensions = vehicle.quote.extensions || {};
+      const current = extensions[item.id] || {};
+      const defaults =
+        item.type === "amount"
+          ? { amount: current.amount || (flowType === "motor" ? DEFAULT_MOTOR_TPL_AMOUNT : DEFAULT_CAR_TPL_AMOUNT) }
+          : item.type === "amount-seat"
+            ? { amount: current.amount || DEFAULT_CAR_PA_AMOUNT, seats: current.seats || "4" }
+            : {};
+      onUpdateVehicle(
+        vehicle.id,
+        {
+          quote: {
+            ...vehicle.quote,
+            extensions: {
+              ...extensions,
+              [item.id]: {
+                ...current,
+                ...defaults,
+                enabled: nextEnabled,
+              },
+            },
+          },
+        },
+        false,
+      );
+    });
+  };
+
+  return (
+    <SectionCard title="Rincian Jaminan">
+      <div className="space-y-4">
+        <div>
+          <div className="text-sm leading-6 text-slate-500">Klik setiap baris untuk melihat penjelasan detailnya.</div>
+        </div>
+        <div>
+          <div className="text-[17px] font-bold tracking-tight text-slate-900">Jaminan Utama</div>
+          <div className="mt-3">
+            <GuaranteeCard title={mainCoverTitle(flowType)} premium={`Rp ${formatRupiah(policyTotals.mainPremium)}`} expanded={Boolean(expandedRows.main)} onToggle={() => toggleRow("main")}>
+              <div>{mainCoverText(flowType)}</div>
+              <div className="mt-3">
+                <span className="font-semibold text-slate-900">Risiko sendiri saat klaim:</span> {flowType === "motor" ? "Rp150.000." : "Mengikuti kategori kendaraan."}
+              </div>
+              <div className="mt-3 border-t border-slate-200 pt-3">
+                <div className="text-sm font-medium text-slate-500">Rincian premi per kendaraan</div>
+                <div className="mt-2 divide-y divide-slate-100">
+                  {vehicles.map((vehicle, index) => {
+                    const quote = policyTotals.vehicleQuotes[index] || {};
+                    const label = String(vehicle.quote.vehicleName || "").trim() || vehicle.title || `Kendaraan ${index + 1}`;
+                    return (
+                      <div key={vehicle.id} className="flex items-start justify-between gap-3 py-1.5">
+                        <div className="font-semibold text-slate-900">{label}</div>
+                        <div className="shrink-0 text-right font-bold text-[#0A4D82]">Rp {formatRupiah(quote.mainPremium)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </GuaranteeCard>
+          </div>
+        </div>
+        <div>
+          <div className="text-[17px] font-bold tracking-tight text-slate-900">Perluasan Jaminan</div>
+          <div className="mt-3 space-y-2.5">
+            {extensionItems.map((item) => (
+              <ExtensionGuaranteeRow
+                key={item.id}
+                item={item}
+                premium={`Rp ${formatRupiah(getExtensionPreviewPremium(item.id))}`}
+                enabled={isExtensionEnabledForAll(item.id)}
+                expanded={Boolean(expandedRows[item.id])}
+                onToggleChecked={() => toggleExtensionForAll(item)}
+                onToggleExpand={() => toggleRow(item.id)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -464,6 +751,9 @@ export default function MultiVehicleFlow({
   setVehicles,
   customerOptions = [],
   flowModeAction = null,
+  vehicleMode = "multi",
+  onSingleVehicleMode = null,
+  onMultiVehicleMode = null,
 }) {
   const isInternalMode = entryMode === "internal";
   const policyTotals = useMemo(() => calculateMultiVehiclePolicy(flowType, vehicles), [flowType, vehicles]);
@@ -478,6 +768,7 @@ export default function MultiVehicleFlow({
       }),
     [flowType, policyForm.email, policyForm.insuredName, policyForm.phone, vehicles],
   );
+  const quotePendingItems = useMemo(() => stepOnePendingItems.filter((item) => String(item).startsWith("Kendaraan ")), [stepOnePendingItems]);
   const stepTwoPendingItems = useMemo(
     () =>
       getMultiVehicleStepTwoPendingItems({
@@ -491,12 +782,15 @@ export default function MultiVehicleFlow({
       }),
     [flowType, policyForm.address, policyForm.coverageStartDate, policyForm.email, policyForm.insuredName, policyForm.phone, vehicles],
   );
+  const compactStepTwoPendingItems = useMemo(() => compactVehiclePendingItems(stepTwoPendingItems), [stepTwoPendingItems]);
   const showPricing = Boolean(policyForm.quoted || step > 1);
-  const canQuote = stepOnePendingItems.length === 0;
+  const canQuote = quotePendingItems.length === 0;
   const canAdvanceStepOne = canQuote && policyForm.quoted;
   const canAdvanceStepTwo = stepTwoPendingItems.length === 0 && policyTotals.status !== "Need Review";
   const canPay = Boolean(policyForm.consentApproved && policyForm.paymentMethod && !policyForm.paymentStatus);
   const customerKeyword = String(policyForm.insuredName || "").trim().toLowerCase();
+  const allowCustomerLookup = customerOptions.length > 0;
+  const selectedCustomer = Boolean(policyForm.selectedCustomerCif);
   const customerSuggestions = customerKeyword
     ? customerOptions.filter((item) => item.name.toLowerCase().includes(customerKeyword) || item.cif.toLowerCase().includes(customerKeyword)).slice(0, 5)
     : [];
@@ -529,11 +823,24 @@ export default function MultiVehicleFlow({
     );
     updatePolicy({ quoted: false, paymentStatus: "" });
   };
+  const scrollToQuoteNotice = () => {
+    window.setTimeout(() => {
+      document.getElementById("multi-vehicle-quote-notice")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  };
+  const runQuoteSimulation = () => {
+    if (quotePendingItems.length) {
+      updatePolicy({ notice: formatQuotePendingNotice(quotePendingItems), quoted: false, paymentStatus: "" });
+      scrollToQuoteNotice();
+      return;
+    }
+    updatePolicy({ quoted: true, paymentStatus: "", notice: "" });
+  };
 
   if (step === 2) {
     return (
       <div className="space-y-5">
-        <SectionCard title="Data Pemegang Polis" subtitle="Data ini berlaku untuk satu polis kendaraan dengan beberapa objek kendaraan." action={flowModeAction}>
+        <SectionCard title="Informasi Calon Pemegang Polis">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <FieldLabel label="Nama Calon Pemegang Polis" required />
@@ -555,18 +862,21 @@ export default function MultiVehicleFlow({
               <FieldLabel label="Alamat Calon Pemegang Polis" required />
               <TextInput value={policyForm.address || ""} onChange={(value) => updatePolicy({ address: value })} placeholder="Masukkan alamat lengkap" />
             </div>
-            <div>
-              <FieldLabel label="Tanggal Mulai Perlindungan" required />
-              <TextInput value={policyForm.coverageStartDate || ""} onChange={(value) => updatePolicy({ coverageStartDate: value, coverageEndDate: addOneYear(value) })} type="date" />
-            </div>
           </div>
         </SectionCard>
-        <SectionCard title="Data Lanjutan Kendaraan" subtitle="Lengkapi STNK, nomor rangka/mesin, klaim, dan foto untuk masing-masing kendaraan.">
+        <SectionCard title="Informasi Kendaraan Lanjutan">
           <div className="space-y-4">
-            <PendingItems items={stepTwoPendingItems} />
-            {policyTotals.status === "Need Review" ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">Ada kendaraan dengan profil risiko yang perlu review internal sebelum pembayaran.</div>
-            ) : null}
+            <PendingItems items={compactStepTwoPendingItems} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <FieldLabel label="Jangka Waktu Pertanggungan (Mulai)" required />
+                <TextInput value={policyForm.coverageStartDate || ""} onChange={(value) => updatePolicy({ coverageStartDate: value, coverageEndDate: addOneYear(value) })} type="date" />
+              </div>
+              <div>
+                <FieldLabel label="Jangka Waktu Pertanggungan (Akhir)" />
+                <TextInput value={policyForm.coverageEndDate || ""} onChange={() => {}} type="date" readOnly />
+              </div>
+            </div>
             {vehicles.map((vehicle, index) => (
               <VehicleUnderwritingCard key={vehicle.id} flowType={flowType} vehicle={vehicle} index={index} onUpdateVehicle={(patch, resetQuote) => updateVehicle(vehicle.id, patch, resetQuote)} />
             ))}
@@ -669,13 +979,14 @@ export default function MultiVehicleFlow({
 
   return (
     <div className="space-y-5">
-      <SectionCard title="Informasi Calon Pemegang Polis" action={flowModeAction}>
-        <div className="grid gap-4 md:grid-cols-2">
+      <ActionCard>
+        <div className="text-[18px] font-bold text-slate-900">Informasi Calon Pemegang Polis</div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
-            <FieldLabel label="Nama Calon Pemegang Polis" required />
+            <FieldLabel label="Nama Calon Pemegang Polis" />
             <div className="relative">
-              <TextInput value={policyForm.insuredName || ""} onChange={(value) => updatePolicy({ insuredName: value, selectedCustomerCif: "", quoted: false })} placeholder="Masukkan nama calon pemegang polis atau kode CIF" icon={<User className="h-4 w-4" />} />
-              {policyForm.insuredName && customerSuggestions.length > 0 && !policyForm.selectedCustomerCif ? (
+              <TextInput value={policyForm.insuredName || ""} onChange={(value) => updatePolicy({ insuredName: value, selectedCustomerCif: "", quoted: false })} placeholder={allowCustomerLookup ? "Masukkan nama calon pemegang polis atau kode CIF" : "Masukkan nama calon pemegang polis"} icon={<User className="h-4 w-4" />} />
+              {allowCustomerLookup && policyForm.insuredName && customerSuggestions.length > 0 && !selectedCustomer ? (
                 <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
                   {customerSuggestions.map((item) => (
                     <button
@@ -703,33 +1014,76 @@ export default function MultiVehicleFlow({
                 </div>
               ) : null}
             </div>
+            {allowCustomerLookup && selectedCustomer ? (
+              <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah yang sudah terdaftar.</div>
+            ) : allowCustomerLookup && policyForm.insuredName ? (
+              <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div>
+            ) : null}
           </div>
+          {Boolean(String(policyForm.insuredName || "").trim()) && (!allowCustomerLookup || (!selectedCustomer && !isDigitsOnly(policyForm.insuredName))) ? (
+            <div>
+              <FieldLabel label="Tipe Nasabah" />
+              <SelectInput value={policyForm.customerType || ""} onChange={(value) => updatePolicy({ customerType: value })} options={CUSTOMER_TYPES} placeholder="Nasabah ini perorangan atau badan usaha?" />
+            </div>
+          ) : null}
           <div>
-            <FieldLabel label="Tipe Nasabah" required />
-            <SelectInput value={policyForm.customerType || ""} onChange={(value) => updatePolicy({ customerType: value })} options={CUSTOMER_TYPES} placeholder="Pilih tipe nasabah" />
-          </div>
-          <div>
-            <FieldLabel label="Nomor Handphone" required />
+            <FieldLabel label="Nomor Handphone" />
             <TextInput value={policyForm.phone || ""} onChange={(value) => updatePolicy({ phone: value })} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} />
           </div>
           <div>
-            <FieldLabel label="Alamat Email" required />
+            <FieldLabel label="Alamat Email" />
             <TextInput value={policyForm.email || ""} onChange={(value) => updatePolicy({ email: value })} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" />
           </div>
         </div>
-      </SectionCard>
+      </ActionCard>
       <SectionCard
         title="Informasi Kendaraan"
-        subtitle="Tambahkan setiap kendaraan sebagai objek pertanggungan dalam satu polis."
         action={
-          <button type="button" onClick={addVehicle} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            <Plus className="h-4 w-4" />
-            Tambah Kendaraan
-          </button>
+          <div className="inline-flex overflow-hidden rounded-[14px] border border-[#D5DDE6] bg-[#F8FBFE] text-[#0A4D82] shadow-sm" aria-label="Aksi kendaraan">
+            <button
+              type="button"
+              title="Upload CSV / Excel"
+              aria-label="Upload CSV / Excel"
+              onClick={() => updatePolicy({ notice: "Upload CSV / Excel akan disiapkan pada tahap berikutnya. Untuk saat ini, tambah kendaraan secara manual." })}
+              className="inline-flex h-11 w-12 items-center justify-center border-r border-[#D5DDE6] bg-white text-[#0A4D82] transition hover:bg-[#F8FBFE]"
+            >
+              <Upload className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              title="Tambah Kendaraan"
+              aria-label="Tambah Kendaraan"
+              onClick={addVehicle}
+              className="inline-flex h-11 w-12 items-center justify-center border-r border-[#D5DDE6] bg-white text-[#0A4D82] transition hover:bg-[#F8FBFE]"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              title="Beberapa Kendaraan"
+              aria-label="Beberapa Kendaraan"
+              onClick={onMultiVehicleMode || undefined}
+              className={cls("inline-flex h-11 w-12 items-center justify-center border-r border-[#D5DDE6] transition", vehicleMode === "multi" ? "bg-[#0A4D82] text-white" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]")}
+            >
+              <span className="relative inline-flex h-6 w-6 items-center justify-center">
+                <Car className="absolute left-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+                <Car className="absolute right-0 top-0.5 h-3.5 w-3.5 opacity-70" />
+                <Car className="absolute bottom-0.5 left-1/2 h-4 w-4 -translate-x-1/2" />
+              </span>
+            </button>
+            <button
+              type="button"
+              title="Satu Kendaraan"
+              aria-label="Satu Kendaraan"
+              onClick={onSingleVehicleMode || undefined}
+              className={cls("inline-flex h-11 w-12 items-center justify-center transition", vehicleMode === "single" ? "bg-[#0A4D82] text-white" : "bg-white text-[#0A4D82] hover:bg-[#F8FBFE]")}
+            >
+              <Car className="h-5 w-5" />
+            </button>
+          </div>
         }
       >
         <div className="space-y-4">
-          <PendingItems items={stepOnePendingItems} />
           {vehicles.map((vehicle, index) => (
             <VehicleQuoteCard
               key={vehicle.id}
@@ -744,36 +1098,76 @@ export default function MultiVehicleFlow({
           ))}
         </div>
       </SectionCard>
-      <SectionCard title="Ringkasan Premi">
-        <div className="grid gap-4 md:grid-cols-2">
-          <SummaryRow label="Jumlah Kendaraan" value={String(vehicles.length)} strong />
-          <SummaryRow label="Total Harga Pertanggungan" value={`Rp ${formatRupiah(policyTotals.marketValue)}`} strong />
-          <SummaryRow label="Premi" value={showPricing ? `Rp ${formatRupiah(policyTotals.mainPremium)}` : "-"} />
-          <SummaryRow label="Premi Perluasan" value={showPricing ? `Rp ${formatRupiah(policyTotals.extensionPremium)}` : "-"} />
-          <SummaryRow label="Biaya Meterai" value={showPricing ? `Rp ${formatRupiah(policyTotals.stampDuty)}` : "-"} />
-          <SummaryRow label="Total Pembayaran" value={showPricing ? `Rp ${formatRupiah(policyTotals.totalPremium)}` : "-"} strong />
+      {policyForm.notice && !policyForm.notice.startsWith("Lengkapi data kendaraan") ? <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{policyForm.notice}</div> : null}
+      {showPricing ? (
+        <MultiVehicleCoverageSection flowType={flowType} vehicles={vehicles} policyTotals={policyTotals} onUpdateVehicle={updateVehicle} />
+      ) : null}
+      {showPricing ? (
+        <SectionCard title="Ringkasan Pembayaran">
+          <div id="multi-vehicle-payment-summary" className="sr-only" aria-hidden="true" />
+          <PremiumPriceHero
+            label="Total Pembayaran"
+            value={`Rp ${formatRupiah(policyTotals.totalPremium)}`}
+            tooltipText="Total pembayaran ini masih perkiraan awal. Setelah Anda melengkapi Data Lanjutan, nilainya akan dihitung ulang dan bisa berubah sesuai informasi yang Anda isi."
+          />
+          <PremiumBreakdown>
+            <ProposalRow label="Premi" value={`Rp ${formatRupiah(policyTotals.mainPremium)}`} />
+            {policyTotals.extensionPremium ? <ProposalRow label="Premi Perluasan" value={`Rp ${formatRupiah(policyTotals.extensionPremium)}`} /> : null}
+            <ProposalRow label="Biaya Meterai" value={`Rp ${formatRupiah(policyTotals.stampDuty)}`} />
+          </PremiumBreakdown>
+        </SectionCard>
+      ) : null}
+      <div>
+        <div className={cls("flex justify-stretch gap-3", showPricing ? "justify-stretch sm:justify-end" : "sm:justify-end sm:gap-3")}>
+          {!showPricing ? (
+            <button
+              type="button"
+              onClick={runQuoteSimulation}
+              className={cls(
+                "inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition",
+                "bg-[#F5A623] hover:brightness-105",
+              )}
+            >
+              Cek Premi
+            </button>
+          ) : null}
+          {showPricing ? (
+            <>
+              {isInternalMode ? (
+                <button
+                  type="button"
+                  disabled={!canAdvanceStepOne}
+                  onClick={() => updatePolicy({ notice: "Penawaran awal beberapa kendaraan siap dikirim ke calon pemegang polis." })}
+                  className={cls(
+                    "inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition",
+                    canAdvanceStepOne ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
+                  )}
+                >
+                  Kirim Penawaran Awal
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={!canAdvanceStepOne}
+                onClick={() => {
+                  setStep(2);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className={cls(
+                  "inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition",
+                  canAdvanceStepOne ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400",
+                )}
+              >
+                Isi Data Lanjutan
+              </button>
+            </>
+          ) : null}
         </div>
-      </SectionCard>
-      <div className="grid gap-3 md:grid-cols-2">
-        <button
-          type="button"
-          disabled={!canQuote}
-          onClick={() => updatePolicy({ quoted: true, paymentStatus: "" })}
-          className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition", canQuote ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
-        >
-          Cek Premi
-        </button>
-        <button
-          type="button"
-          disabled={!canAdvanceStepOne}
-          onClick={() => {
-            setStep(2);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-sm font-semibold text-white shadow-sm transition", canAdvanceStepOne ? "bg-[#0A4D82] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
-        >
-          Isi Data Lanjutan
-        </button>
+        {policyForm.notice && policyForm.notice.startsWith("Lengkapi data kendaraan") ? (
+          <div id="multi-vehicle-quote-notice" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+            {policyForm.notice}
+          </div>
+        ) : null}
       </div>
     </div>
   );
