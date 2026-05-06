@@ -512,14 +512,29 @@ const LIFE_GUARD_ADDITIONAL_CLAUSE_LIBRARY = [
 const WORDING_OPTION_META = {
   PSAKDI: "Wording utama berbahasa Indonesia untuk perlindungan kecelakaan diri.",
   "PSAKDI Bilingual": "Wording utama dua bahasa untuk partner yang membutuhkan dokumen bilingual.",
+  PSAKI: "Wording utama untuk perlindungan kebakaran dan harta benda.",
+  "Property All Risks": "Wording untuk perlindungan property all risks dengan pengaturan lokasi dan nilai pertanggungan.",
 };
 
 const WORDING_OPTIONS = ["PSAKDI", "PSAKDI Bilingual"];
+const PROPERTY_WORDING_OPTIONS = ["PSAKI", "Property All Risks"];
 const PRINT_DOCUMENT_OPTIONS = ["Ikhtisar", "Sertifikat"];
+const PROPERTY_CLAUSE_LIBRARY = [
+  "Klausula 72 Jam",
+  "Endorsement Lokasi",
+  "Klausula Banjir",
+  "Klausula Gempa Bumi",
+  "Klausula Kerusuhan",
+  "Klausula Otoritas Sipil",
+  "Data Realisasi Dapat Diunggah Massal",
+  "No Claim Bonus Tidak Berlaku",
+];
 
 function renderWordingLabel(value) {
   if (value === "PSAKDI") return "Polis Standar Asuransi Kecelakaan Diri Indonesia";
   if (value === "PSAKDI Bilingual") return "Polis Standar Asuransi Kecelakaan Diri Indonesia (Bilingual)";
+  if (value === "PSAKI") return "Polis Standar Asuransi Kebakaran Indonesia";
+  if (value === "Property All Risks") return "Polis Standar Asuransi Property All Risks";
   return value;
 }
 
@@ -547,6 +562,11 @@ const CLAUSE_DESCRIPTIONS = {
   "Klausul Risiko Mengendarai Sepeda Motor dan Sejenisnya": "Mengatur perluasan atau penyesuaian perlindungan untuk risiko sepeda motor dan sejenisnya.",
   "Wilayah Indonesia Saja": "Membatasi perlindungan agar hanya berlaku untuk perjalanan atau aktivitas di wilayah Indonesia.",
   "Data Realisasi Dapat Diunggah Massal": "Mengatur bahwa data realisasi peserta dapat diunggah sekaligus sesuai format partner.",
+  "Endorsement Lokasi": "Mengatur penambahan, pengurangan, atau perubahan lokasi pertanggungan selama periode polis.",
+  "Klausula Banjir": "Mengatur perluasan risiko banjir atau genangan sesuai syarat dan batasan polis.",
+  "Klausula Gempa Bumi": "Mengatur perluasan risiko gempa bumi bila dipilih sebagai bagian dari package properti.",
+  "Klausula Kerusuhan": "Mengatur perluasan risiko kerusuhan, pemogokan, dan huru-hara sesuai ketentuan polis.",
+  "Klausula Otoritas Sipil": "Mengatur perlindungan terkait tindakan otoritas sipil dalam konteks risiko harta benda.",
 };
 
 function getClauseDescription(label, fallback = "Klausula ini akan ikut sebagai pengaturan default pada konfigurasi partner.") {
@@ -1632,7 +1652,7 @@ function createBlankConfig(family = "group-pa") {
         riskClass: "Kelas III",
         riskExposure: "Tersebar",
         deductible: "",
-        wordingType: "PSAKDI",
+        wordingType: family === "property-group" ? "PSAKI" : "PSAKDI",
         printDocumentType: "Ikhtisar",
         additionalClauseTitle: "",
         additionalClauseDescription: "",
@@ -1895,6 +1915,7 @@ const SEED_CONFIGS = [
         sumInsured: "15000000000",
         baseRate: "0.081",
         adminFee: "50000",
+        wordingType: "PSAKI",
         clausePackage: ["Wilayah Indonesia Saja", "Data Realisasi Dapat Diunggah Massal"],
         benefitSummary: "Bangunan, inventaris, serta endorsement per lokasi dengan kontrol nilai pertanggungan.",
       },
@@ -2749,6 +2770,38 @@ function PartnerConfigStudio({
     const pendingItems = reviewPendingItems;
     const isLifeGuard = selectedConfig.family === "group-pa";
     const isTripTravelGuard = ["health-group", "travel-group"].includes(selectedConfig.family);
+    const isPropertyGuard = selectedConfig.family === "property-group";
+    const genericWordingOptions = isPropertyGuard ? PROPERTY_WORDING_OPTIONS : WORDING_OPTIONS;
+    const genericFallbackWording = isPropertyGuard ? PROPERTY_WORDING_OPTIONS[0] : "PSAKDI";
+    const activeGenericWording = genericWordingOptions.includes(master.wordingType) ? master.wordingType : genericFallbackWording;
+    const genericClauseLibrary = isPropertyGuard ? PROPERTY_CLAUSE_LIBRARY : CLAUSE_LIBRARY;
+    const objectCopy = isPropertyGuard
+      ? {
+          sectionTitle: "Obyek Pertanggungan Properti",
+          sectionSubtitle: "Atur master policy, lokasi, nilai pertanggungan, rate properti, dan parameter underwriting harta benda.",
+          productCodePlaceholder: "Contoh: 920",
+          productNamePlaceholder: "Contoh: Edu Protect Property Blanket",
+          planPlaceholder: "Contoh: Blanket",
+          sumInsuredLabel: "Total Nilai Pertanggungan",
+          rateLabel: "Rate Properti (‰)",
+          benefitPlaceholder: "Jelaskan objek bangunan, inventaris, lokasi, dan pola endorsement.",
+          parameterTitle: "Parameter Underwriting Properti",
+          parameterSubtitle: "Parameter properti ditempatkan bersama obyek agar alur tetap dekat dengan simulator properti.",
+          mappingSourcePlaceholder: "Contoh: location_code",
+        }
+      : {
+          sectionTitle: "Obyek Pertanggungan",
+          sectionSubtitle: "Step ini menyamakan gaya pengisian coverage, limit, rate, dan parameter underwriting inti.",
+          productCodePlaceholder: "Contoh: 705",
+          productNamePlaceholder: "Contoh: 705 Anak Sekolah",
+          planPlaceholder: "Contoh: Silver",
+          sumInsuredLabel: "Nilai Pertanggungan",
+          rateLabel: "Rate Dasar (‰)",
+          benefitPlaceholder: "Jelaskan manfaat inti yang akan selalu mengikuti realisasi dari master policy ini.",
+          parameterTitle: "Parameter Underwriting",
+          parameterSubtitle: "Tambahan parameter underwriting ditempatkan satu step dengan obyek pertanggungan agar alurnya terasa seperti simulator asli.",
+          mappingSourcePlaceholder: "Contoh: student_name",
+        };
     const lifeGuardComputed = isLifeGuard ? getLifeGuardComputed(master) : null;
     const insuredLookupValue = blueprint.insuredCode || blueprint.insuredName || "";
     const hasInsuredLookup = Boolean(insuredLookupValue.trim());
@@ -3468,13 +3521,13 @@ function PartnerConfigStudio({
             subtitle="Informasi Umum menjadi pintu masuk utama sebelum masuk ke pengaturan obyek, wording, klausul, dan ringkasan."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Nama Konfigurasi" required>
-                <TextInput
-                  value={selectedConfig.title}
-                  onChange={(value) => patchRoot({ title: value })}
-                  placeholder="Contoh: Momotrip - Anak Sekolah"
-                />
-              </FormField>
+                <FormField label="Nama Konfigurasi" required>
+                  <TextInput
+                    value={selectedConfig.title}
+                    onChange={(value) => patchRoot({ title: value })}
+                    placeholder={isPropertyGuard ? "Contoh: Edu Protect - Dealer Blanket" : "Contoh: Momotrip - Anak Sekolah"}
+                  />
+                </FormField>
               <FormField label="Nama Partner" required>
                 <TextInput
                   value={selectedConfig.partnerName}
@@ -3547,8 +3600,9 @@ function PartnerConfigStudio({
                     });
                     patchSection("master", { productFamily: getFamilyMeta(value).label });
                   }}
-                  options={PRODUCT_FAMILIES.filter((item) => item.id !== "all").map((item) => item.id)}
+                  options={[selectedConfig.family]}
                   renderLabel={(value) => getFamilyMeta(value).label}
+                  disabled
                 />
               </FormField>
             </div>
@@ -3572,15 +3626,15 @@ function PartnerConfigStudio({
       return (
         <div className="space-y-4">
           <SectionCard
-            title="Obyek Pertanggungan"
-            subtitle="Step ini menyamakan gaya pengisian coverage, limit, rate, dan parameter underwriting inti."
+            title={objectCopy.sectionTitle}
+            subtitle={objectCopy.sectionSubtitle}
           >
             <div className="grid gap-4 md:grid-cols-2">
               <FormField label="Kode Produk" required>
                 <TextInput
                   value={master.productCode}
                   onChange={(value) => patchSection("master", { productCode: value.toUpperCase() })}
-                  placeholder="Contoh: 705"
+                  placeholder={objectCopy.productCodePlaceholder}
                 />
               </FormField>
               <FormField label="Nama Produk Induk" required>
@@ -3590,7 +3644,7 @@ function PartnerConfigStudio({
                     patchSection("master", { productName: value });
                     patchRoot({ productName: value });
                   }}
-                  placeholder="Contoh: 705 Anak Sekolah"
+                  placeholder={objectCopy.productNamePlaceholder}
                 />
               </FormField>
               <FormField label="Nomor Polis Induk / PKS" required>
@@ -3604,16 +3658,16 @@ function PartnerConfigStudio({
                 <TextInput
                   value={master.plan}
                   onChange={(value) => patchSection("master", { plan: value })}
-                  placeholder="Contoh: Silver"
+                  placeholder={objectCopy.planPlaceholder}
                 />
               </FormField>
-              <FormField label="Nilai Pertanggungan" required>
+              <FormField label={objectCopy.sumInsuredLabel} required>
                 <CurrencyInput
                   value={master.sumInsured}
                   onChange={(value) => patchSection("master", { sumInsured: value })}
                 />
               </FormField>
-              <FormField label="Rate Dasar (‰)" required>
+              <FormField label={objectCopy.rateLabel} required>
                 <TextInput
                   value={master.baseRate}
                   onChange={(value) => patchSection("master", { baseRate: value })}
@@ -3638,7 +3692,7 @@ function PartnerConfigStudio({
                   <TextAreaInput
                     value={master.benefitSummary}
                     onChange={(value) => patchSection("master", { benefitSummary: value })}
-                    placeholder="Jelaskan manfaat inti yang akan selalu mengikuti realisasi dari master policy ini."
+                    placeholder={objectCopy.benefitPlaceholder}
                   />
                 </FormField>
               </div>
@@ -3646,39 +3700,50 @@ function PartnerConfigStudio({
           </SectionCard>
 
           <SectionCard
-            title="Parameter Underwriting"
-            subtitle="Tambahan parameter underwriting ditempatkan satu step dengan obyek pertanggungan agar alurnya terasa seperti simulator asli."
+            title={objectCopy.parameterTitle}
+            subtitle={objectCopy.parameterSubtitle}
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField label="Batasan Usia Peserta">
-                <div className="grid grid-cols-[1fr_24px_1fr] items-center gap-2">
-                  <TextInput
-                    value={master.ageMin || ""}
-                    onChange={(value) => patchSection("master", { ageMin: onlyDigits(value) })}
-                    placeholder="Min"
-                  />
-                  <div className="text-center text-sm font-bold text-slate-400">-</div>
-                  <TextInput
-                    value={master.ageMax || ""}
-                    onChange={(value) => patchSection("master", { ageMax: onlyDigits(value) })}
-                    placeholder="Max"
-                  />
-                </div>
-              </FormField>
-              <FormField label="Kelas Risiko">
+              {isPropertyGuard ? null : (
+                <FormField label="Batasan Usia Peserta">
+                  <div className="grid grid-cols-[1fr_24px_1fr] items-center gap-2">
+                    <TextInput
+                      value={master.ageMin || ""}
+                      onChange={(value) => patchSection("master", { ageMin: onlyDigits(value) })}
+                      placeholder="Min"
+                    />
+                    <div className="text-center text-sm font-bold text-slate-400">-</div>
+                    <TextInput
+                      value={master.ageMax || ""}
+                      onChange={(value) => patchSection("master", { ageMax: onlyDigits(value) })}
+                      placeholder="Max"
+                    />
+                  </div>
+                </FormField>
+              )}
+              <FormField label={isPropertyGuard ? "Kelas Konstruksi" : "Kelas Risiko"}>
                 <SelectInput
                   value={master.riskClass || "Kelas III"}
                   onChange={(value) => patchSection("master", { riskClass: value })}
                   options={["Kelas I", "Kelas II", "Kelas III", "Kelas IV", "Single Rate"]}
                 />
               </FormField>
-              <FormField label="Risk Exposure">
+              <FormField label={isPropertyGuard ? "Sebaran Lokasi" : "Risk Exposure"}>
                 <SelectInput
                   value={master.riskExposure || "Tersebar"}
                   onChange={(value) => patchSection("master", { riskExposure: value })}
                   options={["Tersebar", "Terlokalisir"]}
                 />
               </FormField>
+              {isPropertyGuard ? (
+                <FormField label="Okupasi / Kelas Risiko">
+                  <TextInput
+                    value={master.occupancy || ""}
+                    onChange={(value) => patchSection("master", { occupancy: value })}
+                    placeholder="Contoh: Showroom / sekolah / kantor"
+                  />
+                </FormField>
+              ) : null}
               <FormField label="Risiko Sendiri (Deductible)">
                 <TextInput
                   value={master.deductible || ""}
@@ -3702,13 +3767,13 @@ function PartnerConfigStudio({
             <div>
               <div className="mb-4 text-[14px] font-medium text-slate-950">Wording</div>
               <SelectInput
-                value={master.wordingType || "PSAKDI"}
+                value={activeGenericWording}
                 onChange={(value) => patchSection("master", { wordingType: value })}
-                options={WORDING_OPTIONS}
+                options={genericWordingOptions}
                 renderLabel={renderWordingLabel}
               />
               <div className="mt-2 text-[12px] leading-5 text-slate-500">
-                {WORDING_OPTION_META[master.wordingType || "PSAKDI"]}
+                {WORDING_OPTION_META[activeGenericWording]}
               </div>
               <div className="mt-4">
                 <FormField label="Jenis cetakan polis">
@@ -3724,8 +3789,8 @@ function PartnerConfigStudio({
             <div className="mt-6">
               <div className="mb-4 text-[14px] font-medium text-slate-950">Klausula</div>
               <div className="space-y-2">
-              {CLAUSE_LIBRARY.map((clause) => {
-                const active = master.clausePackage.includes(clause);
+              {genericClauseLibrary.map((clause) => {
+                const active = (master.clausePackage || []).includes(clause);
                 return (
                   <PartnerClauseAccordionRow
                     key={clause}
@@ -3841,7 +3906,7 @@ function PartnerConfigStudio({
                       <TextInput
                         value={row.sourceField}
                         onChange={(value) => updateMappingRow(row.id, { sourceField: value })}
-                        placeholder="Contoh: student_name"
+                        placeholder={objectCopy.mappingSourcePlaceholder}
                       />
                     </FormField>
                     <FormField label="Target Core Field">
