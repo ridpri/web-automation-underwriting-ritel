@@ -33,6 +33,7 @@ import { getPropertyExtensions, getPropertyVariant } from "./propertyProductConf
 import { CustomerDataJourneyShell } from "./components/CustomerDataJourneyShell.jsx";
 import { OfferShareModal } from "./components/OfferShareModal.jsx";
 import { PremiumBreakdown, PremiumPriceHero } from "./components/PremiumSummaryBlocks.jsx";
+import { getSharedOfferSummarySubtitle } from "./app/offerCopy.js";
 import { getCanonicalPathForJourney } from "./app/routing.js";
 import MultiPropertyFlow from "./property/MultiPropertyFlow.jsx";
 import {
@@ -1521,7 +1522,7 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
         <div className="space-y-3">
           <SectionCard
             title="Ringkasan Penawaran Anda"
-            subtitle={`Ringkasan ini disusun dari data SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada ${activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle}.`}
+            subtitle={getSharedOfferSummarySubtitle(activeVariant.policyDocumentName || activeVariant.primaryCoverageTitle, isIndicative ? "indicative" : "final")}
             headerAlign="center"
           >
             <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">

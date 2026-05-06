@@ -34,11 +34,12 @@ import { OfferShareModal } from "./components/OfferShareModal.jsx";
 import { PremiumBreakdown, PremiumPriceHero, ProposalRow } from "./components/PremiumSummaryBlocks.jsx";
 import { SentOffersHistoryModal, UserPillMenu } from "./components/UserPillMenu.jsx";
 import { VehicleYearPicker } from "./components/VehicleYearPicker.jsx";
+import { getSharedOfferSummarySubtitle } from "./app/offerCopy.js";
 import { getCanonicalPathForJourney } from "./app/routing.js";
 import { createEmptyDocumentCheck, createPhotoEvidence, createTransactionAuthority, evaluateDocumentRead, summarizeFraudSignals } from "./platform/securityControls.js";
 import { findVehicleSuggestions, getVehicleCatalogItem, getVehicleCatalogItems } from "./vehicleCatalog.js";
 import MultiVehicleFlow from "./vehicle/MultiVehicleFlow.jsx";
-import { createMultiVehicleDraft, isMultiVehicleFlowEnabled } from "./vehicle/multiVehicleDomain.js";
+import { createMultiVehicleDraft, isMultiVehicleFlowEnabled, isValidEmailAddress, isValidPhoneNumber } from "./vehicle/multiVehicleDomain.js";
 
 const CURRENT_YEAR = 2026;
 const MIN_YEAR_TLO = CURRENT_YEAR - 20;
@@ -329,12 +330,12 @@ const MULTI_MOTOR_DEMO_QUOTES = [
 const MULTI_CAR_TLO_DEMO_QUOTES = [
   { vehicleName: "Toyota Avanza 1.5 G", plateRegion: "B - Jakarta/Depok/Tangerang/Bekasi", year: "2023", marketValue: "248000000", usage: "Pribadi", extensions: { tpl: { enabled: true, amount: 25000000 } } },
   { vehicleName: "Honda BR-V N7X Edition", plateRegion: "D - Bandung", year: "2022", marketValue: "315000000", usage: "Pribadi", extensions: { srcc: { enabled: true } } },
-  { vehicleName: "Toyota Hilux Double Cabin 2.4 G", plateRegion: "L - Surabaya", year: "2021", marketValue: "420000000", usage: "Komersial", extensions: { flood: { enabled: true } } },
+  { vehicleName: "Toyota Hilux Double Cabin 2.4 G", plateRegion: "L - Surabaya", year: "2021", marketValue: "420000000", usage: "Pribadi", extensions: { flood: { enabled: true } } },
 ];
 const MULTI_CAR_COMP_DEMO_QUOTES = [
   { vehicleName: "BYD Atto 3 Advanced", plateRegion: "B - Jakarta/Depok/Tangerang/Bekasi", year: "2024", marketValue: "465000000", usage: "Pribadi", extensions: { authorizedWorkshop: { enabled: true } } },
   { vehicleName: "Hyundai Ioniq 5 Signature", plateRegion: "D - Bandung", year: "2023", marketValue: "720000000", usage: "Pribadi", extensions: { tpl: { enabled: true, amount: 25000000 } } },
-  { vehicleName: "Mitsubishi Pajero Sport Dakar", plateRegion: "L - Surabaya", year: "2022", marketValue: "610000000", usage: "Komersial", extensions: { srcc: { enabled: true } } },
+  { vehicleName: "Mitsubishi Pajero Sport Dakar", plateRegion: "L - Surabaya", year: "2022", marketValue: "610000000", usage: "Pribadi", extensions: { srcc: { enabled: true } } },
 ];
 const MULTI_MOTOR_DEMO_DETAILS = [
   { plateNumber: "B 4123 UYT", chassisNumber: "MH1JM8112PK123456", engineNumber: "JM81E1234567", color: "Hitam" },
@@ -1613,6 +1614,36 @@ function SectionCard({
   );
 }
 
+function PendingItems({ items }: { items: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!items.length) return null;
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+      <button type="button" onClick={() => setExpanded((value) => !value)} className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Yang masih perlu dilengkapi</span>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">{items.length}</span>
+          </div>
+          {!expanded ? <div className="mt-1 truncate text-[12px] text-amber-800">{items[0]}</div> : null}
+        </div>
+        <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-amber-800 transition", expanded && "rotate-180")} />
+      </button>
+      {expanded ? (
+        <div className="space-y-2 border-t border-amber-200 px-4 py-3">
+          {items.map((item) => (
+            <div key={item} className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function OfferSummarySection({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="rounded-[22px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFDFF_100%)] px-4 py-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition-shadow duration-200 hover:shadow-[0_16px_34px_rgba(15,23,42,0.07)] md:px-5">
@@ -1841,6 +1872,7 @@ export default function MotorLatestExact({
   const [openCatalog, setOpenCatalog] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({ main: false });
   const [showPremiumDetails, setShowPremiumDetails] = useState(false);
+  const [quoteAttempted, setQuoteAttempted] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [paymentPanel, setPaymentPanel] = useState("");
   const [checkoutStatus, setCheckoutStatus] = useState("");
@@ -2024,6 +2056,7 @@ export default function MotorLatestExact({
     if (isInternalMode) {
       setSelectedCustomers((prev) => ({ ...prev, [type]: demoCustomer }));
     }
+    setQuoteAttempted(false);
   };
 
   const fillStepTwoDemoData = (type: FlowType) => {
@@ -2207,6 +2240,7 @@ export default function MotorLatestExact({
     if (isInternalMode) {
       setSelectedCustomers((prev) => ({ ...prev, [type]: demoCustomer }));
     }
+    setQuoteAttempted(false);
     setJourneyStatus("");
     setCheckoutStatus("");
   };
@@ -2229,6 +2263,7 @@ export default function MotorLatestExact({
     setScreen("flow");
     setStep(1);
     setShowPremiumDetails(false);
+    setQuoteAttempted(false);
     setJourneyStatus("");
     setCheckoutStatus("");
   };
@@ -2294,6 +2329,7 @@ export default function MotorLatestExact({
     }));
     setActiveMultiVehicles((prev: any[]) => (prev.length ? [firstVehicle, ...prev.slice(1)] : [firstVehicle]));
     setVehicleObjectMode("multi");
+    setQuoteAttempted(false);
     setJourneyStatus("");
     setCheckoutStatus("");
   };
@@ -2320,6 +2356,7 @@ export default function MotorLatestExact({
     setShowPremiumDetails(Boolean(activeMultiVehiclePolicyForm.quoted));
     setVehicleObjectMode("single");
     setStep((prev) => (isInternalMode && prev > 2 ? 2 : prev));
+    setQuoteAttempted(false);
     setJourneyStatus("");
     setCheckoutStatus("");
   };
@@ -2361,8 +2398,13 @@ export default function MotorLatestExact({
     && Boolean(selected.quote.usage)
     && Boolean(String(selected.quote.vehicleName || "").trim())
     && (flowType === "motor" || Boolean(selected.quote.vehicleType));
-  const quoteReady = hasQuoteBasis;
+  const hasQuoteCustomer = Boolean(String(selected.insured.lookup || selected.insured.fullName || "").trim())
+    && isValidPhoneNumber(selected.insured.phone)
+    && isValidEmailAddress(selected.insured.email);
+  const quoteReady = hasQuoteCustomer && hasQuoteBasis;
   const stepOneQuotePendingItems = [
+    !String(selected.insured.lookup || selected.insured.fullName || "").trim() ? "Isi nama calon pemegang polis atau pilih CIF." : null,
+    !isValidPhoneNumber(selected.insured.phone) || !isValidEmailAddress(selected.insured.email) ? "Lengkapi nomor handphone dan alamat email yang valid." : null,
     !String(selected.quote.vehicleName || "").trim() ? `Pilih merek / tipe ${flowType === "motor" ? "motor" : "kendaraan"}.` : null,
     !selected.quote.plateRegion ? "Pilih kode wilayah plat / TNKB." : null,
     !selected.quote.year ? "Pilih tahun pembuatan kendaraan." : null,
@@ -2372,7 +2414,7 @@ export default function MotorLatestExact({
     !selected.quote.usage ? "Pilih penggunaan kendaraan." : null,
     flowType !== "motor" && !selected.quote.vehicleType ? "Pilih merek / tipe kendaraan dari database." : null,
   ].filter(Boolean) as string[];
-  const quotePendingNotice = journeyStatus.startsWith("Lengkapi data kendaraan");
+  const quotePendingNotice = quoteAttempted && !showPremiumDetails && stepOneQuotePendingItems.length > 0;
   const selectedVehicleMeta = getVehicleCatalogItem(flowType === "motor" ? "motor" : "car", selected.quote.vehicleName);
   const tariffCategoryLabel = getVehicleTariffCategory(flowType, selected.quote);
   const tariffRegionLabel = getRegionLabel(selected.quote.plateRegion);
@@ -3036,7 +3078,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const renderSharedPreviewSummaryCard = () => (
     <SectionCard
       title="Ringkasan Penawaran Anda"
-      subtitle={`Ringkasan ini disusun dari data SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada ${policySummaryTitle}.`}
+      subtitle={getSharedOfferSummarySubtitle(policySummaryTitle, isFinalSharedOffer ? "final" : "indicative")}
       headerAlign="center"
     >
       <div className="rounded-[24px] border border-[#D8E1EA] bg-[linear-gradient(180deg,#FBFDFF_0%,#F5F9FD_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
@@ -3311,9 +3353,11 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             type="button"
             onClick={() => {
               if (!quoteReady) {
-                setJourneyStatus(`Lengkapi data kendaraan: ${stepOneQuotePendingItems.join(" ")}`);
+                setQuoteAttempted(true);
+                setJourneyStatus("");
                 return;
               }
+              setQuoteAttempted(false);
               setJourneyStatus("");
               setShowPremiumDetails(true);
             }}
@@ -3341,6 +3385,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             disabled={!quoteReady}
             onClick={() => {
               setJourneyStatus("");
+              setQuoteAttempted(false);
               setStep(2);
             }}
             className={cls(
@@ -3352,7 +3397,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           </button>
         ) : null}
       </div>
-      {quotePendingNotice ? <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">{journeyStatus}</div> : null}
+      {quotePendingNotice ? <div className="mt-3"><PendingItems items={stepOneQuotePendingItems} /></div> : null}
       {!isInternalMode && hasSharedOfferJourney ? (
         <div className="mt-3 space-y-3">
           <button
@@ -4500,89 +4545,86 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       </>
                     ) : (
                       <>
-                    {isInternalMode ? (
-                      <ActionCard>
-                        <div className="text-[18px] font-bold text-slate-900">Informasi Calon Pemegang Polis</div>
-                        <div className="mt-5 grid gap-4 md:grid-cols-2">
-                          <div className="md:col-span-2">
-                            <FieldLabel label="Nama Calon Pemegang Polis" />
-                            <div className="relative">
-                              <TextInput
-                                value={selected.insured.lookup || selected.insured.fullName}
-                                onChange={(value: string) => {
-                                  setSelectedCustomers((prev) => ({ ...prev, [flowType]: null }));
-                                  setAt(flowType, "insured.lookup", value);
-                                  setAt(flowType, "insured.fullName", value);
-                                }}
-                                placeholder={allowCustomerLookup ? "Masukkan nama calon pemegang polis atau kode CIF" : "Masukkan nama calon pemegang polis"}
-                                icon={<User className="h-4 w-4" />}
-                              />
-                              {allowCustomerLookup && selected.insured.lookup && customerSuggestions.length > 0 && !selectedCustomer ? (
-                                <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
-                                  {customerSuggestions.map((item) => (
-                                    <button
-                                      key={item.cif}
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedCustomers((prev) => ({ ...prev, [flowType]: item }));
-                                        setAt(flowType, "insured.lookup", `${item.name} - ${item.cif}`);
-                                        setAt(flowType, "insured.fullName", item.name);
-                                        setAt(flowType, "insured.customerType", item.type);
-                                        setAt(flowType, "insured.phone", item.phone);
-                                        setAt(flowType, "insured.email", item.email);
-                                      }}
-                                      className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
-                                    >
-                                      <div>
-                                        <div className="font-semibold text-slate-900">{item.name}</div>
-                                        <div className="text-xs text-slate-500">{item.type}</div>
-                                      </div>
-                                      <div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div>
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </div>
-                            {allowCustomerLookup && selectedCustomer ? (
-                              <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah yang sudah terdaftar.</div>
-                            ) : allowCustomerLookup && selected.insured.lookup ? (
-                              <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div>
+                    <ActionCard>
+                      <div className="text-[18px] font-bold text-slate-900">Informasi Calon Pemegang Polis</div>
+                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+                        <div className="md:col-span-2">
+                          <FieldLabel label="Nama Calon Pemegang Polis" required />
+                          <div className="relative">
+                            <TextInput
+                              value={selected.insured.lookup || selected.insured.fullName}
+                              onChange={(value: string) => {
+                                setSelectedCustomers((prev) => ({ ...prev, [flowType]: null }));
+                                setAt(flowType, "insured.lookup", value);
+                                setAt(flowType, "insured.fullName", value);
+                              }}
+                              placeholder={allowCustomerLookup ? "Masukkan nama calon pemegang polis atau kode CIF" : "Masukkan nama calon pemegang polis"}
+                              icon={<User className="h-4 w-4" />}
+                            />
+                            {allowCustomerLookup && selected.insured.lookup && customerSuggestions.length > 0 && !selectedCustomer ? (
+                              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
+                                {customerSuggestions.map((item) => (
+                                  <button
+                                    key={item.cif}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedCustomers((prev) => ({ ...prev, [flowType]: item }));
+                                      setAt(flowType, "insured.lookup", `${item.name} - ${item.cif}`);
+                                      setAt(flowType, "insured.fullName", item.name);
+                                      setAt(flowType, "insured.customerType", item.type);
+                                      setAt(flowType, "insured.phone", item.phone);
+                                      setAt(flowType, "insured.email", item.email);
+                                    }}
+                                    className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
+                                  >
+                                    <div>
+                                      <div className="font-semibold text-slate-900">{item.name}</div>
+                                      <div className="text-xs text-slate-500">{item.type}</div>
+                                    </div>
+                                    <div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div>
+                                  </button>
+                                ))}
+                              </div>
                             ) : null}
                           </div>
-                          {Boolean((selected.insured.lookup || selected.insured.fullName || "").trim()) && (!allowCustomerLookup || (!selectedCustomer && !isDigitsOnly(selected.insured.lookup || selected.insured.fullName))) ? (
-                            <div>
-                              <FieldLabel label="Tipe Nasabah" />
-                              <SelectInput
-                                value={selected.insured.customerType}
-                                onChange={(value: string) => setAt(flowType, "insured.customerType", value)}
-                                options={CUSTOMER_TYPES}
-                                placeholder="Nasabah ini perorangan atau badan usaha?"
-                              />
-                            </div>
+                          {allowCustomerLookup && selectedCustomer ? (
+                            <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah yang sudah terdaftar.</div>
+                          ) : allowCustomerLookup && selected.insured.lookup ? (
+                            <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div>
                           ) : null}
-                          <div>
-                            <FieldLabel label="Nomor Handphone" />
-                            <TextInput
-                              value={selected.insured.phone}
-                              onChange={(value: string) => setAt(flowType, "insured.phone", value)}
-                              placeholder="08xxxxxxxxxx"
-                              icon={<Phone className="h-4 w-4" />}
-                            />
-                          </div>
-                          <div>
-                            <FieldLabel label="Alamat Email" />
-                            <TextInput
-                              value={selected.insured.email}
-                              onChange={(value: string) => setAt(flowType, "insured.email", value)}
-                              placeholder="nama@email.com"
-                              icon={<Mail className="h-4 w-4" />}
-                              type="email"
-                            />
-                          </div>
                         </div>
-                      </ActionCard>
-                    ) : null}
-
+                        {Boolean((selected.insured.lookup || selected.insured.fullName || "").trim()) && (!allowCustomerLookup || (!selectedCustomer && !isDigitsOnly(selected.insured.lookup || selected.insured.fullName))) ? (
+                          <div>
+                            <FieldLabel label="Tipe Nasabah" required />
+                            <SelectInput
+                              value={selected.insured.customerType}
+                              onChange={(value: string) => setAt(flowType, "insured.customerType", value)}
+                              options={CUSTOMER_TYPES}
+                              placeholder="Nasabah ini perorangan atau badan usaha?"
+                            />
+                          </div>
+                        ) : null}
+                        <div>
+                          <FieldLabel label="Nomor Handphone" required />
+                          <TextInput
+                            value={selected.insured.phone}
+                            onChange={(value: string) => setAt(flowType, "insured.phone", value)}
+                            placeholder="08xxxxxxxxxx"
+                            icon={<Phone className="h-4 w-4" />}
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel label="Alamat Email" required />
+                          <TextInput
+                            value={selected.insured.email}
+                            onChange={(value: string) => setAt(flowType, "insured.email", value)}
+                            placeholder="nama@email.com"
+                            icon={<Mail className="h-4 w-4" />}
+                            type="email"
+                          />
+                        </div>
+                      </div>
+                    </ActionCard>
                     {!isInternalMode && !hasSharedOfferJourney ? (
                       <ActionCard>
                         <div className="text-center">

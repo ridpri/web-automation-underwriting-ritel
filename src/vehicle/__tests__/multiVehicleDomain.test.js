@@ -6,6 +6,7 @@ import {
   createMultiVehicleDraft,
   getMultiVehicleStepOnePendingItems,
   getMultiVehicleStepTwoPendingItems,
+  getMultiVehicleReviewPendingItems,
   isMultiVehicleFlowEnabled,
 } from "../multiVehicleDomain.js";
 
@@ -198,5 +199,12 @@ describe("multiVehicleDomain", () => {
     });
 
     assert.deepEqual(result, ["BYD Atto 3 Advanced: kondisi kerusakan sebelum polis belum dipilih."]);
+  });
+
+  it("returns review pending items when a multi vehicle policy needs underwriting review", () => {
+    assert.deepEqual(getMultiVehicleReviewPendingItems("Straight Through"), []);
+    assert.deepEqual(getMultiVehicleReviewPendingItems("Need Review"), [
+      "Profil risiko salah satu kendaraan masih perlu dicek oleh underwriter sebelum pembayaran.",
+    ]);
   });
 });

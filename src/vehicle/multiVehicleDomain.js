@@ -237,3 +237,8 @@ export function getMultiVehicleStepTwoPendingItems({ flowType = "motor", custome
   });
   return items;
 }
+
+export function getMultiVehicleReviewPendingItems(policyStatus = "") {
+  if (policyStatus !== "Need Review") return [];
+  return ["Profil risiko salah satu kendaraan masih perlu dicek oleh underwriter sebelum pembayaran."];
+}

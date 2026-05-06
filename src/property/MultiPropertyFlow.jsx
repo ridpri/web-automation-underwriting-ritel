@@ -36,6 +36,7 @@ import {
   STRUCTURE_MATERIAL_OPTIONS,
   WALL_MATERIAL_OPTIONS,
 } from "./multiPropertyDomain.js";
+import { PremiumBreakdown, PremiumPriceHero, ProposalRow } from "../components/PremiumSummaryBlocks.jsx";
 
 const FIRE_PROTECTION_ITEMS = ["APAR", "Hydrant", "Sprinkler"];
 const FIRE_PROTECTION_CHOICES = ["Tidak Ada", "Ada"];
@@ -178,7 +179,7 @@ function SectionCard({ title, subtitle, children, action, headerAlign = "left", 
         </div>
         {action ? <div>{action}</div> : null}
       </div>
-      <div className="mt-4">{children}</div>
+      {children ? <div className="mt-4">{children}</div> : null}
     </section>
   );
 }
@@ -789,6 +790,12 @@ export default function MultiPropertyFlow({
     return (
       <div className="mx-auto mt-6 max-w-4xl px-4 md:px-6">
         <div className="space-y-5">
+          <SectionCard
+            title="Data Lanjutan"
+            subtitle="Data lanjutan ini disusun sebagai bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta menjadi dasar ringkasan final sebelum pembayaran dan penerbitan polis."
+            headerAlign="center"
+            heroHeader
+          />
           <SectionCard title="Informasi Calon Pemegang Polis">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
@@ -839,7 +846,7 @@ export default function MultiPropertyFlow({
       <div className="mx-auto mt-6 max-w-[1280px] px-4 md:px-6">
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-5">
-            <SectionCard title="Review Polis Beberapa Properti" subtitle="Periksa ringkasan seluruh properti pertanggungan sebelum pembayaran.">
+            <SectionCard title="Ringkasan Sebelum Pembayaran" subtitle="Tinjau kembali ringkasan beberapa properti sebelum melanjutkan ke pembayaran.">
               <div className="grid gap-4 md:grid-cols-2">
                 <SummaryRow label="Pemegang Polis" value={policyForm.identity} strong />
                 <SummaryRow label="Total Properti" value={String(properties.length)} strong />
@@ -847,7 +854,14 @@ export default function MultiPropertyFlow({
                 <SummaryRow label="Total Premi" value={`Rp ${formatRupiah(policyTotals.totalPremium)}`} strong />
               </div>
             </SectionCard>
-            <SectionCard title="Daftar Properti Pertanggungan">
+            <SectionCard title="Ringkasan Pembayaran">
+              <PremiumPriceHero label="Total Pembayaran" value={`Rp ${formatRupiah(policyTotals.totalPremium)}`} />
+              <PremiumBreakdown>
+                <ProposalRow label="Premi" value={`Rp ${formatRupiah(policyTotals.basePremium + policyTotals.extensionPremium)}`} />
+                <ProposalRow label="Biaya Meterai" value={`Rp ${formatRupiah(policyTotals.stampDuty)}`} />
+              </PremiumBreakdown>
+            </SectionCard>
+            <SectionCard title="Detail Properti Pertanggungan" subtitle="Daftar ini menjadi detail pendukung; total pembayaran tetap diringkas di atas.">
               <div className="space-y-3">
                 {properties.map((property, index) => {
                   const quote = policyTotals.propertyQuotes[index];

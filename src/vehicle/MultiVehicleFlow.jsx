@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
+  AlertTriangle,
   Bike,
   Camera,
   Car,
@@ -25,6 +26,7 @@ import { findVehicleSuggestions, getVehicleCatalogItem } from "../vehicleCatalog
 import {
   calculateMultiVehiclePolicy,
   createMultiVehicleDraft,
+  getMultiVehicleReviewPendingItems,
   getMultiVehicleStepOnePendingItems,
   getMultiVehicleStepTwoPendingItems,
   MULTI_VEHICLE_UPLOAD_SLOTS,
@@ -239,12 +241,35 @@ function compactVehiclePendingItems(items = []) {
   return compacted;
 }
 
-function formatQuotePendingNotice(items = []) {
+function PendingItems({ items }) {
+  const [expanded, setExpanded] = React.useState(false);
   const compacted = compactVehiclePendingItems(items);
-  if (!compacted.length) return "";
-  const shownItems = compacted.slice(0, 2).join(" ");
-  const remainingCount = compacted.length - 2;
-  return `Lengkapi data kendaraan sebelum simulasi premi: ${shownItems}${remainingCount > 0 ? ` dan ${remainingCount} kendaraan lainnya.` : ""}`;
+  if (!compacted.length) return null;
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+      <button type="button" onClick={() => setExpanded((value) => !value)} className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Yang masih perlu dilengkapi</span>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">{compacted.length}</span>
+          </div>
+          {!expanded ? <div className="mt-1 truncate text-[12px] text-amber-800">{compacted[0]}</div> : null}
+        </div>
+        <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-amber-800 transition", expanded && "rotate-180")} />
+      </button>
+      {expanded ? (
+        <div className="space-y-2 border-t border-amber-200 px-4 py-3">
+          {compacted.map((item) => (
+            <div key={item} className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function mainCoverTitle(flowType) {
@@ -948,7 +973,6 @@ export default function MultiVehicleFlow({
       }),
     [flowType, policyForm.email, policyForm.insuredName, policyForm.phone, vehicles],
   );
-  const quotePendingItems = useMemo(() => stepOnePendingItems.filter((item) => String(item).startsWith("Kendaraan ")), [stepOnePendingItems]);
   const stepTwoPendingItems = useMemo(
     () =>
       getMultiVehicleStepTwoPendingItems({
@@ -965,9 +989,12 @@ export default function MultiVehicleFlow({
     [flowType, policyForm.address, policyForm.coverageStartDate, policyForm.customerType, policyForm.email, policyForm.idNumber, policyForm.insuredName, policyForm.phone, vehicles],
   );
   const showPricing = Boolean(policyForm.quoted || step > 1);
-  const canQuote = quotePendingItems.length === 0;
+  const reviewPendingItems = useMemo(() => getMultiVehicleReviewPendingItems(policyTotals.status), [policyTotals.status]);
+  const stepTwoBlockingItems = useMemo(() => stepTwoPendingItems.concat(reviewPendingItems), [reviewPendingItems, stepTwoPendingItems]);
+  const canQuote = stepOnePendingItems.length === 0;
   const canAdvanceStepOne = canQuote && policyForm.quoted;
-  const canAdvanceStepTwo = stepTwoPendingItems.length === 0 && policyTotals.status !== "Need Review";
+  const canAdvanceStepTwo = stepTwoBlockingItems.length === 0;
+  const [quoteAttempted, setQuoteAttempted] = React.useState(false);
   const canPay = Boolean(policyForm.consentApproved && policyForm.paymentMethod && !policyForm.paymentStatus);
   const customerKeyword = String(policyForm.insuredName || "").trim().toLowerCase();
   const allowCustomerLookup = customerOptions.length > 0;
@@ -1010,17 +1037,27 @@ export default function MultiVehicleFlow({
     }, 50);
   };
   const runQuoteSimulation = () => {
-    if (quotePendingItems.length) {
-      updatePolicy({ notice: formatQuotePendingNotice(quotePendingItems), quoted: false, paymentStatus: "" });
+    if (stepOnePendingItems.length) {
+      setQuoteAttempted(true);
+      updatePolicy({ notice: "", quoted: false, paymentStatus: "" });
       scrollToQuoteNotice();
       return;
     }
+    setQuoteAttempted(false);
     updatePolicy({ quoted: true, paymentStatus: "", notice: "" });
   };
 
   if (step === 2) {
     return (
       <div className="space-y-5">
+        <ActionCard>
+          <div className="text-center">
+            <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Data Lanjutan</div>
+            <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
+              Data lanjutan ini disusun sebagai bagian dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada polis kendaraan sebagai dasar ringkasan final sebelum pembayaran dan penerbitan polis.
+            </div>
+          </div>
+        </ActionCard>
         <SectionCard title="Informasi Calon Pemegang Polis">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
@@ -1055,6 +1092,7 @@ export default function MultiVehicleFlow({
             ))}
           </div>
         </SectionCard>
+        <PendingItems items={stepTwoBlockingItems} />
         {policyForm.notice ? <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{policyForm.notice}</div> : null}
         <div className="grid gap-3 md:grid-cols-2">
           <button type="button" onClick={() => setStep(1)} className="flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#D5DEEA] bg-white px-5 text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F8FBFE]">
@@ -1081,7 +1119,7 @@ export default function MultiVehicleFlow({
     return (
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">
-          <SectionCard title="Review Polis Beberapa Kendaraan" subtitle="Periksa ringkasan seluruh kendaraan sebelum pembayaran." action={flowModeAction}>
+          <SectionCard title="Ringkasan Sebelum Pembayaran" subtitle="Tinjau kembali ringkasan beberapa kendaraan sebelum melanjutkan ke pembayaran." action={flowModeAction}>
             <div className="grid gap-4 md:grid-cols-2">
               <SummaryRow label="Pemegang Polis" value={policyForm.insuredName} strong />
               <SummaryRow label="Total Kendaraan" value={String(vehicles.length)} strong />
@@ -1089,7 +1127,15 @@ export default function MultiVehicleFlow({
               <SummaryRow label="Total Premi" value={`Rp ${formatRupiah(policyTotals.totalPremium)}`} strong />
             </div>
           </SectionCard>
-          <SectionCard title="Daftar Kendaraan Pertanggungan">
+          <SectionCard title="Ringkasan Pembayaran">
+            <PremiumPriceHero label="Total Pembayaran" value={`Rp ${formatRupiah(policyTotals.totalPremium)}`} />
+            <PremiumBreakdown>
+              <ProposalRow label="Premi" value={`Rp ${formatRupiah(policyTotals.mainPremium)}`} />
+              {policyTotals.extensionPremium ? <ProposalRow label="Premi Perluasan" value={`Rp ${formatRupiah(policyTotals.extensionPremium)}`} /> : null}
+              <ProposalRow label="Biaya Meterai" value={`Rp ${formatRupiah(policyTotals.stampDuty)}`} />
+            </PremiumBreakdown>
+          </SectionCard>
+          <SectionCard title="Detail Kendaraan Pertanggungan" subtitle="Daftar ini menjadi detail pendukung; total pembayaran tetap diringkas di atas.">
             <div className="space-y-3">
               {vehicles.map((vehicle, index) => {
                 const quote = policyTotals.vehicleQuotes[index];
@@ -1281,7 +1327,7 @@ export default function MultiVehicleFlow({
           ))}
         </div>
       </SectionCard>
-      {policyForm.notice && !policyForm.notice.startsWith("Lengkapi data kendaraan") ? <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{policyForm.notice}</div> : null}
+      {policyForm.notice ? <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{policyForm.notice}</div> : null}
       {showPricing ? (
         <MultiVehicleCoverageSection flowType={flowType} vehicles={vehicles} policyTotals={policyTotals} onUpdateVehicle={updateVehicle} />
       ) : null}
@@ -1346,9 +1392,9 @@ export default function MultiVehicleFlow({
             </>
           ) : null}
         </div>
-        {policyForm.notice && policyForm.notice.startsWith("Lengkapi data kendaraan") ? (
-          <div id="multi-vehicle-quote-notice" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
-            {policyForm.notice}
+        {quoteAttempted && !policyForm.quoted ? (
+          <div id="multi-vehicle-quote-notice" className="mt-3">
+            <PendingItems items={stepOnePendingItems} />
           </div>
         ) : null}
       </div>

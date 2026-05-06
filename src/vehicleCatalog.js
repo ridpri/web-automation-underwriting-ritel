@@ -75,6 +75,7 @@ function withSearchIndex(item) {
   return {
     ...item,
     searchIndex: normalizeVehicleQuery(parts.join(" ")),
+    lookupIndex: parts.map(normalizeVehicleQuery).filter(Boolean),
   };
 }
 
@@ -92,7 +93,7 @@ export function getVehicleCatalogItems(flowType) {
 export function getVehicleCatalogItem(flowType, value) {
   const normalized = normalizeVehicleQuery(value);
   if (!normalized) return null;
-  return getVehicleCatalogItems(flowType).find((item) => item.searchIndex === normalized) || null;
+  return getVehicleCatalogItems(flowType).find((item) => item.searchIndex === normalized || item.lookupIndex.includes(normalized)) || null;
 }
 
 export function findVehicleSuggestions(flowType, query, limit = 8) {
