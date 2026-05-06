@@ -232,7 +232,7 @@ export function getMultiVehicleStepTwoPendingItems({ flowType = "motor", custome
     if (!String(vehicleData.chassisNumber || "").trim()) items.push(`${label}: nomor rangka kendaraan belum lengkap.`);
     if (!String(vehicleData.engineNumber || "").trim()) items.push(`${label}: nomor mesin kendaraan belum lengkap.`);
     if (!String(underwriting.claimHistory || "").trim()) items.push(`${label}: riwayat klaim 3 tahun terakhir belum diisi.`);
-    if (flowType === "carComp" && !String(underwriting.existingDamageStatus || "").trim()) items.push(`${label}: kondisi kerusakan sebelum polis belum dipilih.`);
+    if (flowType === "carComp" && !String(underwriting.existingDamageStatus || "").trim()) items.push(`${label}: jawaban kerusakan pada kendaraan belum dipilih.`);
     if (!hasCompleteUploads(flowType, vehicle.uploads)) items.push(`${label}: foto kendaraan belum lengkap.`);
   });
   return items;

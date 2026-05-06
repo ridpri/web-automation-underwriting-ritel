@@ -40,6 +40,7 @@ import { createEmptyDocumentCheck, createPhotoEvidence, createTransactionAuthori
 import { findVehicleSuggestions, getVehicleCatalogItem, getVehicleCatalogItems } from "./vehicleCatalog.js";
 import MultiVehicleFlow from "./vehicle/MultiVehicleFlow.jsx";
 import { createMultiVehicleDraft, isMultiVehicleFlowEnabled, isValidEmailAddress, isValidPhoneNumber } from "./vehicle/multiVehicleDomain.js";
+import { getCarCompCustomerPhotoReviewPendingItems } from "./vehicle/paymentReviewGate.js";
 
 const CURRENT_YEAR = 2026;
 const MIN_YEAR_TLO = CURRENT_YEAR - 20;
@@ -2388,6 +2389,7 @@ export default function MotorLatestExact({
   const heroGreeting = isInternalMode ? `Selamat datang kembali, ${userName}` : `Halo, ${externalDisplayName}`;
   const showPaymentStep = entryMode === "external" || viewerMode === "customer";
   const isSharedCustomerPreview = !isInternalMode && hasSharedOfferJourney;
+  const isFinalSharedOffer = isSharedCustomerPreview && ["offer-final", "payment"].includes(sharedOfferEntryView);
   const stepOneTitle = hasSharedOfferJourney ? "Tinjau Penawaran" : "Simulasi Premi";
   const activeProduct = PRODUCTS.find((item) => item.id === flowType);
   const hasQuoteBasis = Boolean(selected.quote.plateRegion)
@@ -2536,9 +2538,18 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const dataComplete = selected ? !!(selected.insured.customerType && selected.insured.fullName && selected.insured.address && selected.insured.email && selected.insured.phone && selected.vehicle.plateNumber && selected.vehicle.chassisNumber && selected.vehicle.engineNumber) : false;
   const periodComplete = selected ? !!(selected.quote.coverageStart && selected.quote.coverageEnd) : false;
   const readyForNextStage = !!(selected && calc && uploadsComplete && equipmentRequirementMet && stnkPhotoComplete && dataComplete && periodComplete && calc.status !== "Need Review");
+  const carCompCustomerPhotoReviewPendingItems = getCarCompCustomerPhotoReviewPendingItems({
+    flowType,
+    entryMode,
+    readyForNextStage,
+    operatingStatus: operatingRecord?.status || "",
+    sharedOfferEntryView: isFinalSharedOffer ? sharedOfferEntryView : "",
+  });
+  const customerPhotoReviewPending = carCompCustomerPhotoReviewPendingItems.length > 0;
+  const readyForPaymentStage = readyForNextStage && !customerPhotoReviewPending;
   const isMultiVehicleMode = supportsMultiVehicleMode && vehicleObjectMode === "multi";
   const canOpenStepTwo = isMultiVehicleMode ? Boolean(activeMultiVehiclePolicyForm.quoted) : showPremiumDetails;
-  const canOpenStepThree = isMultiVehicleMode ? step > 2 : step > 1 && readyForNextStage;
+  const canOpenStepThree = isMultiVehicleMode ? step > 2 : step > 1 && readyForPaymentStage;
   const vehicleFlowModeAction = supportsMultiVehicleMode ? (
     <VehicleFlowModeSwitch
       mode={vehicleObjectMode}
@@ -2547,7 +2558,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
       onMulti={switchToMultiVehicleFlow}
     />
   ) : null;
-  const canIssue = !!(readyForNextStage && selected.agree && selected.paymentMethod);
+  const canIssue = !!(readyForPaymentStage && selected.agree && selected.paymentMethod);
   const coverageEndDate = selected?.quote?.coverageStart ? addOneYear(selected.quote.coverageStart) : "";
   const coverageStartDisplay = selected?.quote?.coverageStart ? formatDisplayDate(new Date(`${selected.quote.coverageStart}T00:00:00`)) : "-";
   const coverageEndDisplay = coverageEndDate ? formatDisplayDate(new Date(`${coverageEndDate}T00:00:00`)) : "-";
@@ -2597,8 +2608,6 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
       }),
     [documentChecks, evidence, flowType],
   );
-  const isFinalSharedOffer = isSharedCustomerPreview && sharedOfferEntryView === "offer-final";
-
   useEffect(() => {
     operatingSignalRef.current = onOperatingSignal;
   }, [onOperatingSignal]);
@@ -2657,7 +2666,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         notes: "Flow kendaraan sedang berada pada tahap data lanjutan.",
       });
     }
-    if (step === 3 && readyForNextStage) {
+    if (step === 3 && readyForPaymentStage) {
       if (
         operatingRecord?.status === "Siap Bayar" &&
         operatingRecord?.reason === "Data kendaraan sudah lengkap dan siap dilanjutkan ke pembayaran."
@@ -2675,7 +2684,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
       });
     }
     if (!stageSignalKey) lastStageSignalRef.current = "";
-  }, [flowType, isInternalMode, operatingRecord?.reason, operatingRecord?.status, readyForNextStage, shouldAutoSyncOperatingSignals, showPremiumDetails, step]);
+  }, [flowType, isInternalMode, operatingRecord?.reason, operatingRecord?.status, readyForPaymentStage, shouldAutoSyncOperatingSignals, showPremiumDetails, step]);
 
   useEffect(() => {
     if (!showOfferShareModal) setShareFeedback("");
@@ -2818,6 +2827,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     });
   };
 
+  const handleSubmitCustomerPhotoReview = () => {
+    setJourneyStatus("Data lanjutan dan foto kendaraan sudah dikirim untuk review internal. Pembayaran akan dibuka setelah foto disetujui oleh internal.");
+    onOperatingSignal({
+      status: "Pending Review Internal",
+      reason: "Foto kendaraan Comprehensive menunggu review internal.",
+      notes: "Calon pemegang polis telah melengkapi data lanjutan Mobil Comprehensive. Foto kendaraan perlu direview internal sebelum pembayaran dibuka.",
+      flags: ["Foto kendaraan Comprehensive perlu review internal"],
+    });
+  };
+
   const handleCopyShareLink = async () => {
     try {
       if (navigator?.clipboard?.writeText) {
@@ -2887,6 +2906,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     flowType !== "carComp" && selected.ui.stnkMode === "scan" && !selected.stnkRead ? "Foto STNK belum terbaca." : null,
     calc?.status === "Need Review" ? "Profil risiko kendaraan masih perlu kami cek lebih lanjut." : null,
   ].filter(Boolean) as string[];
+  const stepTwoBlockingItems = [...stepTwoPendingItems, ...carCompCustomerPhotoReviewPendingItems];
 
   const renderPremiumSummaryCard = (showHeroAsFinal = false) => (
     <ActionCard>
@@ -3421,7 +3441,9 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     </div>
   );
 
-  const renderExternalStepTwoActions = () => (
+  const renderExternalStepTwoActions = () => {
+    const canRunExternalStepTwoAction = customerPhotoReviewPending ? readyForNextStage : readyForPaymentStage;
+    return (
     <ActionCard>
       <div className="space-y-4">
         {journeyStatus ? <div className="rounded-xl border border-[#CFE0F0] bg-[#F8FBFE] p-4 text-sm text-[#0A4D82]">{journeyStatus}</div> : null}
@@ -3433,6 +3455,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             </div>
           </div>
         ) : null}
+        {!journeyStatus && stepTwoBlockingItems.length ? <PendingItems items={stepTwoBlockingItems} /> : null}
         <div className="grid gap-3 md:grid-cols-2">
           <button
             type="button"
@@ -3446,15 +3469,19 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
           </button>
           <button
             onClick={() => {
-              if (readyForNextStage) {
+              if (customerPhotoReviewPending && readyForNextStage) {
+                handleSubmitCustomerPhotoReview();
+                return;
+              }
+              if (readyForPaymentStage) {
                 setJourneyStatus("");
                 setStep(3);
               }
             }}
-            disabled={!readyForNextStage}
-            className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm", readyForNextStage ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+            disabled={!canRunExternalStepTwoAction}
+            className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm", canRunExternalStepTwoAction ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
           >
-            Lanjut ke Pembayaran
+            {customerPhotoReviewPending ? "Kirim untuk Review Internal" : "Lanjut ke Pembayaran"}
           </button>
         </div>
         {hasSharedOfferJourney ? (
@@ -3477,7 +3504,8 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         ) : null}
       </div>
     </ActionCard>
-  );
+    );
+  };
 
   const renderInternalStepTwoActions = () => (
     <ActionCard>
@@ -4200,7 +4228,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             <div className="rounded-xl border border-[#D8E1EA] bg-white p-3">
               <div className="space-y-2.5">
                 <div>
-                  <div className="text-[14px] font-bold text-slate-900">Kondisi Kendaraan Sebelum Polis</div>
+                  <div className="text-[14px] font-bold text-slate-900">Apakah terdapat kerusakan pada kendaraan?</div>
                   <div className="mt-0.5 text-[11px] leading-4 text-slate-500">
                     Pilih apakah kendaraan sudah memiliki kerusakan sebelum polis aktif. Jika ada, unggah satu atau lebih foto area kerusakan.
                   </div>
@@ -4492,7 +4520,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                     <StepNode
                       step="Langkah 2"
                       title="Data Lanjutan"
-                      subtitle={step === 2 ? (readyForNextStage ? (isInternalMode ? "Siap dikirim" : "Siap dibayar") : "Sedang diisi") : isInternalMode ? "Menunggu" : step > 2 ? "Selesai" : "Menunggu"}
+                      subtitle={step === 2 ? (readyForPaymentStage ? (isInternalMode ? "Siap dikirim" : "Siap dibayar") : customerPhotoReviewPending ? "Menunggu review" : "Sedang diisi") : isInternalMode ? "Menunggu" : step > 2 ? "Selesai" : "Menunggu"}
                       active={step === 2}
                       done={!isInternalMode && step > 2}
                       icon={<FileText className="h-4 w-4" />}
@@ -4545,6 +4573,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       </>
                     ) : (
                       <>
+                    {!isInternalMode && !hasSharedOfferJourney ? (
+                      <ActionCard>
+                        <div className="text-center">
+                          <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Simulasi Premi</div>
+                          <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
+                            Data simulasi ini disusun sebagai bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada {policySummaryTitle} sebagai dasar simulasi premi dan langkah berikutnya.
+                          </div>
+                        </div>
+                      </ActionCard>
+                    ) : null}
                     <ActionCard>
                       <div className="text-[18px] font-bold text-slate-900">Informasi Calon Pemegang Polis</div>
                       <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -4625,16 +4663,6 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         </div>
                       </div>
                     </ActionCard>
-                    {!isInternalMode && !hasSharedOfferJourney ? (
-                      <ActionCard>
-                        <div className="text-center">
-                          <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Simulasi Premi</div>
-                          <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
-                            Data simulasi ini disusun sebagai bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada {policySummaryTitle} sebagai dasar simulasi premi dan langkah berikutnya.
-                          </div>
-                        </div>
-                      </ActionCard>
-                    ) : null}
 
                     <SectionCard title="Informasi Kendaraan" action={vehicleFlowModeAction}>
                       <div className="grid gap-4 md:grid-cols-2">
@@ -4824,7 +4852,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
 
                     <SectionCard title="Lanjutkan Pembayaran" subtitle="Selesaikan persetujuan atas SPAU elektronik ini terlebih dahulu, lalu lanjutkan pembayaran.">
                       {(() => {
-                        const paymentPendingItems = [];
+                        const paymentPendingItems = [...carCompCustomerPhotoReviewPendingItems];
                         if (!selected.paymentMethod) paymentPendingItems.push("Pilih salah satu metode pembayaran terlebih dahulu.");
                         if (!selected.agree) paymentPendingItems.push("Buka dan setujui Syarat dan Ketentuan Persetujuan atas SPAU elektronik ini.");
                         return (
@@ -4924,15 +4952,19 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                           if (readyForNextStage) handleSendFinalizedOffer();
                           return;
                         }
-                        if (readyForNextStage) {
+                        if (customerPhotoReviewPending && readyForNextStage) {
+                          handleSubmitCustomerPhotoReview();
+                          return;
+                        }
+                        if (readyForPaymentStage) {
                           setJourneyStatus("");
                           setStep(3);
                         }
                       }}
-                      disabled={!readyForNextStage}
-                      className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm", readyForNextStage ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
+                      disabled={isInternalMode ? !readyForNextStage : customerPhotoReviewPending ? !readyForNextStage : !readyForPaymentStage}
+                      className={cls("flex h-[48px] w-full items-center justify-center rounded-[12px] px-5 text-center text-sm font-semibold text-white shadow-sm", (isInternalMode ? readyForNextStage : customerPhotoReviewPending ? readyForNextStage : readyForPaymentStage) ? "bg-[#F5A623] hover:brightness-105" : "cursor-not-allowed bg-slate-400")}
                     >
-                      {isInternalMode ? "Kirim Penawaran Final" : "Lanjut ke Pembayaran"}
+                      {isInternalMode ? "Kirim Penawaran Final" : customerPhotoReviewPending ? "Kirim untuk Review Internal" : "Lanjut ke Pembayaran"}
                     </button>
                     {!isInternalMode && hasSharedOfferJourney ? (
                       <button

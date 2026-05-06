@@ -198,7 +198,7 @@ describe("multiVehicleDomain", () => {
       vehicles: [vehicle],
     });
 
-    assert.deepEqual(result, ["BYD Atto 3 Advanced: kondisi kerusakan sebelum polis belum dipilih."]);
+    assert.deepEqual(result, ["BYD Atto 3 Advanced: jawaban kerusakan pada kendaraan belum dipilih."]);
   });
 
   it("returns review pending items when a multi vehicle policy needs underwriting review", () => {

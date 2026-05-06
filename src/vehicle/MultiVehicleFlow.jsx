@@ -868,7 +868,7 @@ function VehicleUnderwritingCard({ flowType, vehicle, index, onUpdateVehicle }) 
           ) : null}
           {flowType === "carComp" ? (
             <div className="mt-4 rounded-xl border border-[#D8E1EA] bg-white p-3">
-              <div className="text-[14px] font-bold text-slate-900">Kondisi Kendaraan Sebelum Polis</div>
+              <div className="text-[14px] font-bold text-slate-900">Apakah terdapat kerusakan pada kendaraan?</div>
               <div className="mt-0.5 text-[11px] leading-4 text-slate-500">
                 Pilih apakah kendaraan sudah memiliki kerusakan sebelum polis aktif.
               </div>
