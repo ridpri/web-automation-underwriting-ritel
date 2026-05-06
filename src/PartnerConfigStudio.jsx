@@ -1,5 +1,5 @@
 ﻿
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Accessibility,
@@ -46,7 +46,6 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { UserPillMenu } from "./components/UserPillMenu.jsx";
 
 const STORAGE_KEY = "partner-integration-studio-v3";
 
@@ -1019,12 +1018,7 @@ function getPendingItems(config) {
   const items = [];
   const blueprint = config.data.blueprint;
   const master = config.data.master;
-  const mapping = config.data.mapping;
   const review = config.data.review;
-  const rules = getOperationalFieldRules(config);
-  const partnerFacing = getPartnerFacingFields(config);
-  const missingTargets = getMissingRequiredTargets(config);
-  const sample = parseSamplePayload(config);
 
   if (config.family === "group-pa") {
     if (!config.title) items.push("Nama konfigurasi belum diisi.");
@@ -1086,9 +1080,7 @@ function getReadiness(config) {
   const checks = [];
   const blueprint = config.data.blueprint;
   const master = config.data.master;
-  const mapping = config.data.mapping;
   const review = config.data.review;
-  const rules = getOperationalFieldRules(config);
 
   if (config.family === "group-pa") {
     checks.push(Boolean(config.title));
@@ -1966,11 +1958,6 @@ function PartnerConfigStudio({
   role: controlledRole = null,
   onRoleChange = null,
   onExit = null,
-  onOpenWorkspace = null,
-  onOpenQueue = null,
-  onOpenPartnerConfig = null,
-  sessionName = "Taqwim (Internal)",
-  sessionRoleLabel = "Internal",
 }) {
   const cached = safeReadStorage();
   const urlState = safeReadUrlState();
@@ -1998,12 +1985,10 @@ function PartnerConfigStudio({
   const [selectedFamily, setSelectedFamily] = useState(initialSelectedFamily);
   const [catalogSearch, setCatalogSearch] = useState(urlState.catalogSearch || cached?.catalogSearch || "");
   const [toast, setToast] = useState("");
-  const [headerAccountMenuOpen, setHeaderAccountMenuOpen] = useState(false);
   const [lifeGuardExpanded, setLifeGuardExpanded] = useState("main-accident");
   const [travelSafeExpandedCategory, setTravelSafeExpandedCategory] = useState("cat_trv");
   const [partnerClauseExpanded, setPartnerClauseExpanded] = useState("wording:PSAKDI");
   const [lifeGuardClauseSearch, setLifeGuardClauseSearch] = useState("");
-  const [lifeGuardSidebarCollapsed, setLifeGuardSidebarCollapsed] = useState(false);
   const [lifeGuardPendingAction, setLifeGuardPendingAction] = useState("");
   const role = controlledRole || roleState;
 
@@ -2012,45 +1997,6 @@ function PartnerConfigStudio({
     [configs, selectedId]
   );
   const accountMeta = useMemo(() => getAccountMeta(role), [role]);
-  const accountMenuItems = useMemo(() => {
-    const openPartnerCatalog = () => {
-      setHeaderAccountMenuOpen(false);
-      setSelectedId(null);
-      setPortalView("catalog");
-    };
-
-    if (sessionRoleLabel === "Internal") {
-      return [
-        {
-          label: "Ruang Kerja Saya",
-          primary: true,
-          onClick: () => {
-            setHeaderAccountMenuOpen(false);
-            if (typeof onOpenWorkspace === "function") onOpenWorkspace();
-          },
-        },
-        {
-          label: "Konfigurasi Partner",
-          onClick: () => {
-            if (typeof onOpenPartnerConfig === "function") {
-              setHeaderAccountMenuOpen(false);
-              onOpenPartnerConfig();
-              return;
-            }
-            openPartnerCatalog();
-          },
-        },
-      ];
-    }
-
-    return [
-      {
-        label: "Konfigurasi Partner",
-        primary: true,
-        onClick: openPartnerCatalog,
-      },
-    ];
-  }, [onOpenPartnerConfig, onOpenQueue, onOpenWorkspace, sessionRoleLabel]);
   const selectedCardMeta = useMemo(
     () => (selectedConfig ? getPortalCardMeta(selectedConfig.family) : null),
     [selectedConfig]
@@ -2129,6 +2075,17 @@ function PartnerConfigStudio({
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  const updateSelected = useCallback((mutator) => {
+    setConfigs((prev) =>
+      prev.map((item) => {
+        if (item.id !== selectedId) return item;
+        const next = mutator(JSON.parse(JSON.stringify(item)));
+        next.updatedAt = nowLabel();
+        return next;
+      })
+    );
+  }, [selectedId]);
+
   useEffect(() => {
     if (!selectedConfig || selectedConfig.family !== "travel-group") return;
     const master = selectedConfig.data.master || {};
@@ -2148,7 +2105,7 @@ function PartnerConfigStudio({
       };
       return draft;
     });
-  }, [selectedConfig]);
+  }, [selectedConfig, updateSelected]);
 
   const filteredConfigs = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -2296,17 +2253,6 @@ function PartnerConfigStudio({
     return Math.max(stepIndex, Math.min(unlocked, STEP_LIST.length - 1));
   }, [selectedConfig, stepIndex, stepState]);
 
-  function updateSelected(mutator) {
-    setConfigs((prev) =>
-      prev.map((item) => {
-        if (item.id !== selectedId) return item;
-        const next = mutator(JSON.parse(JSON.stringify(item)));
-        next.updatedAt = nowLabel();
-        return next;
-      })
-    );
-  }
-
   function patchRoot(changes) {
     updateSelected((draft) => ({ ...draft, ...changes }));
   }
@@ -2326,15 +2272,6 @@ function PartnerConfigStudio({
       draft.audit = [{ at: nowLabel(), actor, action, note }, ...(draft.audit || [])];
       return draft;
     });
-  }
-
-  function toggleChannel(id) {
-    if (!selectedConfig) return;
-    const channels = selectedConfig.data.blueprint.channels || [];
-    const next = channels.includes(id)
-      ? channels.filter((value) => value !== id)
-      : [...channels, id];
-    patchSection("blueprint", { channels: next });
   }
 
   function toggleClause(label) {
@@ -2638,6 +2575,12 @@ function PartnerConfigStudio({
     if (!selectedConfig) return;
     if (stepIndex < STEP_LIST.length - 1) {
       setStepIndex((prev) => prev + 1);
+      return;
+    }
+
+    const pendingItems = getPendingItems(selectedConfig);
+    if (pendingItems.length > 0) {
+      setToast(`Lengkapi ${pendingItems.length} item pending sebelum dikirim.`);
       return;
     }
 
@@ -4420,7 +4363,7 @@ function PartnerConfigStudio({
     );
   }
 
-  function renderLifeGuardStudio() {
+  function _renderLifeGuardStudio() {
     if (!selectedConfig || selectedConfig.family !== "group-pa") return null;
 
     const blueprint = selectedConfig.data.blueprint;
@@ -4602,14 +4545,9 @@ function PartnerConfigStudio({
     return (
       <div className="min-h-screen bg-[#f4f7fa] text-slate-800">
         <AppProductHeader
-          sessionName={sessionName}
           role={role}
           onRoleChange={updateRole}
-          accountInitials={accountMeta.initials}
           onHome={exitToShell}
-          accountMenuOpen={headerAccountMenuOpen}
-          onToggleAccountMenu={() => setHeaderAccountMenuOpen((current) => !current)}
-          accountMenuItems={accountMenuItems}
         />
 
         <main className="relative">
@@ -5455,7 +5393,7 @@ function PartnerConfigStudio({
     );
   }
 
-  function renderTravelSafeStudio() {
+  function _renderTravelSafeStudio() {
     if (!selectedConfig || selectedConfig.family !== "travel-group") return null;
 
     const blueprint = selectedConfig.data.blueprint;
@@ -5535,7 +5473,7 @@ function PartnerConfigStudio({
     const formInputClass =
       "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[13px] font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
     const formInputDisabledClass = "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500";
-    const classicLabelClass = "text-[11px] font-bold uppercase text-[#004d7a]";
+    const _classicLabelClass = "text-[11px] font-bold uppercase text-[#004d7a]";
     const toggleChecklist = (key, value) =>
       patchSection("review", {
         checklist: { ...review.checklist, [key]: value },
@@ -5634,14 +5572,9 @@ function PartnerConfigStudio({
     return (
       <div className="min-h-screen bg-[#f4f7fa] text-slate-800">
         <AppProductHeader
-          sessionName={sessionName}
           role={role}
           onRoleChange={updateRole}
-          accountInitials={accountMeta.initials}
           onHome={exitToShell}
-          accountMenuOpen={headerAccountMenuOpen}
-          onToggleAccountMenu={() => setHeaderAccountMenuOpen((current) => !current)}
-          accountMenuItems={accountMenuItems}
         />
 
         <main className="relative">
@@ -6417,7 +6350,8 @@ function PartnerConfigStudio({
       : role === "Checker"
       ? "Kirim ke Approval"
       : "Aktifkan";
-  const summaryPrimaryDisabled = selectedConfig ? getPendingItems(selectedConfig).length > 0 : true;
+  const finalStepPendingCount = selectedConfig ? getPendingItems(selectedConfig).length : 0;
+  const primaryDisabled = stepIndex === STEP_LIST.length - 1 && finalStepPendingCount > 0;
 
   if (!role || portalView === "login") {
     return (
@@ -6512,14 +6446,9 @@ function PartnerConfigStudio({
     return (
       <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
         <AppProductHeader
-          sessionName={sessionName}
           role={role}
           onRoleChange={updateRole}
-          accountInitials={accountMeta.initials}
           onHome={exitToShell}
-          accountMenuOpen={headerAccountMenuOpen}
-          onToggleAccountMenu={() => setHeaderAccountMenuOpen((current) => !current)}
-          accountMenuItems={accountMenuItems}
         />
 
         <div className="mx-auto max-w-[1800px] px-4 py-4 md:px-6 md:py-6">
@@ -6730,14 +6659,9 @@ function PartnerConfigStudio({
         ) : (
           <div className="pb-52 lg:pb-8">
             <AppProductHeader
-              sessionName={sessionName}
               role={role}
               onRoleChange={updateRole}
-              accountInitials={accountMeta.initials}
               onHome={exitToShell}
-              accountMenuOpen={headerAccountMenuOpen}
-              onToggleAccountMenu={() => setHeaderAccountMenuOpen((current) => !current)}
-              accountMenuItems={accountMenuItems}
             />
 
             <header className="relative overflow-hidden bg-[#0A4D82] pb-7 md:pb-8">
@@ -6770,38 +6694,12 @@ function PartnerConfigStudio({
                   </p>
                 </div>
 
-                <div className="mx-auto mt-5 max-w-4xl rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-6 md:p-5">
-                  <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-3 md:px-5 md:py-5">
-                    <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-row md:gap-5 md:overflow-visible md:px-0 md:pb-0">
-                      {STEP_LIST.map((step, index) => {
-                        const Icon = step.icon;
-                        const active = stepIndex === index;
-                        const done = stepIndex > index || Boolean(stepState[index]?.done && !active);
-                        const subtitle = active ? "Dalam proses" : done ? "Selesai" : "Bisa dibuka";
-                        const canOpen = true;
-                        return (
-                          <React.Fragment key={step.id}>
-                            {index > 0 ? <div className="pointer-events-none hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (canOpen) setStepIndex(index);
-                              }}
-                              className="relative z-10 block w-[140px] shrink-0 snap-start rounded-xl px-1 py-1 md:w-auto md:flex-1 md:shrink md:snap-none cursor-pointer"
-                            >
-                              <StudioStepNode
-                                title={step.label}
-                                subtitle={subtitle}
-                                active={active}
-                                icon={<Icon className="h-4 w-4" />}
-                              />
-                            </button>
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
+                <StudioJourneySteps
+                  stepIndex={stepIndex}
+                  stepState={stepState}
+                  maxUnlockedStep={STEP_LIST.length - 1}
+                  onSelect={setStepIndex}
+                />
               </div>
             </header>
 
@@ -6818,7 +6716,11 @@ function PartnerConfigStudio({
                     <button
                       type="button"
                       onClick={moveNext}
-                      className="flex h-[48px] w-full items-center justify-center rounded-[8px] bg-[#F5A623] text-sm font-bold uppercase tracking-wide text-white shadow-sm hover:brightness-105"
+                      disabled={primaryDisabled}
+                      className={cls(
+                        "flex h-[48px] w-full items-center justify-center rounded-[8px] text-sm font-bold uppercase tracking-wide text-white shadow-sm",
+                        primaryDisabled ? "cursor-not-allowed bg-[#93A8C0]" : "bg-[#F5A623] hover:brightness-105"
+                      )}
                     >
                       {primaryLabel}
                     </button>
@@ -7353,14 +7255,9 @@ function TravelSafeBenefitSummaryCard({ rows = [], emptyText = "Belum ada perlua
 }
 
 function AppProductHeader({
-  sessionName,
   role,
   onRoleChange,
-  accountInitials,
   onHome,
-  accountMenuOpen,
-  onToggleAccountMenu,
-  accountMenuItems,
 }) {
   return (
     <header className="sticky top-0 z-30 bg-[#0A4D82] shadow-sm">
@@ -7416,26 +7313,9 @@ function AppProductHeader({
             </select>
             <ChevronDown className="pointer-events-none -ml-5 h-4 w-4 text-white/85" />
           </div>
-          <button
-            type="button"
-            aria-expanded={accountMenuOpen}
-            aria-haspopup="menu"
-            aria-controls="partner-account-menu"
-            onClick={onToggleAccountMenu}
-            className="hidden h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:inline-flex md:px-4"
-          >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">
-              {accountInitials}
-            </span>
-            <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{sessionName}</span>
-            <ChevronDown className="h-4 w-4 text-slate-500" />
-          </button>
           <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
             <Bell className="h-4 w-4" />
           </button>
-          <div id="partner-account-menu">
-            <UserPillMenu open={accountMenuOpen} items={accountMenuItems} />
-          </div>
         </div>
       </div>
     </header>
@@ -7550,7 +7430,7 @@ function PartnerClauseAccordionRow({
         <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[#0A4D82]">
-              <Icon className="h-[14px] w-[14px] shrink-0" />
+              {React.createElement(Icon, { className: "h-[14px] w-[14px] shrink-0" })}
               <div className="truncate text-[14px] font-medium leading-5">{title}</div>
             </div>
             {subtitle ? <div className="mt-0.5 text-[11px] leading-4 text-slate-500">{subtitle}</div> : null}
@@ -7943,7 +7823,24 @@ function StudioJourneySteps({ stepIndex = 0, stepState = [], maxUnlockedStep = 0
 
   return (
     <div className="mx-auto mt-5 max-w-[1120px] rounded-[30px] bg-white p-5 shadow-2xl shadow-black/15 md:mt-6 md:p-6">
-      <div className="rounded-[24px] border border-[#D8E1EA] bg-[#F4F7FA] px-6 py-7 md:px-7 md:py-7">{content}</div>
+      <div className="relative rounded-[24px] border border-[#D8E1EA] bg-[#F4F7FA] px-6 py-7 md:px-7 md:py-7">
+        {content}
+        <div className="pointer-events-none absolute bottom-7 right-4 h-[150px] w-10 bg-gradient-to-l from-[#F4F7FA] to-transparent md:hidden" />
+        <div className="mt-3 flex items-center justify-center gap-2 text-[11px] font-semibold text-[#5F7A99] md:hidden">
+          <span>Langkah {stepIndex + 1} dari {STEP_LIST.length}</span>
+          <span className="inline-flex items-center gap-1">
+            {STEP_LIST.map((step, index) => (
+              <span
+                key={step.id}
+                className={cls(
+                  "h-1.5 rounded-full transition-all",
+                  index === stepIndex ? "w-5 bg-[#0A4D82]" : "w-1.5 bg-[#C9D5E3]"
+                )}
+              />
+            ))}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
