@@ -170,7 +170,7 @@ function WorkspaceRail({ activeLane, onChange, records }) {
                     </div>
                   </div>
                 </button>
-                {showConnector ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
+                {showConnector ? <div className="hidden h-px w-8 shrink-0 bg-slate-300 md:block lg:w-12 mt-[36px]" /> : null}
               </React.Fragment>
             );
           })}

@@ -490,7 +490,7 @@ function PortalTabs({ activeTab, onChange }) {
                   {active ? "Sedang dibuka" : "Klik untuk buka"}
                 </div>
               </button>
-              {showConnector ? <div className="hidden h-px flex-1 bg-[#C7D4E4] md:block" /> : null}
+              {showConnector ? <div className="hidden h-px w-8 shrink-0 bg-[#C7D4E4] md:block lg:w-12 mt-10" /> : null}
             </React.Fragment>
           );
         })}
