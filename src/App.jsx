@@ -2,6 +2,7 @@
 import { createElement, Suspense, useEffect, useMemo, useState } from "react";
 import { OPERATING_QUEUE_SEED, buildTimelineEvent, statusTone } from "./operatingLayer.js";
 import { buildPropertyCatalog, buildVehicleCatalog, PERSONAL_PRODUCTS } from "./app/catalogData.js";
+import { getCanonicalPathForJourney, resolveRouteFromPath, shouldKeepRoleQuery } from "./app/routing.js";
 import {
   CarCompInternalPrototype,
   CarTloInternalPrototype,
@@ -104,12 +105,14 @@ function resolveInitialNavigationState() {
   }
 
   const params = new URLSearchParams(window.location.search);
+  const pathRoute = resolveRouteFromPath(window.location.pathname);
   const shareJourney = inferJourneyFromShareData(decodeUrlShareToken(params.get("share") || ""));
-  const requestedJourney = params.get("journey") || shareJourney || "";
+  const requestedJourney = pathRoute?.journey || params.get("journey") || shareJourney || "";
   const allowSharedOfferJourney = Boolean(shareJourney && requestedJourney === shareJourney);
   const requestedJourneyRole = requestedJourney ? inferSessionRoleFromJourney(requestedJourney) : null;
   const sessionRole =
-    resolveUrlSessionRole(params.get("role"))
+    pathRoute?.sessionRole
+    || resolveUrlSessionRole(params.get("role"))
     || requestedJourneyRole
     || readStoredSessionRole()
     || "guest";
@@ -268,10 +271,14 @@ export default function App() {
     const win = typeof window !== "undefined" ? window : null;
     if (!win) return;
     const url = new URL(win.location.href);
-    if (resolvedActiveJourney) url.searchParams.set("journey", resolvedActiveJourney);
-    else url.searchParams.delete("journey");
+    const canonicalPath =
+      resolvedActiveJourney === "partner-config" && url.pathname.startsWith("/admin/partner-config")
+        ? url.pathname
+        : getCanonicalPathForJourney(resolvedActiveJourney, sessionRole, url.searchParams);
+    url.pathname = canonicalPath;
+    url.searchParams.delete("journey");
     const publicUrlSessionRole = resolveUrlSessionRole(sessionRole);
-    if (publicUrlSessionRole) url.searchParams.set("role", publicUrlSessionRole);
+    if (publicUrlSessionRole && shouldKeepRoleQuery(sessionRole, canonicalPath)) url.searchParams.set("role", publicUrlSessionRole);
     else url.searchParams.delete("role");
     win.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }, [resolvedActiveJourney, sessionRole]);
