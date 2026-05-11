@@ -13,7 +13,7 @@ export const WALL_MATERIAL_OPTIONS = [
 export const STRUCTURE_MATERIAL_OPTIONS = [
   "Beton, baja, atau bahan tidak mudah terbakar",
   "Kayu",
-  "Material lain di luar ketentuan kelas 1 dan 2",
+  "Material mudah terbakar lainnya",
 ];
 export const ROOF_MATERIAL_OPTIONS = [
   "Beton, metal, genteng, atau bahan tidak mudah terbakar",
@@ -62,7 +62,7 @@ export function deriveConstructionClass(form = {}) {
   if (!wall || !structure || !roof || !flammable) return "";
   if (
     wall === "Bagian bahan mudah terbakar melebihi 20% dari luas dinding" ||
-    structure === "Material lain di luar ketentuan kelas 1 dan 2" ||
+    structure === "Material mudah terbakar lainnya" ||
     roof === "Bahan mudah terbakar lainnya" ||
     flammable === "Ada"
   ) {
