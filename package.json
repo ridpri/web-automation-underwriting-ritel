@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "node --test src/**/*.test.js",
     "capture:procedure:internal": "node docs/procedures/internal/capture-internal-procedure.mjs",
     "build:procedure:internal": "node docs/procedures/internal/build-internal-procedure.mjs",
     "generate:procedure:internal": "npm run capture:procedure:internal && npm run build:procedure:internal"

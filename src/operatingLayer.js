@@ -175,8 +175,11 @@ export function buildTimelineEvent(text, actor = "System") {
 }
 
 export function statusTone(status) {
+  if (!status) return "slate";
+  if (status === "Draft") return "slate";
+  if (status === "Siap Bayar" || status === "Pending Payment") return "orange";
+  if (status === "Paid" || status === "Selesai") return "emerald";
   if (status === "Pending Review Internal" || status === "Perlu Revisi") return "amber";
-  if (status === "Siap Bayar" || status === "Paid") return "green";
   if (status === "Rejected" || status === "Expired") return "red";
   if (status === "Indikasi Terkirim" || status === "Dibuka Calon Tertanggung" || status === "Isi Data Lanjutan") return "blue";
   return "slate";
