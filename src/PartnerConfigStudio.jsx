@@ -1228,10 +1228,10 @@ function getLifeGuardTotalDays(startDate, endDate) {
 
 function getLifeGuardSelectedClauseList(master) {
   const libraryTitles = new Set(LIFE_GUARD_ADDITIONAL_CLAUSE_LIBRARY.map((item) => item.title));
-  const customTitles = (master?.customClauses || []).map((item) => item.title);
+  const customTitles = new Set((master?.customClauses || []).map((item) => item.title));
   return Array.from(
     new Set(
-      (master?.clausePackage || []).filter((item) => libraryTitles.has(item) || customTitles.includes(item))
+      (master?.clausePackage || []).filter((item) => libraryTitles.has(item) || customTitles.has(item))
     )
   ).sort((a, b) => a.localeCompare(b));
 }
