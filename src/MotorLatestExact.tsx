@@ -1158,14 +1158,6 @@ function VehicleGuaranteeDetailCard({
   );
 }
 
-function secondaryCoverTitle(flowType: FlowType) {
-  return "Risiko Kehilangan";
-}
-
-function secondaryDeductibleText(flowType: FlowType) {
-  return "5% dari Harga Pertanggungan.";
-}
-
 function getMainPremiumSplit(flowType: FlowType, calc: any) {
   if (!calc) return { ownDamage: 0, theft: 0 };
   if (flowType === "carComp") return { ownDamage: calc.mainPremium, theft: 0 };
