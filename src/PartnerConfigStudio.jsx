@@ -7710,15 +7710,6 @@ function CurrencyInput({ value, onChange, disabled = false, className = "" }) {
   );
 }
 
-function SummaryRow({ label, value }) {
-  return (
-    <div className="mt-2 flex items-start justify-between gap-3 text-[13px]">
-      <div className="min-w-0 flex-1 text-white/70">{label}</div>
-      <div className="shrink-0 text-right font-semibold text-white">{fixDisplayText(value)}</div>
-    </div>
-  );
-}
-
 function RoleGateCard({ role, onSelect }) {
   const meta =
     role === "Maker"
