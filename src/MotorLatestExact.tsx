@@ -1814,7 +1814,7 @@ export default function MotorLatestExact({
 
   const setAt = (type: FlowType, path: string, value: any) => {
     setFlows((prev) => {
-      const copy: any = JSON.parse(JSON.stringify(prev));
+      const copy: any = structuredClone(prev);
       const parts = path.split(".");
       let ref = copy[type];
       for (let i = 0; i < parts.length - 1; i += 1) ref = ref[parts[i]];
