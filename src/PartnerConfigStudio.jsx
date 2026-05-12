@@ -7795,38 +7795,6 @@ function ProductLandingCard({ card, count, featured, onOpen }) {
   );
 }
 
-function WorkflowRoleStrip({ status }) {
-  const step = status === "Checker" ? 2 : status === "Approval" || status === "Active" ? 3 : 1;
-  const items = [
-    { label: "Maker", note: "Draft" },
-    { label: "Checker", note: "UDW" },
-    { label: "Approval", note: "HO" },
-  ];
-
-  return (
-    <div className="rounded-[18px] border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm">
-      <div className="relative">
-        <div className="absolute left-0 top-[11px] h-1 w-full rounded-full bg-white/15" />
-        <div className="absolute left-0 top-[11px] h-1 rounded-full bg-[#F5A623]" style={{ width: `${((step - 1) / 2) * 100}%` }} />
-        <div className="relative flex justify-between">
-          {items.map((item, index) => {
-            const done = index + 1 <= step;
-            return (
-              <div key={item.label} className="w-1/3 text-center">
-                <div className={cls("mx-auto flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-black ring-4 ring-[#0A4D82]", done ? "border-[#F5A623] bg-[#F5A623] text-white" : "border-white/25 bg-[#0A4D82] text-white/70")}>
-                  {index + 1}
-                </div>
-                <div className="mt-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/72">{item.label}</div>
-                <div className="text-[10px] font-semibold text-white">{item.note}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function StudioStepNode({ title, subtitle, active, icon }) {
   return (
     <div
