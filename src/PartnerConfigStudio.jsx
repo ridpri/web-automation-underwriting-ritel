@@ -6997,41 +6997,6 @@ function SummaryPanel({ config, primaryLabel = "ISI DATA", secondaryLabel = "KEM
   );
 }
 
-function SummarySheet({ open, onClose, config, primaryLabel, secondaryLabel, onPrimary, onSecondary, primaryDisabled }) {
-  if (!open || !config) return null;
-  const cardMeta = getPortalCardMeta(config.family);
-  return (
-    <div className="fixed inset-0 z-40 bg-slate-950/50 lg:hidden">
-      <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-auto rounded-t-[28px] bg-white p-4 shadow-2xl">
-        <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-slate-200" />
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">Ringkasan</div>
-            <div className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
-              {fixDisplayText(cardMeta?.title || config.productName || config.title)}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700"
-          >
-            Tutup
-          </button>
-        </div>
-        <SummaryPanel
-          config={config}
-          primaryLabel={primaryLabel}
-          secondaryLabel={secondaryLabel}
-          onPrimary={onPrimary}
-          onSecondary={onSecondary}
-          primaryDisabled={primaryDisabled}
-        />
-      </div>
-    </div>
-  );
-}
-
 function ReviewSummaryCard({ infoRows = [], premiumRows = [], totalLabel = "Estimasi Premi", totalValue = "-", pendingItems = [] }) {
   return (
     <div className="overflow-hidden rounded-[20px] bg-[#0A4D82] p-3.5 text-white shadow-[0_14px_32px_rgba(15,23,42,0.18)]">
