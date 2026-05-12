@@ -2289,15 +2289,6 @@ function PartnerConfigStudio({
     });
   }
 
-  function toggleChannel(id) {
-    if (!selectedConfig) return;
-    const channels = selectedConfig.data.blueprint.channels || [];
-    const next = channels.includes(id)
-      ? channels.filter((value) => value !== id)
-      : [...channels, id];
-    patchSection("blueprint", { channels: next });
-  }
-
   function toggleClause(label) {
     if (!selectedConfig) return;
     const clauses = selectedConfig.data.master.clausePackage || [];
