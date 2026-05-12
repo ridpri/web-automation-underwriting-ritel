@@ -910,16 +910,6 @@ function ProposalAccordion({ title, subtitle, open, onToggle, children }) {
   );
 }
 
-function ProposalBadge({ children, tone = "blue" }) {
-  const toneClass =
-    tone === "amber"
-      ? "bg-amber-50 text-amber-700 ring-amber-200"
-      : tone === "green"
-        ? "bg-green-50 text-green-700 ring-green-200"
-        : "bg-[#F1F7FD] text-[#0A4D82] ring-[#CFE0F0]";
-  return <div className={cls("inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1", toneClass)}>{children}</div>;
-}
-
 function ProductCard({ item, onClick }) {
   return (
     <button type="button" onClick={onClick} className="group relative h-[260px] overflow-hidden rounded-xl text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed">
