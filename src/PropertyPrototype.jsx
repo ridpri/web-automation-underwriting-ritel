@@ -895,21 +895,6 @@ function PreviewPropertyGuaranteeOption({ title, icon, premium, checked, expande
   );
 }
 
-function ProposalAccordion({ title, subtitle, open, onToggle, children }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-[#D8E1EA] bg-white">
-      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50/80">
-        <div>
-          <div className="text-[15px] font-semibold text-slate-900">{title}</div>
-          {subtitle ? <div className="mt-1 text-sm text-slate-500">{subtitle}</div> : null}
-        </div>
-        <ChevronDown className={cls("h-4 w-4 shrink-0 text-slate-500 transition", open && "rotate-180")} />
-      </button>
-      {open ? <div className="border-t border-slate-100 px-5 py-4">{children}</div> : null}
-    </div>
-  );
-}
-
 function ProposalBadge({ children, tone = "blue" }) {
   const toneClass =
     tone === "amber"
