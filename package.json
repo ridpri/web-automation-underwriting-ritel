@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "capture:procedure:internal": "node docs/procedures/internal/capture-internal-procedure.mjs",
     "build:procedure:internal": "node docs/procedures/internal/build-internal-procedure.mjs",
-    "generate:procedure:internal": "npm run capture:procedure:internal && npm run build:procedure:internal"
+    "generate:procedure:internal": "npm run capture:procedure:internal && npm run build:procedure:internal",
+    "test": "node --test src/**/*.test.js"
   },
   "dependencies": {
     "jspdf": "^4.2.1",
