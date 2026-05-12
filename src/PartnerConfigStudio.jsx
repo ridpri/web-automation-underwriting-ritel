@@ -7905,51 +7905,5 @@ function StudioJourneySteps({ stepIndex = 0, stepState = [], maxUnlockedStep = 0
   );
 }
 
-function StudioConfigRail({ configs, selectedId, onOpen, onCreate }) {
-  return (
-    <div className="rounded-[20px] border border-[#D9E1EA] bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Pilihan Konfigurasi</div>
-          <div className="mt-1 text-lg font-bold text-slate-900">Buka pengaturan satu per satu sesuai produk</div>
-        </div>
-        <button
-          type="button"
-          onClick={onCreate}
-          className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-bold text-white shadow-sm"
-        >
-          <Plus className="h-4 w-4" />
-          Konfigurasi Baru
-        </button>
-      </div>
-      <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-        {configs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onOpen(item.id)}
-            className={cls(
-              "min-w-[260px] rounded-[14px] border p-4 text-left transition",
-              item.id === selectedId ? "border-[#0A4D82] bg-[#F8FBFE]" : "border-[#D9E1EA] bg-white hover:bg-slate-50"
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-bold text-slate-900">{fixDisplayText(item.title)}</div>
-                <div className="mt-1 truncate text-xs text-slate-500">{fixDisplayText(item.partnerName)}</div>
-              </div>
-              <StatusBadge status={item.status} />
-            </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              <SmallDataCard label="Produk" value={fixDisplayText(item.productName || "-")} />
-              <SmallDataCard label="Version" value={item.version} />
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default PartnerConfigStudio;
 
