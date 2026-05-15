@@ -2,7 +2,7 @@
 import { LogIn, MapPin, Phone } from "lucide-react";
 import { createElement, Suspense, useEffect, useMemo, useState } from "react";
 import { OPERATING_QUEUE_SEED, buildTimelineEvent, statusTone } from "./operatingLayer.js";
-import { buildPropertyCatalog, buildVehicleCatalog, PERSONAL_PRODUCTS } from "./app/catalogData.js";
+import { PERSONAL_PRODUCTS } from "./app/catalogData.js";
 import {
   CarCompInternalPrototype,
   CarTloInternalPrototype,
@@ -15,7 +15,7 @@ import {
   ReviewWorkbench,
   SelfCarePortalBridge,
 } from "./app/lazyJourneys.js";
-import { resolveSessionDescription, resolveSessionName, resolveSessionProfile, SESSION_OPTIONS } from "./app/sessionConfig.js";
+import { resolveSessionName, resolveSessionProfile, SESSION_OPTIONS } from "./app/sessionConfig.js";
 
 function cls() {
   return Array.from(arguments).filter(Boolean).join(" ");
@@ -387,10 +387,8 @@ function JourneyFallback() {
 export default function App() {
   const initialNavigationState = useMemo(() => resolveInitialNavigationState(), []);
   const [activeJourney, setActiveJourney] = useState(initialNavigationState.activeJourney);
-  const [sessionRole, setSessionRole] = useState(initialNavigationState.sessionRole);
+  const [sessionRole] = useState(initialNavigationState.sessionRole);
   const [partnerConfigRole, setPartnerConfigRole] = useState("Maker");
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [operatingRecords, setOperatingRecords] = useState(OPERATING_QUEUE_SEED);
   const [activeTransactionId, setActiveTransactionId] = useState(OPERATING_QUEUE_SEED[0]?.id || "");
   const allowSharedOfferJourney = useMemo(() => hasMatchingShareContext(activeJourney), [activeJourney]);
@@ -400,25 +398,11 @@ export default function App() {
   );
   const activeSessionName = resolveSessionName(sessionRole);
   const activeSessionProfile = resolveSessionProfile(sessionRole);
-  const isInternalSession = sessionRole === "internal";
-  const isGuestSession = sessionRole === "guest";
   const isAuthenticatedCustomerSession = sessionRole === "external" || sessionRole === "partner";
-  const propertyItems = useMemo(
-    () => ({
-      safeItem: sessionRole === "internal" ? "property-internal" : "property-external",
-      allRiskItem: sessionRole === "internal" ? "property-all-risk-internal" : "property-all-risk-external",
-    }),
-    [sessionRole],
-  );
-  const motorItem = useMemo(() => (sessionRole === "internal" ? "motor-internal" : "motor-external"), [sessionRole]);
-  const carTloItem = useMemo(() => (sessionRole === "internal" ? "car-tlo-internal" : "car-tlo-external"), [sessionRole]);
-  const carCompItem = useMemo(() => (sessionRole === "internal" ? "car-comp-internal" : ""), [sessionRole]);
   const ownedOperatingRecords = useMemo(
     () => operatingRecords.filter((item) => item.owner === activeSessionName),
     [activeSessionName, operatingRecords],
   );
-  const accountPrimaryDestination = isInternalSession ? "internal-workspace" : "self-care-portal";
-  const accountPrimaryLabel = isInternalSession ? "Ruang Kerja Saya" : "Polis Saya";
   const externalAccountMenuItems = [
     {
       label: "Polis Saya",
@@ -454,8 +438,6 @@ export default function App() {
     clearSharedJourneyParams();
     const matchingRecord = operatingRecords.find((item) => item.journeyKey === target);
     if (matchingRecord) setActiveTransactionId(matchingRecord.id);
-    setRoleMenuOpen(false);
-    setAccountMenuOpen(false);
     setActiveJourney(target);
   };
 
@@ -768,190 +750,5 @@ export default function App() {
       </Suspense>
     );
   }
-  if (!isInternalSession) {
-    return <PublicProductLanding onOpen={handleOpenJourney} />;
-  }
-  return (
-    <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
-      <header className="sticky top-0 z-30 bg-[#0A4D82] shadow-sm">
-        <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4">
-          <div className="flex min-w-0 items-center gap-3 text-white md:gap-6">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-sm bg-[#091E42] md:h-8 md:w-8">
-                <div className="absolute left-0 top-0 h-full w-full bg-[linear-gradient(135deg,#D71920_0%,#D71920_42%,transparent_42%,transparent_100%)]" />
-                <div className="absolute bottom-0 right-0 h-3.5 w-3.5 bg-white" />
-              </div>
-              <div className="text-[12px] font-black leading-[0.95] md:text-[18px]">Danantara<div className="-mt-0.5 md:-mt-1">Indonesia</div></div>
-            </div>
-            <div className="hidden h-10 w-px bg-white/20 md:block" />
-            <div className="hidden items-center gap-2.5 text-white md:flex">
-              <div className="text-[14px] font-semibold leading-none md:text-[15px]">asuransi</div>
-              <div className="h-1.5 w-1.5 rounded-full bg-white/70" />
-              <div className="text-[14px] font-semibold leading-none md:text-[15px]">jasindo</div>
-            </div>
-          </div>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = "https://esppa.asuransijasindo.co.id/";
-              }}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-5 py-3 text-sm font-semibold text-white shadow-sm"
-            >
-              <Home className="h-4 w-4" />
-              Beranda
-            </button>
-            <button className="inline-flex items-center gap-2 rounded-[8px] bg-white/6 px-5 py-3 text-sm font-medium text-white hover:bg-white/10">
-              <Shield className="h-4 w-4" />
-              Produk
-            </button>
-          </div>
-
-          <div className="relative flex items-center gap-2 md:gap-3">
-            <button
-              type="button"
-              aria-expanded={roleMenuOpen}
-              aria-haspopup="menu"
-              aria-controls="role-menu"
-              onClick={() => {
-                setAccountMenuOpen(false);
-                setRoleMenuOpen((current) => !current);
-              }}
-              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/15"
-            >
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
-              <span className="max-w-[118px] truncate">{resolveRoleLabel(sessionRole)}</span>
-              <ChevronDown className={cls("h-4 w-4 text-white/85 transition", roleMenuOpen && "rotate-180")} aria-hidden="true" />
-            </button>
-            {roleMenuOpen ? (
-              <div id="role-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
-                <div className="px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">View as</div>
-                {SESSION_OPTIONS.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={sessionRole === item.key}
-                    onClick={() => {
-                      setRoleMenuOpen(false);
-                      setSessionRole(item.key);
-                      setActiveJourney("");
-                    }}
-                    className={cls(
-                      "flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold hover:bg-[#F7FAFD]",
-                      sessionRole === item.key ? "bg-[#F7FAFD] text-[#0A4D82]" : "text-slate-700",
-                    )}
-                  >
-                    {resolveRoleLabel(item.key)}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            {isGuestSession ? (
-              <>
-                <button
-                  type="button"
-                  aria-expanded={accountMenuOpen}
-                  aria-haspopup="menu"
-                  aria-controls="guest-account-menu"
-                  onClick={() => {
-                    setRoleMenuOpen(false);
-                    setAccountMenuOpen((current) => !current);
-                  }}
-                  className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
-                >
-                  <Home className="h-4 w-4" aria-hidden="true" />
-                  Masuk
-                </button>
-                {accountMenuOpen ? (
-                  <div id="guest-account-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setAccountMenuOpen(false);
-                        setActiveJourney("self-care-lookup");
-                      }}
-                      className="flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-[#0A4D82] hover:bg-[#F7FAFD]"
-                    >
-                      Cari Polis / Klaim
-                    </button>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  aria-expanded={accountMenuOpen}
-                  aria-haspopup="menu"
-                  aria-controls="account-menu"
-                  onClick={() => {
-                    setRoleMenuOpen(false);
-                    setAccountMenuOpen((current) => !current);
-                  }}
-                  className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
-                  <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{activeSessionName}</span>
-                  <ChevronDown className={cls("h-4 w-4 text-slate-500 transition", accountMenuOpen && "rotate-180")} aria-hidden="true" />
-                </button>
-                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
-                  <span aria-hidden="true" className="text-[15px] leading-none">🔔</span>
-                </button>
-                {accountMenuOpen ? (
-                  <div id="account-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setAccountMenuOpen(false);
-                        setActiveJourney(accountPrimaryDestination);
-                      }}
-                      className="flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-[#0A4D82] hover:bg-[#F7FAFD]"
-                    >
-                      {accountPrimaryLabel}
-                    </button>
-                    {isInternalSession ? (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          setActiveJourney("partner-config");
-                        }}
-                        className="mt-1 flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-[#F7FAFD]"
-                      >
-                        Konfigurasi Partner
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-[1800px] px-4 py-4 md:px-6 md:py-6">
-        <div className="mt-5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:mt-6 md:p-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div>
-              <div className="text-[28px] font-bold text-slate-900 md:text-[32px]">Pilihan Produk Asuransi Jasindo</div>
-              {resolveSessionDescription(sessionRole) ? (
-                <div className="mt-2 text-sm leading-6 text-slate-600">
-                  {resolveSessionDescription(sessionRole)}
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <SectionShelf icon={Shield} title="Asuransi Kecelakaan Diri" subtitle="Perlindungan biaya pengobatan akibat kecelakaan" items={PERSONAL_PRODUCTS} onOpen={handleOpenJourney} />
-          <SectionShelf icon={Building2} title="Asuransi Harta Benda" subtitle="Perlindungan bangunan dan isi properti dengan simulasi premi dan penawaran digital." items={buildPropertyCatalog(propertyItems)} onOpen={handleOpenJourney} />
-          <SectionShelf icon={Car} title="Asuransi Kendaraan" subtitle="Perlindungan motor dan mobil dengan simulasi premi dan penawaran digital." items={buildVehicleCatalog({ motorItem, carTloItem, carCompItem, sessionRole })} onOpen={handleOpenJourney} />
-        </div>
-      </div>
-    </div>
-  );
+  return <PublicProductLanding onOpen={handleOpenJourney} />;
 }
