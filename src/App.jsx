@@ -1,4 +1,4 @@
-﻿import { Building2, Car, ChevronDown, Home, Plane, Shield } from "lucide-react";
+﻿import { Building2, Car, ChevronDown, Home, LogIn, MapPin, Package, Phone, Plane, Shield } from "lucide-react";
 import { createElement, Suspense, useEffect, useMemo, useState } from "react";
 import { OPERATING_QUEUE_SEED, buildTimelineEvent, statusTone } from "./operatingLayer.js";
 import { buildPropertyCatalog, buildVehicleCatalog, PERSONAL_PRODUCTS } from "./app/catalogData.js";
@@ -14,7 +14,7 @@ import {
   ReviewWorkbench,
   SelfCarePortalBridge,
 } from "./app/lazyJourneys.js";
-import { resolveSessionDescription, resolveSessionName, resolveSessionProfile, SESSION_OPTIONS } from "./app/sessionConfig.js";
+import { resolveSessionName, resolveSessionProfile, SESSION_OPTIONS } from "./app/sessionConfig.js";
 
 function cls() {
   return Array.from(arguments).filter(Boolean).join(" ");
@@ -133,65 +133,164 @@ function clearSharedJourneyParams() {
   window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-function ProductCard({ item, onClick }) {
+const PRODUCTION_ASSETS = {
+  danantara: "/production-assets/danantara.57629308.png",
+  jasindoWhite: "/production-assets/jasindo-white-all.814f5299.png",
+  jasindoPositive: "/production-assets/Jasindo_Positive-2.adb9525c.png",
+  iso: "/production-assets/iso-jasindo.0f9f4aa7.png",
+  mari: "/production-assets/logo-mari-berasuransi.803b8b56.png",
+  lifeGuard: "/production-assets/product-lintasan.df53665c.jpg",
+  tripGuard: "/production-assets/product-kecelakaan-diri.31916e3d.jpg",
+  eduProtect: "/production-assets/product-anak-sekolah.56785bac.jpg",
+  travelSafe: "/production-assets/product-travel.51b3edff.jpg",
+  propertyFire: "/production-assets/property-fire.jpg",
+  propertyAllRisk: "/production-assets/property-all-risk.jpg",
+  vehicleMotor: "/production-assets/vehicle-motor-tlo.jpg",
+  vehicleCarTlo: "/production-assets/vehicle-car-tlo.jpg",
+  vehicleCarComp: "/production-assets/vehicle-car-comp.jpg",
+};
+
+const PRODUCT_IMAGE_BY_TITLE = {
+  "Life Guard": PRODUCTION_ASSETS.lifeGuard,
+  "Trip Guard": PRODUCTION_ASSETS.tripGuard,
+  "Edu Protect": PRODUCTION_ASSETS.eduProtect,
+  "Travel Safe": PRODUCTION_ASSETS.travelSafe,
+  "Asuransi Kebakaran": PRODUCTION_ASSETS.propertyFire,
+  "Asuransi Property All Risk": PRODUCTION_ASSETS.propertyAllRisk,
+  "Asuransi Sepeda Motor - Total Loss": PRODUCTION_ASSETS.vehicleMotor,
+  "Asuransi Mobil - Total Loss": PRODUCTION_ASSETS.vehicleCarTlo,
+  "Asuransi Mobil Komprehensif": PRODUCTION_ASSETS.vehicleCarComp,
+};
+
+function productionImageFor(item) {
+  return PRODUCT_IMAGE_BY_TITLE[item.title] || item.image;
+}
+
+function ProductionCategoryIcon({ category }) {
+  if (category === "Perjalanan") return <Plane className="production-product-card__tag-icon" aria-hidden="true" />;
+  if (category === "Harta Benda") return <Building2 className="production-product-card__tag-icon" aria-hidden="true" />;
+  if (category === "Kendaraan Bermotor") return <Car className="production-product-card__tag-icon" aria-hidden="true" />;
+  return <Shield className="production-product-card__tag-icon" aria-hidden="true" />;
+}
+
+function ProductionProductCard({ item, onClick }) {
   return (
     <button
       type="button"
       onClick={item.active ? onClick : undefined}
-      className={cls(
-        "group relative h-[212px] overflow-hidden rounded-[10px] text-left transition sm:h-[228px] md:h-[252px]",
-        item.active ? "hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(15,23,42,0.16)]" : "cursor-not-allowed opacity-80",
-      )}
+      className={cls("production-product-card", !item.active && "is-disabled")}
+      aria-label={item.title}
     >
-      <img src={item.image} alt={item.title} width="960" height="540" className="absolute inset-0 h-full w-full object-cover" />
-      <div className={cls("absolute inset-0", item.active ? "bg-[linear-gradient(180deg,rgba(15,23,42,0.24)_0%,rgba(15,23,42,0.18)_36%,rgba(15,23,42,0.74)_100%)]" : "bg-[linear-gradient(180deg,rgba(15,23,42,0.42)_0%,rgba(15,23,42,0.28)_36%,rgba(15,23,42,0.82)_100%)]")} />
-      <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-[8px] bg-[rgba(116,124,138,0.82)] px-3 py-2 text-[11px] font-bold text-white backdrop-blur-sm">
-        {item.category === "Perjalanan" ? <Plane className="h-3.5 w-3.5" aria-hidden="true" /> : <Shield className="h-3.5 w-3.5" aria-hidden="true" />}
+      <img src={item.image} alt="" width="640" height="720" className="production-product-card__image" />
+      <span className="production-product-card__shade" />
+      <span className="production-product-card__tag">
+        <ProductionCategoryIcon category={item.category} />
         <span>{item.category}</span>
-      </div>
-      {!item.active ? (
-        <div className="absolute right-4 top-4 rounded-[8px] border border-white/35 bg-slate-950/50 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
-          Belum Tersedia
-        </div>
-      ) : null}
-      <div className="absolute inset-x-0 bottom-0 flex h-full flex-col justify-end p-4 text-white">
-        <div className="translate-y-0 transition duration-300 ease-out group-hover:-translate-y-1">
-          <div className="max-w-[92%] text-[18px] font-bold leading-tight md:max-w-[88%] md:text-[20px]">{item.title}</div>
-          <div className="mt-2 max-w-[92%] text-sm leading-6 text-white/95 md:max-w-[80%]">
-            {item.subtitle || item.description}
-          </div>
-          <div className="mt-3 md:mt-4">
-            <span className={cls("inline-flex min-w-[132px] items-center justify-center rounded-[14px] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.08em]", item.active ? "bg-white text-[#102A43]" : "bg-white text-slate-500")}>
-              {item.active ? "Cek Premi" : "Segera Hadir"}
-            </span>
-          </div>
-        </div>
-      </div>
+      </span>
+      <span className="production-product-card__title">{item.title}</span>
     </button>
   );
 }
 
-function SectionShelf({ icon, title, subtitle, items, onOpen }) {
+function ProductionProductSection({ icon, title, subtitle, items, onOpen }) {
   return (
-    <div className="mt-5 rounded-[14px] bg-[#F5F6F7] p-4 md:mt-6 md:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3 text-[#0A4D82]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-white text-[#2D3748] shadow-sm ring-1 ring-slate-200">
-            {createElement(icon, { className: "h-7 w-7" })}
-          </div>
-          <div>
-            <div className="text-[18px] font-bold leading-tight md:text-[20px]">{title}</div>
-            <div className="mt-1 text-[14px] leading-6 text-slate-600 md:text-[15px]">{subtitle}</div>
-          </div>
+    <section className="production-product-section">
+      <div className="production-product-section__header">
+        <div className="production-product-section__icon" aria-hidden="true">
+          {createElement(icon, { size: 35, strokeWidth: 2.25 })}
         </div>
-        <ChevronDown className="mt-1 hidden h-6 w-6 text-slate-500 md:block" />
+        <div className="production-product-section__copy">
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
+        </div>
+        <ChevronDown className="production-product-section__chevron" aria-hidden="true" />
       </div>
-      <div className={cls("mt-5 grid gap-3 md:gap-4", items.length === 4 ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2 xl:grid-cols-3")}>
+      <div className={cls("production-product-grid", items.length === 3 && "is-three-column")}>
         {items.map((item) => (
-          <ProductCard key={item.title} item={item} onClick={() => onOpen(item.key)} />
+          <ProductionProductCard key={item.title} item={item} onClick={() => onOpen(item.key)} />
         ))}
       </div>
-    </div>
+    </section>
+  );
+}
+
+function InstagramLogo() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <rect x="5" y="5" width="14" height="14" rx="4" />
+      <circle cx="12" cy="12" r="3.2" />
+      <circle cx="16.6" cy="7.4" r="1" />
+    </svg>
+  );
+}
+
+function FacebookLogo() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M14 8.2h2V5h-2.6c-3 0-4.6 1.7-4.6 4.5v1.7H6.5v3.3h2.3V21h3.6v-6.5h2.9l.5-3.3h-3.4V9.8c0-1 .4-1.6 1.6-1.6Z" />
+    </svg>
+  );
+}
+
+function XLogo() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M6 5h3.5l3 4.2L16.2 5H19l-5 5.7L19.7 19h-3.5l-3.5-5-4.4 5H5.5l5.7-6.5L6 5Zm2.2 1.6 8.8 10.8h.6L8.8 6.6h-.6Z" />
+    </svg>
+  );
+}
+
+function ProductionFooter() {
+  return (
+    <footer className="production-footer">
+      <div className="production-footer__main">
+        <div className="production-footer__brand">
+          <img src={PRODUCTION_ASSETS.jasindoPositive} alt="Asuransi Jasindo" />
+          <div className="production-footer__socials" aria-label="Media sosial Jasindo">
+            <a href="https://www.instagram.com/asuransijasindo" aria-label="Instagram Asuransi Jasindo">
+              <InstagramLogo />
+            </a>
+            <a href="https://www.facebook.com/AsuransiJasindo" aria-label="Facebook Asuransi Jasindo">
+              <FacebookLogo />
+            </a>
+            <a href="https://x.com/asuransijasindo" aria-label="X Asuransi Jasindo">
+              <XLogo />
+            </a>
+          </div>
+        </div>
+        <div className="production-footer__contact">
+          <h2>Hubungi Kami</h2>
+          <div className="production-footer__info">
+            <MapPin size={20} strokeWidth={2.2} aria-hidden="true" />
+            <div>
+              <strong>Graha Jasindo</strong>
+              <span>Jln. Menteng Raya No. 21 Jakarta Pusat, 10340</span>
+            </div>
+          </div>
+          <div className="production-footer__info">
+            <Phone size={20} strokeWidth={2.2} aria-hidden="true" />
+            <div>
+              <strong>Contact Center</strong>
+              <span>1500073</span>
+            </div>
+          </div>
+        </div>
+        <div className="production-footer__links">
+          <h2>Tautan Cepat</h2>
+          <a href="https://asuransijasindo.co.id/">Website Asuransi Jasindo</a>
+          <a href="https://asuransijasindo.co.id/representative-office">Representative Office</a>
+          <a href="https://asuransijasindo.co.id/privacy-policy">Pusat Privasi</a>
+        </div>
+        <div className="production-footer__certs">
+          <img src={PRODUCTION_ASSETS.iso} alt="ISO Jasindo" />
+          <img src={PRODUCTION_ASSETS.mari} alt="Pahami dan Miliki Asuransi" />
+        </div>
+      </div>
+      <div className="production-footer__bar">
+        <span>Copyright 2026 PT. Asuransi Jasa Indonesia, Hak Cipta Dilindungi Undang-undang</span>
+        <span>PT Asuransi Jasa Indonesia Berizin dan Diawasi oleh OJK</span>
+      </div>
+    </footer>
   );
 }
 
@@ -219,7 +318,6 @@ export default function App() {
   const [activeJourney, setActiveJourney] = useState(initialNavigationState.activeJourney);
   const [sessionRole, setSessionRole] = useState(initialNavigationState.sessionRole);
   const [partnerConfigRole, setPartnerConfigRole] = useState("Maker");
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [operatingRecords, setOperatingRecords] = useState(OPERATING_QUEUE_SEED);
   const [activeTransactionId, setActiveTransactionId] = useState(OPERATING_QUEUE_SEED[0]?.id || "");
@@ -243,6 +341,18 @@ export default function App() {
   const motorItem = useMemo(() => (sessionRole === "internal" ? "motor-internal" : "motor-external"), [sessionRole]);
   const carTloItem = useMemo(() => (sessionRole === "internal" ? "car-tlo-internal" : "car-tlo-external"), [sessionRole]);
   const carCompItem = useMemo(() => (sessionRole === "internal" ? "car-comp-internal" : ""), [sessionRole]);
+  const productionPersonalProducts = useMemo(
+    () => PERSONAL_PRODUCTS.map((item) => ({ ...item, image: productionImageFor(item) })),
+    [],
+  );
+  const productionPropertyProducts = useMemo(
+    () => buildPropertyCatalog(propertyItems).map((item) => ({ ...item, image: productionImageFor(item) })),
+    [propertyItems],
+  );
+  const productionVehicleProducts = useMemo(
+    () => buildVehicleCatalog({ motorItem, carTloItem, carCompItem, sessionRole }).map((item) => ({ ...item, image: productionImageFor(item) })),
+    [carCompItem, carTloItem, motorItem, sessionRole],
+  );
   const ownedOperatingRecords = useMemo(
     () => operatingRecords.filter((item) => item.owner === activeSessionName),
     [activeSessionName, operatingRecords],
@@ -284,7 +394,6 @@ export default function App() {
     clearSharedJourneyParams();
     const matchingRecord = operatingRecords.find((item) => item.journeyKey === target);
     if (matchingRecord) setActiveTransactionId(matchingRecord.id);
-    setRoleMenuOpen(false);
     setAccountMenuOpen(false);
     setActiveJourney(target);
   };
@@ -599,186 +708,158 @@ export default function App() {
     );
   }
   return (
-    <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
-      <header className="sticky top-0 z-30 bg-[#0A4D82] shadow-sm">
-        <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4">
-          <div className="flex min-w-0 items-center gap-3 text-white md:gap-6">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-sm bg-[#091E42] md:h-8 md:w-8">
-                <div className="absolute left-0 top-0 h-full w-full bg-[linear-gradient(135deg,#D71920_0%,#D71920_42%,transparent_42%,transparent_100%)]" />
-                <div className="absolute bottom-0 right-0 h-3.5 w-3.5 bg-white" />
-              </div>
-              <div className="text-[12px] font-black leading-[0.95] md:text-[18px]">Danantara<div className="-mt-0.5 md:-mt-1">Indonesia</div></div>
-            </div>
-            <div className="hidden h-10 w-px bg-white/20 md:block" />
-            <div className="hidden items-center gap-2.5 text-white md:flex">
-              <div className="text-[14px] font-semibold leading-none md:text-[15px]">asuransi</div>
-              <div className="h-1.5 w-1.5 rounded-full bg-white/70" />
-              <div className="text-[14px] font-semibold leading-none md:text-[15px]">jasindo</div>
-            </div>
+    <div className="production-page">
+      <header className="production-header">
+        <div className="production-header__inner">
+          <div className="production-header__brand">
+            <img src={PRODUCTION_ASSETS.danantara} alt="Danantara Indonesia" />
+            <img src={PRODUCTION_ASSETS.jasindoWhite} alt="Asuransi Jasindo" />
           </div>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <nav className="production-nav" aria-label="Navigasi utama">
             <button
               type="button"
+              className="production-nav__item"
               onClick={() => {
                 window.location.href = "https://esppa.asuransijasindo.co.id/";
               }}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-5 py-3 text-sm font-semibold text-white shadow-sm"
             >
-              <Home className="h-4 w-4" />
-              Beranda
+              <Home size={16} strokeWidth={2.2} aria-hidden="true" />
+              <span>Beranda</span>
             </button>
-            <button className="inline-flex items-center gap-2 rounded-[8px] bg-white/6 px-5 py-3 text-sm font-medium text-white hover:bg-white/10">
-              <Shield className="h-4 w-4" />
-              Produk
-            </button>
-          </div>
-
-          <div className="relative flex items-center gap-2 md:gap-3">
             <button
               type="button"
-              aria-expanded={roleMenuOpen}
-              aria-haspopup="menu"
-              aria-controls="role-menu"
+              className="production-nav__item is-active"
               onClick={() => {
-                setAccountMenuOpen(false);
-                setRoleMenuOpen((current) => !current);
+                clearSharedJourneyParams();
+                setActiveJourney("");
               }}
-              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/15"
             >
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
-              <span className="max-w-[118px] truncate">{resolveRoleLabel(sessionRole)}</span>
-              <ChevronDown className={cls("h-4 w-4 text-white/85 transition", roleMenuOpen && "rotate-180")} aria-hidden="true" />
+              <Package size={16} strokeWidth={2.2} aria-hidden="true" />
+              <span>Produk</span>
             </button>
-            {roleMenuOpen ? (
-              <div id="role-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
-                <div className="px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">View as</div>
-                {SESSION_OPTIONS.map((item) => (
+          </nav>
+
+          <div className="production-actions">
+            <button type="button" className="production-language" aria-label="Bahasa Indonesia">
+              <span className="production-language__flag" aria-hidden="true" />
+              <span>ID</span>
+            </button>
+            <div className="production-account">
+              {isGuestSession ? (
+                <>
                   <button
-                    key={item.key}
                     type="button"
-                    role="menuitemradio"
-                    aria-checked={sessionRole === item.key}
+                    className="production-login"
+                    aria-expanded={accountMenuOpen}
+                    aria-haspopup="menu"
+                    aria-controls="guest-account-menu"
                     onClick={() => {
-                      setRoleMenuOpen(false);
-                      setSessionRole(item.key);
-                      setActiveJourney("");
+                      setAccountMenuOpen((current) => !current);
                     }}
-                    className={cls(
-                      "flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold hover:bg-[#F7FAFD]",
-                      sessionRole === item.key ? "bg-[#F7FAFD] text-[#0A4D82]" : "text-slate-700",
-                    )}
                   >
-                    {resolveRoleLabel(item.key)}
+                    <LogIn size={17} strokeWidth={2.25} aria-hidden="true" />
+                    <span>Masuk</span>
                   </button>
-                ))}
-              </div>
-            ) : null}
-            {isGuestSession ? (
-              <>
-                <button
-                  type="button"
-                  aria-expanded={accountMenuOpen}
-                  aria-haspopup="menu"
-                  aria-controls="guest-account-menu"
-                  onClick={() => {
-                    setRoleMenuOpen(false);
-                    setAccountMenuOpen((current) => !current);
-                  }}
-                  className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
-                >
-                  <Home className="h-4 w-4" aria-hidden="true" />
-                  Masuk
-                </button>
-                {accountMenuOpen ? (
-                  <div id="guest-account-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setAccountMenuOpen(false);
-                        setActiveJourney("self-care-lookup");
-                      }}
-                      className="flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-[#0A4D82] hover:bg-[#F7FAFD]"
-                    >
-                      Cari Polis / Klaim
-                    </button>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  aria-expanded={accountMenuOpen}
-                  aria-haspopup="menu"
-                  aria-controls="account-menu"
-                  onClick={() => {
-                    setRoleMenuOpen(false);
-                    setAccountMenuOpen((current) => !current);
-                  }}
-                  className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
-                  <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{activeSessionName}</span>
-                  <ChevronDown className={cls("h-4 w-4 text-slate-500 transition", accountMenuOpen && "rotate-180")} aria-hidden="true" />
-                </button>
-                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
-                  <span aria-hidden="true" className="text-[15px] leading-none">🔔</span>
-                </button>
-                {accountMenuOpen ? (
-                  <div id="account-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setAccountMenuOpen(false);
-                        setActiveJourney(accountPrimaryDestination);
-                      }}
-                      className="flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-[#0A4D82] hover:bg-[#F7FAFD]"
-                    >
-                      {accountPrimaryLabel}
-                    </button>
-                    {isInternalSession ? (
+                  {accountMenuOpen ? (
+                    <div id="guest-account-menu" role="menu" className="production-menu">
                       <button
                         type="button"
                         role="menuitem"
                         onClick={() => {
                           setAccountMenuOpen(false);
-                          setActiveJourney("partner-config");
+                          setSessionRole("external");
                         }}
-                        className="mt-1 flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-[#F7FAFD]"
                       >
-                        Konfigurasi Partner
+                        Login / Buat Akun
                       </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </>
-            )}
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setAccountMenuOpen(false);
+                          setActiveJourney("self-care-lookup");
+                        }}
+                      >
+                        Lanjut tanpa Login
+                      </button>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="production-profile"
+                    aria-expanded={accountMenuOpen}
+                    aria-haspopup="menu"
+                    aria-controls="account-menu"
+                    onClick={() => {
+                      setAccountMenuOpen((current) => !current);
+                    }}
+                  >
+                    <span className="production-profile__badge">ID</span>
+                    <span>{activeSessionName}</span>
+                    <ChevronDown size={15} strokeWidth={2.2} aria-hidden="true" />
+                  </button>
+                  {accountMenuOpen ? (
+                    <div id="account-menu" role="menu" className="production-menu">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setAccountMenuOpen(false);
+                          setActiveJourney(accountPrimaryDestination);
+                        }}
+                      >
+                        {accountPrimaryLabel}
+                      </button>
+                      {isInternalSession ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setAccountMenuOpen(false);
+                            setActiveJourney("partner-config");
+                          }}
+                        >
+                          Konfigurasi Partner
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1800px] px-4 py-4 md:px-6 md:py-6">
-        <div className="mt-5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:mt-6 md:p-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div>
-              <div className="text-[28px] font-bold text-slate-900 md:text-[32px]">Pilihan Produk Asuransi Jasindo</div>
-              {resolveSessionDescription(sessionRole) ? (
-                <div className="mt-2 text-sm leading-6 text-slate-600">
-                  {resolveSessionDescription(sessionRole)}
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <SectionShelf icon={Shield} title="Asuransi Kecelakaan Diri" subtitle="Perlindungan biaya pengobatan akibat kecelakaan" items={PERSONAL_PRODUCTS} onOpen={handleOpenJourney} />
-          <SectionShelf icon={Building2} title="Asuransi Harta Benda" subtitle="Perlindungan bangunan dan isi properti dengan simulasi premi dan penawaran digital." items={buildPropertyCatalog(propertyItems)} onOpen={handleOpenJourney} />
-          <SectionShelf icon={Car} title="Asuransi Kendaraan" subtitle="Perlindungan motor dan mobil dengan simulasi premi dan penawaran digital." items={buildVehicleCatalog({ motorItem, carTloItem, carCompItem, sessionRole })} onOpen={handleOpenJourney} />
-        </div>
-      </div>
+      <main className="production-main">
+        <h1>Pilihan Produk Asuransi Jasindo</h1>
+        <ProductionProductSection
+          icon={Shield}
+          title="Asuransi Kecelakaan Diri"
+          subtitle="Perlindungan biaya pengobatan akibat kecelakaan"
+          items={productionPersonalProducts}
+          onOpen={handleOpenJourney}
+        />
+        <ProductionProductSection
+          icon={Building2}
+          title="Asuransi Harta Benda"
+          subtitle="Perlindungan bangunan dan isi properti dengan simulasi premi dan penawaran digital."
+          items={productionPropertyProducts}
+          onOpen={handleOpenJourney}
+        />
+        <ProductionProductSection
+          icon={Car}
+          title="Asuransi Kendaraan"
+          subtitle="Perlindungan motor dan mobil dengan simulasi premi dan penawaran digital."
+          items={productionVehicleProducts}
+          onOpen={handleOpenJourney}
+        />
+      </main>
+      <ProductionFooter />
     </div>
   );
 }
