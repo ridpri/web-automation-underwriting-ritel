@@ -1,8 +1,7 @@
 ﻿import { Building2, Car, ChevronDown, Home, Plane, Shield } from "lucide-react";
-import { LogIn, MapPin, Phone } from "lucide-react";
 import { createElement, Suspense, useEffect, useMemo, useState } from "react";
 import { OPERATING_QUEUE_SEED, buildTimelineEvent, statusTone } from "./operatingLayer.js";
-import { PERSONAL_PRODUCTS } from "./app/catalogData.js";
+import { buildPropertyCatalog, buildVehicleCatalog, PERSONAL_PRODUCTS } from "./app/catalogData.js";
 import {
   CarCompInternalPrototype,
   CarTloInternalPrototype,
@@ -15,7 +14,7 @@ import {
   ReviewWorkbench,
   SelfCarePortalBridge,
 } from "./app/lazyJourneys.js";
-import { resolveSessionName, resolveSessionProfile, SESSION_OPTIONS } from "./app/sessionConfig.js";
+import { resolveSessionDescription, resolveSessionName, resolveSessionProfile, SESSION_OPTIONS } from "./app/sessionConfig.js";
 
 function cls() {
   return Array.from(arguments).filter(Boolean).join(" ");
@@ -106,11 +105,7 @@ function resolveInitialNavigationState() {
 
   const params = new URLSearchParams(window.location.search);
   const shareJourney = inferJourneyFromShareData(decodeUrlShareToken(params.get("share") || ""));
-  const propertyOfferViews = new Set(["offer-indicative", "offer-final", "external-underwriting", "payment"]);
-  const propertyOfferJourney = propertyOfferViews.has(params.get("view") || "") && window.location.pathname.includes("/guest/property")
-    ? "property-external"
-    : "";
-  const requestedJourney = params.get("journey") || shareJourney || propertyOfferJourney || "";
+  const requestedJourney = params.get("journey") || shareJourney || "";
   const allowSharedOfferJourney = Boolean(shareJourney && requestedJourney === shareJourney);
   const requestedJourneyRole = requestedJourney ? inferSessionRoleFromJourney(requestedJourney) : null;
   const sessionRole =
@@ -176,171 +171,6 @@ function ProductCard({ item, onClick }) {
   );
 }
 
-function PublicBrandLogo({ compact = false }) {
-  return (
-    <div className="flex items-center gap-2 text-white">
-      <div className="relative h-5 w-5 overflow-hidden rounded-full bg-white">
-        <div className="absolute inset-x-0 top-0 h-1/2 bg-red-600" />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-white" />
-        <div className="absolute inset-0 rounded-full ring-1 ring-black/10" />
-      </div>
-      <div className={cls("font-black leading-[0.95]", compact ? "text-[11px]" : "text-[13px]")}>
-        Danantara
-        <div>Indonesia</div>
-      </div>
-    </div>
-  );
-}
-
-function JasindoLogo({ dark = false }) {
-  return (
-    <div className={cls("flex flex-col leading-none", dark ? "text-[#0A4D82]" : "text-white")}>
-      <div className="flex items-end gap-1">
-        <span className="text-[24px] font-black italic text-[#F5A623]">j</span>
-        <span className="text-[13px] font-black">asuransi</span>
-      </div>
-      <span className="ml-4 text-[15px] font-black">jasindo</span>
-      <span className="ml-4 mt-1 text-[7px] font-semibold opacity-80">A member of IFG</span>
-    </div>
-  );
-}
-
-function PublicProductCard({ item, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={item.active ? onClick : undefined}
-      className={cls(
-        "group relative h-[240px] overflow-hidden rounded-[4px] text-left shadow-sm transition",
-        item.active ? "hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(15,23,42,0.18)]" : "cursor-not-allowed opacity-80",
-      )}
-    >
-      <img src={item.image} alt={item.title} width="480" height="576" className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.18)_0%,rgba(15,23,42,0.30)_48%,rgba(15,23,42,0.74)_100%)]" />
-      <div className="absolute left-3 top-4 inline-flex items-center gap-2 rounded-[5px] bg-slate-500/80 px-3 py-2 text-[11px] font-bold text-white backdrop-blur-sm">
-        {item.category === "Perjalanan" ? <Plane className="h-3.5 w-3.5" aria-hidden="true" /> : <Shield className="h-3.5 w-3.5" aria-hidden="true" />}
-        <span>{item.category}</span>
-      </div>
-      <div className="absolute inset-x-0 bottom-0 p-4">
-        <div className="text-[18px] font-black leading-tight text-white drop-shadow-sm">{item.title}</div>
-      </div>
-    </button>
-  );
-}
-
-function PublicProductLanding({ onOpen }) {
-  return (
-    <div className="min-h-screen bg-white text-slate-950">
-      <header className="bg-[#004B78] text-white">
-        <div className="mx-auto flex h-[52px] max-w-[1800px] items-center justify-between px-8">
-          <div className="flex items-center gap-8">
-            <PublicBrandLogo />
-            <JasindoLogo />
-          </div>
-          <nav className="flex items-center gap-2">
-            <button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex h-8 items-center gap-2 rounded-[4px] bg-[#064467] px-4 text-sm font-semibold text-white hover:bg-[#0A5A86]">
-              <Home className="h-3.5 w-3.5" aria-hidden="true" />
-              Beranda
-            </button>
-            <button type="button" className="inline-flex h-8 items-center gap-2 rounded-[4px] bg-[#F5A623] px-4 text-sm font-bold text-white shadow-sm">
-              <Shield className="h-3.5 w-3.5" aria-hidden="true" />
-              Produk
-            </button>
-          </nav>
-          <div className="flex items-center gap-4">
-            <div className="inline-flex h-8 items-center gap-2 rounded-full bg-[#064467] px-3 text-sm font-bold">
-              <span className="relative h-5 w-5 overflow-hidden rounded-full bg-white">
-                <span className="absolute inset-x-0 top-0 h-1/2 bg-red-600" />
-                <span className="absolute inset-x-0 bottom-0 h-1/2 bg-white" />
-              </span>
-              ID
-            </div>
-            <button type="button" className="inline-flex h-8 items-center gap-2 rounded-[4px] bg-[#064467] px-4 text-sm font-bold text-white hover:bg-[#0A5A86]">
-              <LogIn className="h-4 w-4" aria-hidden="true" />
-              Masuk
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[1820px] px-8 pb-14 pt-8">
-        <h1 className="text-center text-[17px] font-black tracking-tight text-black">Pilihan Produk Asuransi Jasindo</h1>
-        <section className="mt-7 rounded-[4px] bg-[#F1F2F2] px-3 py-5 md:px-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-[8px] bg-white text-slate-800 shadow-sm ring-1 ring-slate-200">
-                <Shield className="h-7 w-7" aria-hidden="true" />
-              </div>
-              <div>
-                <h2 className="text-[20px] font-black leading-tight text-[#004B78]">Asuransi Kecelakaan Diri</h2>
-                <p className="mt-1 text-[15px] leading-6 text-slate-600">Perlindungan biaya pengobatan akibat kecelakaan</p>
-              </div>
-            </div>
-            <ChevronDown className="mt-5 h-5 w-5 shrink-0 text-slate-800" aria-hidden="true" />
-          </div>
-          <div className="mt-5 grid max-w-[840px] grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            {PERSONAL_PRODUCTS.map((item) => (
-              <PublicProductCard key={item.title} item={item} onClick={() => onOpen(item.key)} />
-            ))}
-          </div>
-        </section>
-      </main>
-
-      <footer className="mt-auto">
-        <div className="mx-auto grid max-w-[1800px] gap-8 px-10 pb-10 pt-2 lg:grid-cols-[1.2fr_0.9fr_0.9fr]">
-          <div>
-            <JasindoLogo dark />
-            <div className="mt-7 flex gap-4">
-              {["ig", "f", "x"].map((label) => (
-                <button key={label} type="button" className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-[12px] font-bold text-slate-700">
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <h2 className="text-[17px] font-black">Hubungi Kami</h2>
-            <div className="mt-5 space-y-5 text-sm">
-              <div className="flex items-start gap-3">
-                <MapPin className="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
-                <div>
-                  <div className="font-bold">Graha Jasindo</div>
-                  <div className="mt-2 text-slate-700">Jln. Menteng Raya No. 21 Jakarta Pusat, 10340</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Phone className="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
-                <div>
-                  <div className="font-bold">Contact Center</div>
-                  <div className="mt-2 font-bold">1500073</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h2 className="text-[17px] font-black">Tautan Cepat</h2>
-            <div className="mt-4 space-y-2 text-sm text-slate-700">
-              <div>Website Asuransi Jasindo</div>
-              <div>Representative Office</div>
-              <div>Pusat Privasi</div>
-            </div>
-            <div className="mt-6 flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-300 text-center text-[9px] font-black text-[#004B78]">OJK</div>
-              <div className="text-[18px] font-black leading-tight text-[#0A4D82]">PAHAMI & MILIKI<br />ASURANSI</div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#004B78] text-white">
-          <div className="mx-auto flex max-w-[1800px] items-center justify-between px-8 py-4 text-[12px] font-semibold">
-            <span>Copyright 2026 PT. Asuransi Jasa Indonesia, Hak Cipta Dilindungi Undang-undang</span>
-            <span>PT Asuransi Jasa Indonesia Berizin dan Diawasi oleh OJK</span>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
 function SectionShelf({ icon, title, subtitle, items, onOpen }) {
   return (
     <div className="mt-5 rounded-[14px] bg-[#F5F6F7] p-4 md:mt-6 md:p-5">
@@ -387,8 +217,10 @@ function JourneyFallback() {
 export default function App() {
   const initialNavigationState = useMemo(() => resolveInitialNavigationState(), []);
   const [activeJourney, setActiveJourney] = useState(initialNavigationState.activeJourney);
-  const [sessionRole] = useState(initialNavigationState.sessionRole);
+  const [sessionRole, setSessionRole] = useState(initialNavigationState.sessionRole);
   const [partnerConfigRole, setPartnerConfigRole] = useState("Maker");
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [operatingRecords, setOperatingRecords] = useState(OPERATING_QUEUE_SEED);
   const [activeTransactionId, setActiveTransactionId] = useState(OPERATING_QUEUE_SEED[0]?.id || "");
   const allowSharedOfferJourney = useMemo(() => hasMatchingShareContext(activeJourney), [activeJourney]);
@@ -398,11 +230,25 @@ export default function App() {
   );
   const activeSessionName = resolveSessionName(sessionRole);
   const activeSessionProfile = resolveSessionProfile(sessionRole);
+  const isInternalSession = sessionRole === "internal";
+  const isGuestSession = sessionRole === "guest";
   const isAuthenticatedCustomerSession = sessionRole === "external" || sessionRole === "partner";
+  const propertyItems = useMemo(
+    () => ({
+      safeItem: sessionRole === "internal" ? "property-internal" : "property-external",
+      allRiskItem: sessionRole === "internal" ? "property-all-risk-internal" : "property-all-risk-external",
+    }),
+    [sessionRole],
+  );
+  const motorItem = useMemo(() => (sessionRole === "internal" ? "motor-internal" : "motor-external"), [sessionRole]);
+  const carTloItem = useMemo(() => (sessionRole === "internal" ? "car-tlo-internal" : "car-tlo-external"), [sessionRole]);
+  const carCompItem = useMemo(() => (sessionRole === "internal" ? "car-comp-internal" : ""), [sessionRole]);
   const ownedOperatingRecords = useMemo(
     () => operatingRecords.filter((item) => item.owner === activeSessionName),
     [activeSessionName, operatingRecords],
   );
+  const accountPrimaryDestination = isInternalSession ? "internal-workspace" : "self-care-portal";
+  const accountPrimaryLabel = isInternalSession ? "Ruang Kerja Saya" : "Polis Saya";
   const externalAccountMenuItems = [
     {
       label: "Polis Saya",
@@ -438,6 +284,8 @@ export default function App() {
     clearSharedJourneyParams();
     const matchingRecord = operatingRecords.find((item) => item.journeyKey === target);
     if (matchingRecord) setActiveTransactionId(matchingRecord.id);
+    setRoleMenuOpen(false);
+    setAccountMenuOpen(false);
     setActiveJourney(target);
   };
 
@@ -750,5 +598,187 @@ export default function App() {
       </Suspense>
     );
   }
-  return <PublicProductLanding onOpen={handleOpenJourney} />;
+  return (
+    <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
+      <header className="sticky top-0 z-30 bg-[#0A4D82] shadow-sm">
+        <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4">
+          <div className="flex min-w-0 items-center gap-3 text-white md:gap-6">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-sm bg-[#091E42] md:h-8 md:w-8">
+                <div className="absolute left-0 top-0 h-full w-full bg-[linear-gradient(135deg,#D71920_0%,#D71920_42%,transparent_42%,transparent_100%)]" />
+                <div className="absolute bottom-0 right-0 h-3.5 w-3.5 bg-white" />
+              </div>
+              <div className="text-[12px] font-black leading-[0.95] md:text-[18px]">Danantara<div className="-mt-0.5 md:-mt-1">Indonesia</div></div>
+            </div>
+            <div className="hidden h-10 w-px bg-white/20 md:block" />
+            <div className="hidden items-center gap-2.5 text-white md:flex">
+              <div className="text-[14px] font-semibold leading-none md:text-[15px]">asuransi</div>
+              <div className="h-1.5 w-1.5 rounded-full bg-white/70" />
+              <div className="text-[14px] font-semibold leading-none md:text-[15px]">jasindo</div>
+            </div>
+          </div>
+
+          <div className="hidden items-center gap-3 md:flex">
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = "https://esppa.asuransijasindo.co.id/";
+              }}
+              className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-5 py-3 text-sm font-semibold text-white shadow-sm"
+            >
+              <Home className="h-4 w-4" />
+              Beranda
+            </button>
+            <button className="inline-flex items-center gap-2 rounded-[8px] bg-white/6 px-5 py-3 text-sm font-medium text-white hover:bg-white/10">
+              <Shield className="h-4 w-4" />
+              Produk
+            </button>
+          </div>
+
+          <div className="relative flex items-center gap-2 md:gap-3">
+            <button
+              type="button"
+              aria-expanded={roleMenuOpen}
+              aria-haspopup="menu"
+              aria-controls="role-menu"
+              onClick={() => {
+                setAccountMenuOpen(false);
+                setRoleMenuOpen((current) => !current);
+              }}
+              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/15"
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
+              <span className="max-w-[118px] truncate">{resolveRoleLabel(sessionRole)}</span>
+              <ChevronDown className={cls("h-4 w-4 text-white/85 transition", roleMenuOpen && "rotate-180")} aria-hidden="true" />
+            </button>
+            {roleMenuOpen ? (
+              <div id="role-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
+                <div className="px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">View as</div>
+                {SESSION_OPTIONS.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={sessionRole === item.key}
+                    onClick={() => {
+                      setRoleMenuOpen(false);
+                      setSessionRole(item.key);
+                      setActiveJourney("");
+                    }}
+                    className={cls(
+                      "flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold hover:bg-[#F7FAFD]",
+                      sessionRole === item.key ? "bg-[#F7FAFD] text-[#0A4D82]" : "text-slate-700",
+                    )}
+                  >
+                    {resolveRoleLabel(item.key)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {isGuestSession ? (
+              <>
+                <button
+                  type="button"
+                  aria-expanded={accountMenuOpen}
+                  aria-haspopup="menu"
+                  aria-controls="guest-account-menu"
+                  onClick={() => {
+                    setRoleMenuOpen(false);
+                    setAccountMenuOpen((current) => !current);
+                  }}
+                  className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#0A4D82] px-4 text-sm font-semibold text-white shadow-sm ring-1 ring-white/20 hover:bg-[#0C5D9E]"
+                >
+                  <Home className="h-4 w-4" aria-hidden="true" />
+                  Masuk
+                </button>
+                {accountMenuOpen ? (
+                  <div id="guest-account-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        setActiveJourney("self-care-lookup");
+                      }}
+                      className="flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-[#0A4D82] hover:bg-[#F7FAFD]"
+                    >
+                      Cari Polis / Klaim
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  aria-expanded={accountMenuOpen}
+                  aria-haspopup="menu"
+                  aria-controls="account-menu"
+                  onClick={() => {
+                    setRoleMenuOpen(false);
+                    setAccountMenuOpen((current) => !current);
+                  }}
+                  className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
+                  <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{activeSessionName}</span>
+                  <ChevronDown className={cls("h-4 w-4 text-slate-500 transition", accountMenuOpen && "rotate-180")} aria-hidden="true" />
+                </button>
+                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
+                  <span aria-hidden="true" className="text-[15px] leading-none">🔔</span>
+                </button>
+                {accountMenuOpen ? (
+                  <div id="account-menu" role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        setActiveJourney(accountPrimaryDestination);
+                      }}
+                      className="flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-[#0A4D82] hover:bg-[#F7FAFD]"
+                    >
+                      {accountPrimaryLabel}
+                    </button>
+                    {isInternalSession ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setAccountMenuOpen(false);
+                          setActiveJourney("partner-config");
+                        }}
+                        className="mt-1 flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-[#F7FAFD]"
+                      >
+                        Konfigurasi Partner
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-[1800px] px-4 py-4 md:px-6 md:py-6">
+        <div className="mt-5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:mt-6 md:p-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <div>
+              <div className="text-[28px] font-bold text-slate-900 md:text-[32px]">Pilihan Produk Asuransi Jasindo</div>
+              {resolveSessionDescription(sessionRole) ? (
+                <div className="mt-2 text-sm leading-6 text-slate-600">
+                  {resolveSessionDescription(sessionRole)}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <SectionShelf icon={Shield} title="Asuransi Kecelakaan Diri" subtitle="Perlindungan biaya pengobatan akibat kecelakaan" items={PERSONAL_PRODUCTS} onOpen={handleOpenJourney} />
+          <SectionShelf icon={Building2} title="Asuransi Harta Benda" subtitle="Perlindungan bangunan dan isi properti dengan simulasi premi dan penawaran digital." items={buildPropertyCatalog(propertyItems)} onOpen={handleOpenJourney} />
+          <SectionShelf icon={Car} title="Asuransi Kendaraan" subtitle="Perlindungan motor dan mobil dengan simulasi premi dan penawaran digital." items={buildVehicleCatalog({ motorItem, carTloItem, carCompItem, sessionRole })} onOpen={handleOpenJourney} />
+        </div>
+      </div>
+    </div>
+  );
 }
