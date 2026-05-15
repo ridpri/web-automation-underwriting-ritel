@@ -355,6 +355,16 @@ function isValidPhone(value) {
   return digits.length >= 10 && digits.length <= 15;
 }
 
+function getObjectRowFieldErrors(row) {
+  const typeError = String(row.type || "").trim() ? "" : "Pilih jenis objek.";
+  const amountError = parseNumber(row.amount) > 0 ? "" : "Isi harga pertanggungan.";
+  return { typeError, amountError };
+}
+
+function shouldShowObjectRowErrors(row, objectRowsLength) {
+  return objectRowsLength > 1 || Boolean(String(row.type || "").trim() || String(row.amount || "").trim() || String(row.note || "").trim());
+}
+
 function isValidIdNumber(customerType, value) {
   const digits = onlyDigits(value);
   if (customerType === "Badan Usaha") return digits.length >= 15;
@@ -396,11 +406,24 @@ function encodeShareSnapshot(payload) {
 
 function decodeShareSnapshot(value) {
   if (!value) return null;
-  try {
-    return JSON.parse(decodeURIComponent(value));
-  } catch {
-    return null;
+  const candidates = [value];
+  for (let index = 0; index < 2; index += 1) {
+    try {
+      const decoded = decodeURIComponent(candidates[candidates.length - 1]);
+      if (!candidates.includes(decoded)) candidates.push(decoded);
+    } catch {
+      break;
+    }
   }
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+    } catch {
+      // Try the next decoding depth.
+    }
+  }
+  return null;
 }
 
 function readShareContextFromUrl() {
@@ -591,7 +614,7 @@ function FieldLabel({ label, required, helpText }) {
   );
 }
 
-function TextInput({ value, onChange, placeholder, icon, type = "text", readOnly = false, disabled = false }) {
+function TextInput({ value, onChange, placeholder, icon, type = "text", readOnly = false, disabled = false, invalid = false }) {
   return (
     <div className="relative">
       {icon ? <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div> : null}
@@ -605,6 +628,7 @@ function TextInput({ value, onChange, placeholder, icon, type = "text", readOnly
         className={cls(
           "h-[44px] w-full rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-[14px] text-slate-800 outline-none transition placeholder:text-slate-500",
           "focus:border-[#0A4D82] focus:ring-4 focus:ring-[#0A4D82]/10",
+          invalid && "border-[#D93025] bg-red-50/40 focus:border-[#D93025] focus:ring-[#D93025]/10",
           (readOnly || disabled) && "cursor-not-allowed bg-slate-50 text-slate-500",
           icon && "pl-10"
         )}
@@ -625,7 +649,7 @@ function TextAreaInput({ value, onChange, placeholder, rows = 3 }) {
   );
 }
 
-function SelectInput({ value, onChange, options, placeholder = "Pilih opsi yang sesuai" }) {
+function SelectInput({ value, onChange, options, placeholder = "Pilih opsi yang sesuai", invalid = false }) {
   return (
     <div className="relative">
       <select
@@ -633,6 +657,7 @@ function SelectInput({ value, onChange, options, placeholder = "Pilih opsi yang 
         onChange={(event) => onChange(event.target.value)}
         className={cls(
           "h-[44px] w-full appearance-none rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 pr-10 text-[14px] outline-none transition focus:border-[#0A4D82] focus:ring-4 focus:ring-[#0A4D82]/10",
+          invalid && "border-[#D93025] bg-red-50/40 focus:border-[#D93025] focus:ring-[#D93025]/10",
           value ? "text-slate-800" : "text-slate-500"
         )}
       >
@@ -644,7 +669,7 @@ function SelectInput({ value, onChange, options, placeholder = "Pilih opsi yang 
   );
 }
 
-function CurrencyInput({ value, onChange, placeholder = "" }) {
+function CurrencyInput({ value, onChange, placeholder = "", invalid = false }) {
   return (
     <div className="relative">
       <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">Rp</span>
@@ -653,7 +678,10 @@ function CurrencyInput({ value, onChange, placeholder = "" }) {
         onChange={(event) => onChange(formatNumber(event.target.value))}
         inputMode="numeric"
         placeholder={placeholder}
-        className="h-[44px] w-full rounded-[10px] border border-[#D5DDE6] bg-white pl-10 pr-3.5 text-[14px] text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#0A4D82] focus:ring-4 focus:ring-[#0A4D82]/10"
+        className={cls(
+          "h-[44px] w-full rounded-[10px] border border-[#D5DDE6] bg-white pl-10 pr-3.5 text-[14px] text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#0A4D82] focus:ring-4 focus:ring-[#0A4D82]/10",
+          invalid && "border-[#D93025] bg-red-50/40 focus:border-[#D93025] focus:ring-[#D93025]/10"
+        )}
       />
     </div>
   );
@@ -1329,7 +1357,7 @@ function UnderwritingSections({
   );
 }
 
-function ExternalProposalPage({ mode, customerName, form, setFormField = () => {}, uwForm, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, canProceed, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
+function ExternalProposalPage({ mode, customerName, form, setFormField = () => {}, uwForm, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, backLabel = "Kembali ke Produk", showBackButton = true, onPrimary, onSecondary, canProceed, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
   const isIndicative = mode === "indicative";
   const isInternalPreview = viewerMode === "internal";
   const activeVariant = productConfig || getPropertyVariant("property-safe");
@@ -1361,6 +1389,8 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
   const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
   const phoneDisplay = form.phone || "-";
   const emailDisplay = form.email || "-";
+  const offerPhoneFieldError = form.phone.trim() && !isValidPhone(form.phone) ? "Nomor handphone harus 10-15 digit angka." : "";
+  const offerEmailFieldError = form.email.trim() && !isValidEmail(form.email) ? "Alamat email harus memakai format nama@domain." : "";
   const customerDisplay = customerName || "-";
   const greetingRecipientName = customerDisplay && customerDisplay !== "-"
     ? String(customerDisplay).trim().split(/\s+/)[0]
@@ -1375,12 +1405,27 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
     premium: "Rp " + formatRupiah(Math.round(totalValue * item.rate)),
     deductible: item.key === "earthquake" ? "2,5% dari Rp " + formatRupiah(totalValue) : item.deductible,
   }));
+  const multipleObjectTerms = objectRows.length > 1
+    ? [
+        "Setiap objek pertanggungan dijamin sesuai jenis dan nilai yang tercantum pada ringkasan penawaran.",
+        "Batas tanggung jawab maksimum per objek mengikuti harga pertanggungan masing-masing objek.",
+        "Perubahan, penambahan, atau penghapusan objek dapat mengubah premi dan perluasan jaminan.",
+        "Klaim atas salah satu objek tidak otomatis berlaku untuk objek lain di luar daftar objek yang dijamin.",
+      ]
+    : [];
   const constructionSummaryLabel = constructionClass || "Belum dipilih";
   const hasStockObject = objectRows.some((row) => row.type === "Stok");
   const selectedStockTypeMeta = STOCK_TYPE_OPTIONS.find((item) => item.label === uwForm.stockType);
   const stockTypeSummary = selectedStockTypeMeta ? `${selectedStockTypeMeta.label} (${selectedStockTypeMeta.risk})` : uwForm.stockType || "-";
-  const headerUserLabel = isInternalPreview ? senderName || "Taqwim (Internal)" : greetingRecipientName;
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
+  const [loginMenuOpen, setLoginMenuOpen] = useState(false);
+  const [guestAccessChoice, setGuestAccessChoice] = useState("anonymous");
+  const headerUserLabel = senderName || "Taqwim (Internal)";
+  const loginChoices = [
+    { key: "login", label: "Login" },
+    { key: "create-account", label: "Buat Akun" },
+    { key: "anonymous", label: "Lanjut Tanpa Login" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
@@ -1423,7 +1468,10 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
             <div className="relative hidden md:block">
               <button
                 type="button"
-                onClick={() => setViewerMenuOpen((current) => !current)}
+                onClick={() => {
+                  setLoginMenuOpen(false);
+                  setViewerMenuOpen((current) => !current);
+                }}
                 className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/15"
               >
                 <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
@@ -1441,6 +1489,7 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                       type="button"
                       onClick={() => {
                         setViewerMenuOpen(false);
+                        setLoginMenuOpen(false);
                         onViewerModeChange(item.key);
                       }}
                       className={cls(
@@ -1454,31 +1503,77 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                 </div>
               ) : null}
             </div>
-            <button type="button" className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
-              <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{headerUserLabel}</span>
-            </button>
-            <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
-              <Bell className="h-4 w-4" />
-            </button>
+            {isInternalPreview ? (
+              <>
+                <button type="button" className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
+                  <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{headerUserLabel}</span>
+                </button>
+                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
+                  <Bell className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-expanded={loginMenuOpen}
+                  aria-haspopup="menu"
+                  aria-controls="property-offer-login-menu"
+                  onClick={() => {
+                    setViewerMenuOpen(false);
+                    setLoginMenuOpen((current) => !current);
+                  }}
+                  className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-white px-4 text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F7FAFD]"
+                >
+                  <User className="h-4 w-4" />
+                  Login
+                  <ChevronDown className={cls("h-4 w-4 text-slate-500 transition", loginMenuOpen && "rotate-180")} />
+                </button>
+                {loginMenuOpen ? (
+                  <div id="property-offer-login-menu" role="menu" className="absolute right-0 top-[calc(100%+10px)] z-40 w-[230px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
+                    {loginChoices.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={guestAccessChoice === item.key}
+                        onClick={() => {
+                          setGuestAccessChoice(item.key);
+                          setLoginMenuOpen(false);
+                        }}
+                        className={cls(
+                          "flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold hover:bg-[#F7FAFD]",
+                          guestAccessChoice === item.key ? "bg-[#F7FAFD] text-[#0A4D82]" : "text-slate-700"
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       <div className="bg-[#0A4D82] pb-8">
         <div className="mx-auto max-w-[1280px] px-4 pt-5 md:px-6">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Kembali ke Produk
-          </button>
+          {showBackButton ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {backLabel}
+            </button>
+          ) : null}
 
           <div className="mt-5 text-center text-white">
             <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">
-              {isInternalPreview ? `Selamat datang kembali, ${headerUserLabel}` : `Halo, ${headerUserLabel}`}
+              {isInternalPreview ? `Selamat datang kembali, ${headerUserLabel}` : `Halo, ${greetingRecipientName}`}
             </div>
             <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{activeVariant.title}</h1>
             <p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{activeVariant.heroSubtitle}</p>
@@ -1515,11 +1610,13 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                       <div className="grid gap-3 md:grid-cols-2">
                         <div>
                           <FieldLabel label="Alamat Email" required />
-                          <TextInput value={form.email} onChange={(value) => setFormField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" />
+                          <TextInput value={form.email} onChange={(value) => setFormField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" invalid={Boolean(offerEmailFieldError)} />
+                          {offerEmailFieldError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{offerEmailFieldError}</div> : null}
                         </div>
                         <div>
                           <FieldLabel label="Nomor Handphone" required />
-                          <TextInput value={form.phone} onChange={(value) => setFormField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} />
+                          <TextInput value={form.phone} onChange={(value) => setFormField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} invalid={Boolean(offerPhoneFieldError)} />
+                          {offerPhoneFieldError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{offerPhoneFieldError}</div> : null}
                         </div>
                       </div>
                       <div className="flex items-center justify-between gap-3">
@@ -1579,18 +1676,28 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                             Tambah Objek
                           </button>
                         </div>
-                        {objectRows.map((row) => (
-                          <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
-                            <div className="grid gap-2.5 lg:grid-cols-[170px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-center">
-                              <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" />
-                              <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" />
-                              <TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} />
-                              <button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek">
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                        {objectRows.map((row) => {
+                          const { typeError, amountError } = getObjectRowFieldErrors(row);
+                          const showRowErrors = shouldShowObjectRowErrors(row, objectRows.length);
+                          return (
+                            <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                              <div className="grid gap-2.5 lg:grid-cols-[170px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-start">
+                                <div>
+                                  <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" invalid={showRowErrors && Boolean(typeError)} />
+                                  {showRowErrors && typeError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{typeError}</div> : null}
+                                </div>
+                                <div>
+                                  <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" invalid={showRowErrors && Boolean(amountError)} />
+                                  {showRowErrors && amountError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{amountError}</div> : null}
+                                </div>
+                                <TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} />
+                                <button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek">
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                       <div className="flex items-center justify-between gap-3">
                         <div className="text-sm text-slate-500">Harga pertanggungan dan premi akan mengikuti perubahan data properti di bagian ini.</div>
@@ -1652,6 +1759,21 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                         deductible={mainCoverageDeductible}
                       />
                     </div>
+                    {multipleObjectTerms.length ? (
+                      <div className="space-y-2">
+                        <div className="text-[14px] font-medium text-slate-600">Ketentuan Objek Pertanggungan</div>
+                        <div className="rounded-xl border border-[#D8E1EA] bg-white px-4 py-3">
+                          <div className="space-y-2">
+                            {multipleObjectTerms.map((item) => (
+                              <div key={item} className="flex items-start gap-2 text-[13px] leading-5 text-slate-700">
+                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0A4D82]" />
+                                <span>{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <div className="text-[14px] font-medium text-slate-600">Perluasan Jaminan</div>
@@ -2209,9 +2331,10 @@ export default function PropertyStepOneFrontendCompact({
 
   const customerSuggestions = useMemo(() => {
     const keyword = String(form.identity || "").trim().toLowerCase();
+    if (!isInternalMode) return [];
     if (!keyword) return [];
     return MOCK_CIF.filter((item) => item.name.toLowerCase().includes(keyword) || item.cif.toLowerCase().includes(keyword)).slice(0, 5);
-  }, [form.identity]);
+  }, [form.identity, isInternalMode]);
   const showFloorInput = selectedGuarantees.earthquake && isFloorRelevant(effectivePropertyType, form.occupancy);
   const fraudAlerts = useMemo(() => summarizeFraudSignals({ documentChecks: [documentChecks.ktp], evidenceChecks: [evidence.location, evidence.photos.frontView, evidence.photos.sideRightView, evidence.photos.sideLeftView] }), [documentChecks, evidence]);
   const operatingVersion = operatingRecord?.version;
@@ -2276,7 +2399,7 @@ export default function PropertyStepOneFrontendCompact({
   useEffect(() => {
     const { view, viewer, referral, sender, customer, offer } = readShareContextFromUrl();
     const isSharedOfferView = view === "offer-indicative" || view === "offer-final" || view === "external-underwriting" || view === "payment";
-    if (isSharedOfferView && offer) {
+    if (isSharedOfferView) {
       setExternalView(view);
     }
     if (viewer === "internal" || viewer === "customer") {
@@ -2315,6 +2438,14 @@ export default function PropertyStepOneFrontendCompact({
       setFloorCount(String(sharedOfferSnapshot.floorCount));
     }
   }, [sharedOfferSnapshot]);
+  useEffect(() => {
+    if (!sharedOfferSnapshot || externalView) return;
+    const { view } = readShareContextFromUrl();
+    const fallbackView = view === "offer-final" || view === "external-underwriting" || view === "payment"
+      ? view
+      : "offer-indicative";
+    setExternalView(fallbackView);
+  }, [externalView, sharedOfferSnapshot]);
   useEffect(() => {
     const shouldShowFloorField = selectedGuarantees.earthquake && showFloorInput && (quoted || externalView === "offer-indicative" || externalView === "offer-final");
     if (shouldShowFloorField) {
@@ -2361,6 +2492,8 @@ export default function PropertyStepOneFrontendCompact({
   const occupancyCode = getOccupancyCode(effectivePropertyType, form.occupancy);
   const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === form.constructionClass);
   const currentExternalTarget = internalStep === 2 ? "offer-final" : "offer-indicative";
+  const isSharedOfferUrl = Boolean(readShareContextFromUrl().view);
+  const allowCustomerLookup = isInternalMode;
   const referralCode = createReferralCode(sessionName, transactionAuthority.transactionId);
   const shareSnapshot = encodeShareSnapshot({
     identity: customerName,
@@ -2394,11 +2527,13 @@ export default function PropertyStepOneFrontendCompact({
   const hasValidStepOneIdentity = Boolean(form.identity.trim());
   const hasValidPhoneContact = Boolean(form.phone.trim()) && isValidPhone(form.phone);
   const hasValidEmailContact = Boolean(form.email.trim()) && isValidEmail(form.email);
+  const phoneFieldError = form.phone.trim() && !hasValidPhoneContact ? "Nomor handphone harus 10-15 digit angka." : "";
+  const emailFieldError = form.email.trim() && !hasValidEmailContact ? "Alamat email harus memakai format nama@domain." : "";
   const hasValidStepOneContact = hasValidPhoneContact && hasValidEmailContact;
   const hasValidStepOneOccupancy = Boolean(form.occupancy);
   const hasValidStepOneLocation = Boolean(form.locationSearch.trim());
   const hasValidConstruction = Boolean(form.constructionClass);
-  const hasValidObjects = totalValue > 0 && objectRows.every((row) => parseNumber(row.amount) > 0);
+  const hasValidObjects = totalValue > 0 && objectRows.every((row) => String(row.type || "").trim() && parseNumber(row.amount) > 0);
   const hasStockObject = objectRows.some((row) => row.type === "Stok");
   const hasRequiredFloorCount = !showFloorInput || Number(floorCount) > 0;
   const canAdvanceInternalStepOne = hasValidStepOneIdentity && hasValidStepOneContact && hasValidStepOneOccupancy && hasValidStepOneLocation && hasValidConstruction && hasValidObjects && hasRequiredFloorCount;
@@ -2409,12 +2544,10 @@ export default function PropertyStepOneFrontendCompact({
   const hasCompleteUploads = hasRequiredUploads(uploads);
   const canAdvanceUnderwriting = hasValidUwIdentity && hasValidPicName && hasValidUnderwriting && hasCompleteUploads;
   const stepOnePendingItems = [];
-  if (!hasValidStepOneIdentity) stepOnePendingItems.push("Isi nama calon pemegang polis atau pilih CIF.");
-  if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone dan alamat email yang valid.");
+  if (!hasValidStepOneIdentity) stepOnePendingItems.push(isInternalMode ? "Isi nama calon pemegang polis atau pilih CIF." : "Isi nama calon pemegang polis.");
   if (!hasValidStepOneOccupancy) stepOnePendingItems.push("Pilih penggunaan properti yang diasuransikan.");
   if (!hasValidStepOneLocation) stepOnePendingItems.push("Isi lokasi properti atau gunakan tombol lokasi cepat.");
   if (!hasValidConstruction) stepOnePendingItems.push("Pilih kelas konstruksi.");
-  if (!hasValidObjects) stepOnePendingItems.push("Setiap objek harus punya nilai yang ingin dilindungi.");
   if (!hasRequiredFloorCount) stepOnePendingItems.push("Lengkapi jumlah lantai pada perluasan Risiko Gempa Bumi.");
   const underwritingPendingItems = [];
   if (uwForm.idNumber.trim() && !hasValidUwIdentity) underwritingPendingItems.push(form.customerType === "Badan Usaha" ? "NPWP yang diisi minimal 15 digit." : "NIK yang diisi harus 16 digit.");
@@ -2579,12 +2712,19 @@ export default function PropertyStepOneFrontendCompact({
           onEditObject={() => {}}
           onEditInsured={() => setExternalView("external-underwriting")}
           onBack={() => {
+            if (isSharedOfferUrl) {
+              setExternalView("offer-indicative");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              return;
+            }
             if (embedded && entryMode === "external") {
               if (onExit) onExit();
               return;
             }
             setExternalView("");
           }}
+          backLabel="Kembali ke Penawaran"
+          showBackButton={!isSharedOfferUrl}
           onPrimary={() => setExternalView("external-underwriting")}
           onSecondary={() => setHelpRequestSent(true)}
           onReject={() => setShowRejectModal(true)}
@@ -2646,12 +2786,18 @@ export default function PropertyStepOneFrontendCompact({
           onEditObject={() => setExternalView("offer-indicative")}
           onEditInsured={() => setExternalView("external-underwriting")}
           onBack={() => {
+            if (isSharedOfferUrl) {
+              setExternalView("offer-indicative");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              return;
+            }
             if (embedded && entryMode === "external") {
               if (onExit) onExit();
               return;
             }
             setExternalView("");
           }}
+          backLabel={isSharedOfferUrl ? "Kembali ke Penawaran" : "Kembali ke Produk"}
           onPrimary={() => setExternalView("payment")}
           onSecondary={() => setExternalView("offer-indicative")}
           onReject={() => setShowRejectModal(true)}
@@ -2717,7 +2863,7 @@ export default function PropertyStepOneFrontendCompact({
           operatingRecord={operatingRecord}
           isExpired={operatingRecord?.status === "Expired"}
           productConfig={activeVariant}
-          stepOneTitle={sharedOfferSnapshot ? "Tinjau Penawaran" : "Simulasi Premi"}
+          stepOneTitle="Simulasi Premi"
           guestMode={entryMode === "external"}
           onSimulate={() => {
             setPaymentMethod(PAYMENT_OPTIONS[0]);
@@ -2766,8 +2912,8 @@ export default function PropertyStepOneFrontendCompact({
         onContinue={() => setExternalView("payment")}
         onBack={() => setExternalView("offer-indicative")}
         showSidebar={false}
-        stepOneTitle={sharedOfferSnapshot ? "Tinjau Penawaran" : "Simulasi Premi"}
-        bottomBackLabel={sharedOfferSnapshot ? "Kembali ke Tinjau Penawaran" : "Kembali ke Simulasi Premi"}
+        stepOneTitle="Simulasi Premi"
+        bottomBackLabel="Kembali ke Simulasi Premi"
         topActionLabel="Simulasi"
         onTopAction={fillStepTwoDemoData}
       >
@@ -2882,10 +3028,63 @@ export default function PropertyStepOneFrontendCompact({
 
                   <SectionCard title="Informasi Calon Pemegang Polis">
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="md:col-span-2"><FieldLabel label="Nama Calon Pemegang Polis" required /><div className="relative"><TextInput value={form.identity} onChange={(value) => { setSelectedCustomer(null); setField("identity", value); }} placeholder="Masukkan nama calon pemegang polis atau kode CIF" icon={<User className="h-4 w-4" />} />{form.identity && customerSuggestions.length > 0 && !selectedCustomer ? <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">{customerSuggestions.map((item) => <button key={item.cif} type="button" onClick={() => { setSelectedCustomer(item); setForm((prev) => ({ ...prev, identity: item.name + " - " + item.cif, customerType: item.type, phone: item.phone || prev.phone, email: item.email || prev.email })); }} className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"><div><div className="font-semibold text-slate-900">{item.name}</div><div className="text-xs text-slate-500">{item.type}</div></div><div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div></button>)}</div> : null}</div>{selectedCustomer ? <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div> : form.identity ? <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div> : null}</div>
+                      <div className="md:col-span-2">
+                        <FieldLabel label="Nama Calon Pemegang Polis" required />
+                        <div className="relative">
+                          <TextInput
+                            value={form.identity}
+                            onChange={(value) => {
+                              setSelectedCustomer(null);
+                              setField("identity", value);
+                            }}
+                            placeholder={allowCustomerLookup ? "Masukkan nama calon pemegang polis atau kode CIF" : "Masukkan nama lengkap calon pemegang polis"}
+                            icon={<User className="h-4 w-4" />}
+                          />
+                          {allowCustomerLookup && form.identity && customerSuggestions.length > 0 && !selectedCustomer ? (
+                            <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
+                              {customerSuggestions.map((item) => (
+                                <button
+                                  key={item.cif}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCustomer(item);
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      identity: item.name + " - " + item.cif,
+                                      customerType: item.type,
+                                      phone: item.phone || prev.phone,
+                                      email: item.email || prev.email,
+                                    }));
+                                  }}
+                                  className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
+                                >
+                                  <div>
+                                    <div className="font-semibold text-slate-900">{item.name}</div>
+                                    <div className="text-xs text-slate-500">{item.type}</div>
+                                  </div>
+                                  <div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div>
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                        {allowCustomerLookup && selectedCustomer ? (
+                          <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div>
+                        ) : allowCustomerLookup && form.identity ? (
+                          <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div>
+                        ) : null}
+                      </div>
                       {Boolean(form.identity.trim()) && !selectedCustomer && !isDigitsOnly(form.identity.trim()) ? <div><FieldLabel label="Tipe Nasabah" required /><SelectInput value={form.customerType} onChange={(value) => setField("customerType", value)} options={CUSTOMER_TYPES} placeholder="Nasabah ini perorangan atau badan usaha?" /></div> : null}
-                      <div><FieldLabel label="Nomor Handphone" required /><TextInput value={form.phone} onChange={(value) => setField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} /></div>
-                      <div><FieldLabel label="Alamat Email" required /><TextInput value={form.email} onChange={(value) => setField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" /></div>
+                      <div>
+                        <FieldLabel label="Nomor Handphone" required />
+                        <TextInput value={form.phone} onChange={(value) => setField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} invalid={Boolean(phoneFieldError)} />
+                        {phoneFieldError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{phoneFieldError}</div> : null}
+                      </div>
+                      <div>
+                        <FieldLabel label="Alamat Email" required />
+                        <TextInput value={form.email} onChange={(value) => setField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" invalid={Boolean(emailFieldError)} />
+                        {emailFieldError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{emailFieldError}</div> : null}
+                      </div>
                     </div>
                   </SectionCard>
 
@@ -2922,7 +3121,35 @@ export default function PropertyStepOneFrontendCompact({
                       </div>
                       <div className="md:col-span-2"><FieldLabel label="Alamat / Lokasi Objek" required /><TextInput value={form.locationSearch} onChange={(value) => setField("locationSearch", value)} placeholder="Ketik alamat, nama jalan, atau nama gedung" icon={<Search className="h-4 w-4" />} /><div className="mt-2 flex flex-wrap gap-2.5"><button type="button" onClick={() => { setField("locationSearch", "Lokasi GPS tersimulasi - Jl. Sudirman Kav. 44, Jakarta Selatan"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Jl. Sudirman Kav. 44, Jakarta Selatan", source: "gps" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Ambil Lokasi Sekarang</button><button type="button" onClick={() => { setField("locationSearch", "Pin peta tersimulasi - Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading"); setEvidence((prev) => ({ ...prev, location: createLocationEvidence({ declaredAddress: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading", source: "map" }) })); }} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"><MapPin className="h-4 w-4" />Pilih di Peta</button></div></div>
                     </div>
-                    <div className="mt-4 rounded-xl border border-[#D5DDE6] bg-[#FAFBFC] p-4"><div className="flex items-center justify-between gap-3"><div className="text-[15px] font-bold text-slate-900">Rincian Properti</div><button type="button" onClick={() => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }))} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-4 w-4" />Tambah Objek</button></div><div className="mt-3 space-y-2.5">{objectRows.map((row) => <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3"><div className="grid gap-2.5 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-center"><SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" /><CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" /><TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} /><button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek"><Trash2 className="h-4 w-4" /></button></div></div>)}</div><div className="mt-3 rounded-[10px] bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200"><div className="flex flex-col gap-1.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><span>Total Nilai Pertanggungan</span><span className="break-words text-left text-[18px] font-bold text-[#E8A436] sm:text-right">Rp {formatRupiah(totalValue)}</span></div></div></div>
+                    <div className="mt-4 rounded-xl border border-[#D5DDE6] bg-[#FAFBFC] p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-[15px] font-bold text-slate-900">Rincian Properti</div>
+                        <button type="button" onClick={() => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }))} className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-[#D5DDE6] bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-4 w-4" />Tambah Objek</button>
+                      </div>
+                      <div className="mt-3 space-y-2.5">
+                        {objectRows.map((row) => {
+                          const { typeError, amountError } = getObjectRowFieldErrors(row);
+                          const showRowErrors = shouldShowObjectRowErrors(row, objectRows.length);
+                          return (
+                            <div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                              <div className="grid gap-2.5 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1.2fr)_40px] lg:items-start">
+                                <div>
+                                  <SelectInput value={row.type} onChange={(value) => updateObjectRow(row.id, { type: value })} options={OBJECT_TYPES} placeholder="Jenis Objek" invalid={showRowErrors && Boolean(typeError)} />
+                                  {showRowErrors && typeError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{typeError}</div> : null}
+                                </div>
+                                <div>
+                                  <CurrencyInput value={row.amount} onChange={(value) => updateObjectRow(row.id, { amount: value })} placeholder="Harga Pertanggungan" invalid={showRowErrors && Boolean(amountError)} />
+                                  {showRowErrors && amountError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{amountError}</div> : null}
+                                </div>
+                                <TextInput value={row.note} onChange={(value) => updateObjectRow(row.id, { note: value })} placeholder={shortObjectLabel(row.type)} />
+                                <button type="button" onClick={() => removeObjectRow(row.id)} className="inline-flex h-[44px] items-center justify-center rounded-[10px] border border-slate-300 text-slate-500 hover:bg-slate-50" title="Hapus objek"><Trash2 className="h-4 w-4" /></button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-3 rounded-[10px] bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200"><div className="flex flex-col gap-1.5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><span>Total Nilai Pertanggungan</span><span className="break-words text-left text-[18px] font-bold text-[#E8A436] sm:text-right">Rp {formatRupiah(totalValue)}</span></div></div>
+                    </div>
                   </SectionCard>
 
                   {!quoted ? (
@@ -3015,7 +3242,7 @@ export default function PropertyStepOneFrontendCompact({
                 </div>
                 {showStepOneSummarySidebar ? <SummarySidebarShell title="Ringkasan">
                   <div className="border-t border-white/15 pt-3">
-                    <SummaryRow label={selectedCustomer || isDigitsOnly(form.identity.trim()) ? "Kode CIF / Nama" : "Nama Calon Pemegang Polis"} value={form.identity || "-"} />
+                    <SummaryRow label={allowCustomerLookup && (selectedCustomer || isDigitsOnly(form.identity.trim())) ? "Kode CIF / Nama" : "Nama Calon Pemegang Polis"} value={form.identity || "-"} />
                     <SummaryRow label="Penggunaan Properti yang Diasuransikan" value={form.occupancy} />
                     <SummaryRow label="Kelas Konstruksi" value={form.constructionClass} />
                   </div>
