@@ -324,6 +324,7 @@ export default function App() {
   const [sessionRole, setSessionRole] = useState(initialNavigationState.sessionRole);
   const [partnerConfigRole, setPartnerConfigRole] = useState("Maker");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [operatingRecords, setOperatingRecords] = useState(OPERATING_QUEUE_SEED);
   const [activeTransactionId, setActiveTransactionId] = useState(OPERATING_QUEUE_SEED[0]?.id || "");
   const allowSharedOfferJourney = useMemo(() => hasMatchingShareContext(activeJourney), [activeJourney]);
@@ -400,6 +401,7 @@ export default function App() {
     const matchingRecord = operatingRecords.find((item) => item.journeyKey === target);
     if (matchingRecord) setActiveTransactionId(matchingRecord.id);
     setAccountMenuOpen(false);
+    setRoleMenuOpen(false);
     setActiveJourney(target);
   };
 
@@ -742,6 +744,8 @@ export default function App() {
               className="production-nav__item is-active"
               onClick={() => {
                 clearSharedJourneyParams();
+                setAccountMenuOpen(false);
+                setRoleMenuOpen(false);
                 setActiveJourney("");
               }}
             >
@@ -751,6 +755,48 @@ export default function App() {
           </nav>
 
           <div className="production-actions">
+            <div className="production-view-as">
+              <button
+                type="button"
+                className="production-view-as__button"
+                aria-expanded={roleMenuOpen}
+                aria-haspopup="menu"
+                aria-controls="production-role-menu"
+                onClick={() => {
+                  setAccountMenuOpen(false);
+                  setRoleMenuOpen((current) => !current);
+                }}
+              >
+                <span className="production-view-as__label">View as</span>
+                <span>{resolveRoleLabel(sessionRole)}</span>
+                <ChevronDown
+                  className={cls("production-view-as__chevron", roleMenuOpen && "is-open")}
+                  size={15}
+                  strokeWidth={2.2}
+                  aria-hidden="true"
+                />
+              </button>
+              {roleMenuOpen ? (
+                <div id="production-role-menu" role="menu" className="production-menu production-menu--role">
+                  {SESSION_OPTIONS.map((item) => (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      key={item.key}
+                      onClick={() => {
+                        clearSharedJourneyParams();
+                        setSessionRole(item.key);
+                        setActiveJourney("");
+                        setRoleMenuOpen(false);
+                        setAccountMenuOpen(false);
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <button type="button" className="production-language" aria-label="Bahasa Indonesia">
               <span className="production-language__flag" aria-hidden="true" />
               <span>ID</span>
@@ -765,6 +811,7 @@ export default function App() {
                     aria-haspopup="menu"
                     aria-controls="guest-account-menu"
                     onClick={() => {
+                      setRoleMenuOpen(false);
                       setAccountMenuOpen((current) => !current);
                     }}
                   >
@@ -778,6 +825,7 @@ export default function App() {
                         role="menuitem"
                         onClick={() => {
                           setAccountMenuOpen(false);
+                          setRoleMenuOpen(false);
                           setSessionRole("external");
                         }}
                       >
@@ -788,6 +836,7 @@ export default function App() {
                         role="menuitem"
                         onClick={() => {
                           setAccountMenuOpen(false);
+                          setRoleMenuOpen(false);
                           setActiveJourney("self-care-lookup");
                         }}
                       >
@@ -805,6 +854,7 @@ export default function App() {
                     aria-haspopup="menu"
                     aria-controls="account-menu"
                     onClick={() => {
+                      setRoleMenuOpen(false);
                       setAccountMenuOpen((current) => !current);
                     }}
                   >
@@ -819,6 +869,7 @@ export default function App() {
                         role="menuitem"
                         onClick={() => {
                           setAccountMenuOpen(false);
+                          setRoleMenuOpen(false);
                           setActiveJourney(accountPrimaryDestination);
                         }}
                       >
@@ -830,6 +881,7 @@ export default function App() {
                           role="menuitem"
                           onClick={() => {
                             setAccountMenuOpen(false);
+                            setRoleMenuOpen(false);
                             setActiveJourney("partner-config");
                           }}
                         >

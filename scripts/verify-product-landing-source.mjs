@@ -15,12 +15,14 @@ const requiredAppSnippets = [
   "Trip Guard",
   "Edu Protect",
   "Travel Safe",
+  "View as",
 ];
 
 const requiredCssSnippets = [
   ".production-page",
   ".production-product-card",
   ".production-product-section",
+  ".production-view-as",
   ".production-footer",
 ];
 
@@ -51,8 +53,6 @@ for (const snippet of requiredCssSnippets) {
 
 const forbiddenAppSnippets = [
   ["Cek Premi", "App.jsx product landing must not include Cek Premi"],
-  ["View as", "App.jsx product landing must not expose View as controls"],
-  ["VIEW AS", "App.jsx product landing must not expose VIEW AS controls"],
 ];
 
 for (const [snippet, message] of forbiddenAppSnippets) {
