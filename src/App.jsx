@@ -436,6 +436,11 @@ export default function App() {
     });
   };
 
+  const exitSharedJourneyToProducts = () => {
+    clearSharedJourneyParams();
+    setActiveJourney("");
+  };
+
   const getActiveRecord = (journeyKey) =>
     operatingRecords.find((item) => item.id === activeTransactionId && item.journeyKey === journeyKey) ||
     operatingRecords.find((item) => item.journeyKey === journeyKey) ||
@@ -554,7 +559,7 @@ export default function App() {
           productVariant="property-safe"
           sessionName={activeSessionName}
           sessionProfile={isAuthenticatedCustomerSession ? activeSessionProfile : null}
-          onExit={() => setActiveJourney("")}
+          onExit={exitSharedJourneyToProducts}
           onOpenPolicies={() => setActiveJourney("self-care-portal")}
         />
       </Suspense>
@@ -586,7 +591,7 @@ export default function App() {
           productVariant="property-all-risk"
           sessionName={activeSessionName}
           sessionProfile={isAuthenticatedCustomerSession ? activeSessionProfile : null}
-          onExit={() => setActiveJourney("")}
+          onExit={exitSharedJourneyToProducts}
           onOpenPolicies={() => setActiveJourney("self-care-portal")}
         />
       </Suspense>

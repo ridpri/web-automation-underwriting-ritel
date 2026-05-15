@@ -1357,7 +1357,7 @@ function UnderwritingSections({
   );
 }
 
-function ExternalProposalPage({ mode, customerName, form, setFormField = () => {}, uwForm, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, backLabel = "Kembali ke Produk", showBackButton = true, onPrimary, onSecondary, canProceed, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
+function ExternalProposalPage({ mode, customerName, form, setFormField = () => {}, uwForm, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, backLabel = "Kembali ke Produk", showBackButton = true, onPrimary, onSecondary, canProceed, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {}, onNavigateProducts = () => {} }) {
   const isIndicative = mode === "indicative";
   const isInternalPreview = viewerMode === "internal";
   const activeVariant = productConfig || getPropertyVariant("property-safe");
@@ -1458,7 +1458,7 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
               <Home className="h-4 w-4" />
               Beranda
             </button>
-            <button className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-5 py-3 text-sm font-semibold text-white shadow-sm">
+            <button type="button" onClick={onNavigateProducts} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-5 py-3 text-sm font-semibold text-white shadow-sm">
               <Shield className="h-4 w-4" />
               Produk
             </button>
@@ -1906,6 +1906,7 @@ function ExternalPaymentPage({
   stepOneTitle = "Tinjau Penawaran",
   guestMode = false,
   onSimulate,
+  onNavigateProducts = () => {},
 }) {
   const [openPaymentGroup, setOpenPaymentGroup] = useState("");
   const activeVariant = productConfig || getPropertyVariant("property-safe");
@@ -1966,7 +1967,7 @@ function ExternalPaymentPage({
             </div>
             <div className="hidden items-center gap-3 md:flex">
               <button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button>
-              <button type="button" className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button>
+              <button type="button" onClick={onNavigateProducts} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button>
             </div>
           </div>
           <div className="flex items-center gap-3 text-white">
@@ -2671,6 +2672,13 @@ export default function PropertyStepOneFrontendCompact({
     }
     fillStepTwoDemoData();
   };
+  const handleNavigateProducts = () => {
+    if (embedded && onExit) {
+      onExit();
+      return;
+    }
+    setExternalView("");
+  };
 
   if (externalView === "offer-indicative") {
     return (
@@ -2741,6 +2749,7 @@ export default function PropertyStepOneFrontendCompact({
             setExternalViewerMode(mode);
             replaceViewerModeInUrl(mode);
           }}
+          onNavigateProducts={handleNavigateProducts}
         />
       </>
     );
@@ -2814,6 +2823,7 @@ export default function PropertyStepOneFrontendCompact({
             setExternalViewerMode(mode);
             replaceViewerModeInUrl(mode);
           }}
+          onNavigateProducts={handleNavigateProducts}
         />
       </>
     );
@@ -2869,6 +2879,7 @@ export default function PropertyStepOneFrontendCompact({
             setPaymentMethod(PAYMENT_OPTIONS[0]);
             setPaymentStatus("");
           }}
+          onNavigateProducts={handleNavigateProducts}
         />
       </>
     );
