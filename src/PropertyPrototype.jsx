@@ -2439,6 +2439,7 @@ export default function PropertyStepOneFrontendCompact({
   const occupancyCode = getOccupancyCode(effectivePropertyType, form.occupancy);
   const constructionInfo = CONSTRUCTION_GUIDE.find((item) => item.title === form.constructionClass);
   const currentExternalTarget = internalStep === 2 ? "offer-final" : "offer-indicative";
+  const isSharedOfferUrl = Boolean(readShareContextFromUrl().view);
   const referralCode = createReferralCode(sessionName, transactionAuthority.transactionId);
   const shareSnapshot = encodeShareSnapshot({
     identity: customerName,
@@ -2657,7 +2658,7 @@ export default function PropertyStepOneFrontendCompact({
           onEditObject={() => {}}
           onEditInsured={() => setExternalView("external-underwriting")}
           onBack={() => {
-            if (sharedOfferSnapshot) {
+            if (isSharedOfferUrl) {
               setExternalView("offer-indicative");
               window.scrollTo({ top: 0, behavior: "smooth" });
               return;
@@ -2669,7 +2670,7 @@ export default function PropertyStepOneFrontendCompact({
             setExternalView("");
           }}
           backLabel="Kembali ke Penawaran"
-          showBackButton={!sharedOfferSnapshot}
+          showBackButton={!isSharedOfferUrl}
           onPrimary={() => setExternalView("external-underwriting")}
           onSecondary={() => setHelpRequestSent(true)}
           onReject={() => setShowRejectModal(true)}
@@ -2731,7 +2732,7 @@ export default function PropertyStepOneFrontendCompact({
           onEditObject={() => setExternalView("offer-indicative")}
           onEditInsured={() => setExternalView("external-underwriting")}
           onBack={() => {
-            if (sharedOfferSnapshot) {
+            if (isSharedOfferUrl) {
               setExternalView("offer-indicative");
               window.scrollTo({ top: 0, behavior: "smooth" });
               return;
@@ -2742,7 +2743,7 @@ export default function PropertyStepOneFrontendCompact({
             }
             setExternalView("");
           }}
-          backLabel={sharedOfferSnapshot ? "Kembali ke Penawaran" : "Kembali ke Produk"}
+          backLabel={isSharedOfferUrl ? "Kembali ke Penawaran" : "Kembali ke Produk"}
           onPrimary={() => setExternalView("payment")}
           onSecondary={() => setExternalView("offer-indicative")}
           onReject={() => setShowRejectModal(true)}
