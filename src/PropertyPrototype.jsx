@@ -604,7 +604,7 @@ function FieldLabel({ label, required, helpText }) {
   );
 }
 
-function TextInput({ value, onChange, placeholder, icon, type = "text", readOnly = false, disabled = false }) {
+function TextInput({ value, onChange, placeholder, icon, type = "text", readOnly = false, disabled = false, invalid = false }) {
   return (
     <div className="relative">
       {icon ? <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div> : null}
@@ -618,6 +618,7 @@ function TextInput({ value, onChange, placeholder, icon, type = "text", readOnly
         className={cls(
           "h-[44px] w-full rounded-[10px] border border-[#D5DDE6] bg-white px-3.5 text-[14px] text-slate-800 outline-none transition placeholder:text-slate-500",
           "focus:border-[#0A4D82] focus:ring-4 focus:ring-[#0A4D82]/10",
+          invalid && "border-[#D93025] bg-red-50/40 focus:border-[#D93025] focus:ring-[#D93025]/10",
           (readOnly || disabled) && "cursor-not-allowed bg-slate-50 text-slate-500",
           icon && "pl-10"
         )}
@@ -1374,6 +1375,8 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
   const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
   const phoneDisplay = form.phone || "-";
   const emailDisplay = form.email || "-";
+  const offerPhoneFieldError = form.phone.trim() && !isValidPhone(form.phone) ? "Nomor handphone harus 10-15 digit angka." : "";
+  const offerEmailFieldError = form.email.trim() && !isValidEmail(form.email) ? "Alamat email harus memakai format nama@domain." : "";
   const customerDisplay = customerName || "-";
   const greetingRecipientName = customerDisplay && customerDisplay !== "-"
     ? String(customerDisplay).trim().split(/\s+/)[0]
@@ -1585,11 +1588,13 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                       <div className="grid gap-3 md:grid-cols-2">
                         <div>
                           <FieldLabel label="Alamat Email" required />
-                          <TextInput value={form.email} onChange={(value) => setFormField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" />
+                          <TextInput value={form.email} onChange={(value) => setFormField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" invalid={Boolean(offerEmailFieldError)} />
+                          {offerEmailFieldError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{offerEmailFieldError}</div> : null}
                         </div>
                         <div>
                           <FieldLabel label="Nomor Handphone" required />
-                          <TextInput value={form.phone} onChange={(value) => setFormField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} />
+                          <TextInput value={form.phone} onChange={(value) => setFormField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} invalid={Boolean(offerPhoneFieldError)} />
+                          {offerPhoneFieldError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{offerPhoneFieldError}</div> : null}
                         </div>
                       </div>
                       <div className="flex items-center justify-between gap-3">
@@ -2473,6 +2478,8 @@ export default function PropertyStepOneFrontendCompact({
   const hasValidStepOneIdentity = Boolean(form.identity.trim());
   const hasValidPhoneContact = Boolean(form.phone.trim()) && isValidPhone(form.phone);
   const hasValidEmailContact = Boolean(form.email.trim()) && isValidEmail(form.email);
+  const phoneFieldError = form.phone.trim() && !hasValidPhoneContact ? "Nomor handphone harus 10-15 digit angka." : "";
+  const emailFieldError = form.email.trim() && !hasValidEmailContact ? "Alamat email harus memakai format nama@domain." : "";
   const hasValidStepOneContact = hasValidPhoneContact && hasValidEmailContact;
   const hasValidStepOneOccupancy = Boolean(form.occupancy);
   const hasValidStepOneLocation = Boolean(form.locationSearch.trim());
@@ -2489,7 +2496,6 @@ export default function PropertyStepOneFrontendCompact({
   const canAdvanceUnderwriting = hasValidUwIdentity && hasValidPicName && hasValidUnderwriting && hasCompleteUploads;
   const stepOnePendingItems = [];
   if (!hasValidStepOneIdentity) stepOnePendingItems.push("Isi nama calon pemegang polis atau pilih CIF.");
-  if (!hasValidStepOneContact) stepOnePendingItems.push("Lengkapi nomor handphone dan alamat email yang valid.");
   if (!hasValidStepOneOccupancy) stepOnePendingItems.push("Pilih penggunaan properti yang diasuransikan.");
   if (!hasValidStepOneLocation) stepOnePendingItems.push("Isi lokasi properti atau gunakan tombol lokasi cepat.");
   if (!hasValidConstruction) stepOnePendingItems.push("Pilih kelas konstruksi.");
@@ -2976,8 +2982,16 @@ export default function PropertyStepOneFrontendCompact({
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="md:col-span-2"><FieldLabel label="Nama Calon Pemegang Polis" required /><div className="relative"><TextInput value={form.identity} onChange={(value) => { setSelectedCustomer(null); setField("identity", value); }} placeholder="Masukkan nama calon pemegang polis atau kode CIF" icon={<User className="h-4 w-4" />} />{form.identity && customerSuggestions.length > 0 && !selectedCustomer ? <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">{customerSuggestions.map((item) => <button key={item.cif} type="button" onClick={() => { setSelectedCustomer(item); setForm((prev) => ({ ...prev, identity: item.name + " - " + item.cif, customerType: item.type, phone: item.phone || prev.phone, email: item.email || prev.email })); }} className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"><div><div className="font-semibold text-slate-900">{item.name}</div><div className="text-xs text-slate-500">{item.type}</div></div><div className="rounded-full bg-[#F8FBFE] px-3 py-1 text-xs font-semibold text-[#0A4D82]">{item.cif}</div></button>)}</div> : null}</div>{selectedCustomer ? <div className="mt-1 text-xs text-green-600">Data CIF terpilih. Anda akan melanjutkan sebagai nasabah existing.</div> : form.identity ? <div className="mt-1 text-xs text-slate-500">Nama belum cocok dengan CIF simulasi. Sistem akan memperlakukan sebagai nasabah baru.</div> : null}</div>
                       {Boolean(form.identity.trim()) && !selectedCustomer && !isDigitsOnly(form.identity.trim()) ? <div><FieldLabel label="Tipe Nasabah" required /><SelectInput value={form.customerType} onChange={(value) => setField("customerType", value)} options={CUSTOMER_TYPES} placeholder="Nasabah ini perorangan atau badan usaha?" /></div> : null}
-                      <div><FieldLabel label="Nomor Handphone" required /><TextInput value={form.phone} onChange={(value) => setField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} /></div>
-                      <div><FieldLabel label="Alamat Email" required /><TextInput value={form.email} onChange={(value) => setField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" /></div>
+                      <div>
+                        <FieldLabel label="Nomor Handphone" required />
+                        <TextInput value={form.phone} onChange={(value) => setField("phone", value)} placeholder="08xxxxxxxxxx" icon={<Phone className="h-4 w-4" />} invalid={Boolean(phoneFieldError)} />
+                        {phoneFieldError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{phoneFieldError}</div> : null}
+                      </div>
+                      <div>
+                        <FieldLabel label="Alamat Email" required />
+                        <TextInput value={form.email} onChange={(value) => setField("email", value)} placeholder="nama@email.com" icon={<Mail className="h-4 w-4" />} type="email" invalid={Boolean(emailFieldError)} />
+                        {emailFieldError ? <div className="mt-1.5 text-xs font-medium text-[#D93025]">{emailFieldError}</div> : null}
+                      </div>
                     </div>
                   </SectionCard>
 
