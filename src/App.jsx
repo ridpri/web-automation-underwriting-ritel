@@ -105,7 +105,11 @@ function resolveInitialNavigationState() {
 
   const params = new URLSearchParams(window.location.search);
   const shareJourney = inferJourneyFromShareData(decodeUrlShareToken(params.get("share") || ""));
-  const requestedJourney = params.get("journey") || shareJourney || "";
+  const propertyOfferViews = new Set(["offer-indicative", "offer-final", "external-underwriting", "payment"]);
+  const propertyOfferJourney = propertyOfferViews.has(params.get("view") || "") && window.location.pathname.includes("/guest/property")
+    ? "property-external"
+    : "";
+  const requestedJourney = params.get("journey") || shareJourney || propertyOfferJourney || "";
   const allowSharedOfferJourney = Boolean(shareJourney && requestedJourney === shareJourney);
   const requestedJourneyRole = requestedJourney ? inferSessionRoleFromJourney(requestedJourney) : null;
   const sessionRole =

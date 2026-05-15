@@ -396,11 +396,24 @@ function encodeShareSnapshot(payload) {
 
 function decodeShareSnapshot(value) {
   if (!value) return null;
-  try {
-    return JSON.parse(decodeURIComponent(value));
-  } catch {
-    return null;
+  const candidates = [value];
+  for (let index = 0; index < 2; index += 1) {
+    try {
+      const decoded = decodeURIComponent(candidates[candidates.length - 1]);
+      if (!candidates.includes(decoded)) candidates.push(decoded);
+    } catch {
+      break;
+    }
   }
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+    } catch {
+      // Try the next decoding depth.
+    }
+  }
+  return null;
 }
 
 function readShareContextFromUrl() {
@@ -1329,7 +1342,7 @@ function UnderwritingSections({
   );
 }
 
-function ExternalProposalPage({ mode, customerName, form, setFormField = () => {}, uwForm, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, onPrimary, onSecondary, canProceed, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
+function ExternalProposalPage({ mode, customerName, form, setFormField = () => {}, uwForm, propertyType, occupancy, setOccupancy = () => {}, occupancyOptions = OCCUPANCY_OPTIONS, objectRows, updateObjectRow = () => {}, addObjectRow = () => {}, removeObjectRow = () => {}, totalValue, estimatedTotal, basePremium, extensionPremium, stampDuty, selectedGuarantees, setSelectedGuarantees, expandedRows, setExpandedRows, constructionClass, onBack, backLabel = "Kembali ke Produk", showBackButton = true, onPrimary, onSecondary, canProceed, preparedBy, operatingRecord, transactionAuthority, productConfig, extensionOptions, viewerMode = "customer", senderName = "", onViewerModeChange = () => {} }) {
   const isIndicative = mode === "indicative";
   const isInternalPreview = viewerMode === "internal";
   const activeVariant = productConfig || getPropertyVariant("property-safe");
@@ -1379,8 +1392,15 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
   const hasStockObject = objectRows.some((row) => row.type === "Stok");
   const selectedStockTypeMeta = STOCK_TYPE_OPTIONS.find((item) => item.label === uwForm.stockType);
   const stockTypeSummary = selectedStockTypeMeta ? `${selectedStockTypeMeta.label} (${selectedStockTypeMeta.risk})` : uwForm.stockType || "-";
-  const headerUserLabel = isInternalPreview ? senderName || "Taqwim (Internal)" : greetingRecipientName;
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
+  const [loginMenuOpen, setLoginMenuOpen] = useState(false);
+  const [guestAccessChoice, setGuestAccessChoice] = useState("anonymous");
+  const headerUserLabel = senderName || "Taqwim (Internal)";
+  const loginChoices = [
+    { key: "login", label: "Login" },
+    { key: "create-account", label: "Buat Akun" },
+    { key: "anonymous", label: "Lanjut Tanpa Login" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
@@ -1423,7 +1443,10 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
             <div className="relative hidden md:block">
               <button
                 type="button"
-                onClick={() => setViewerMenuOpen((current) => !current)}
+                onClick={() => {
+                  setLoginMenuOpen(false);
+                  setViewerMenuOpen((current) => !current);
+                }}
                 className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/15"
               >
                 <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
@@ -1441,6 +1464,7 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                       type="button"
                       onClick={() => {
                         setViewerMenuOpen(false);
+                        setLoginMenuOpen(false);
                         onViewerModeChange(item.key);
                       }}
                       className={cls(
@@ -1454,31 +1478,77 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                 </div>
               ) : null}
             </div>
-            <button type="button" className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
-              <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{headerUserLabel}</span>
-            </button>
-            <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
-              <Bell className="h-4 w-4" />
-            </button>
+            {isInternalPreview ? (
+              <>
+                <button type="button" className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
+                  <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{headerUserLabel}</span>
+                </button>
+                <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
+                  <Bell className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-expanded={loginMenuOpen}
+                  aria-haspopup="menu"
+                  aria-controls="property-offer-login-menu"
+                  onClick={() => {
+                    setViewerMenuOpen(false);
+                    setLoginMenuOpen((current) => !current);
+                  }}
+                  className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-white px-4 text-sm font-semibold text-[#0A4D82] shadow-sm hover:bg-[#F7FAFD]"
+                >
+                  <User className="h-4 w-4" />
+                  Login
+                  <ChevronDown className={cls("h-4 w-4 text-slate-500 transition", loginMenuOpen && "rotate-180")} />
+                </button>
+                {loginMenuOpen ? (
+                  <div id="property-offer-login-menu" role="menu" className="absolute right-0 top-[calc(100%+10px)] z-40 w-[230px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
+                    {loginChoices.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={guestAccessChoice === item.key}
+                        onClick={() => {
+                          setGuestAccessChoice(item.key);
+                          setLoginMenuOpen(false);
+                        }}
+                        className={cls(
+                          "flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold hover:bg-[#F7FAFD]",
+                          guestAccessChoice === item.key ? "bg-[#F7FAFD] text-[#0A4D82]" : "text-slate-700"
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       <div className="bg-[#0A4D82] pb-8">
         <div className="mx-auto max-w-[1280px] px-4 pt-5 md:px-6">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Kembali ke Produk
-          </button>
+          {showBackButton ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {backLabel}
+            </button>
+          ) : null}
 
           <div className="mt-5 text-center text-white">
             <div className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90">
-              {isInternalPreview ? `Selamat datang kembali, ${headerUserLabel}` : `Halo, ${headerUserLabel}`}
+              {isInternalPreview ? `Selamat datang kembali, ${headerUserLabel}` : `Halo, ${greetingRecipientName}`}
             </div>
             <h1 className="mt-4 text-[32px] font-bold tracking-tight md:text-[40px]">{activeVariant.title}</h1>
             <p className="mx-auto mt-2 max-w-3xl text-[14px] text-white/90 md:text-[17px]">{activeVariant.heroSubtitle}</p>
@@ -2276,7 +2346,7 @@ export default function PropertyStepOneFrontendCompact({
   useEffect(() => {
     const { view, viewer, referral, sender, customer, offer } = readShareContextFromUrl();
     const isSharedOfferView = view === "offer-indicative" || view === "offer-final" || view === "external-underwriting" || view === "payment";
-    if (isSharedOfferView && offer) {
+    if (isSharedOfferView) {
       setExternalView(view);
     }
     if (viewer === "internal" || viewer === "customer") {
@@ -2315,6 +2385,14 @@ export default function PropertyStepOneFrontendCompact({
       setFloorCount(String(sharedOfferSnapshot.floorCount));
     }
   }, [sharedOfferSnapshot]);
+  useEffect(() => {
+    if (!sharedOfferSnapshot || externalView) return;
+    const { view } = readShareContextFromUrl();
+    const fallbackView = view === "offer-final" || view === "external-underwriting" || view === "payment"
+      ? view
+      : "offer-indicative";
+    setExternalView(fallbackView);
+  }, [externalView, sharedOfferSnapshot]);
   useEffect(() => {
     const shouldShowFloorField = selectedGuarantees.earthquake && showFloorInput && (quoted || externalView === "offer-indicative" || externalView === "offer-final");
     if (shouldShowFloorField) {
@@ -2579,12 +2657,19 @@ export default function PropertyStepOneFrontendCompact({
           onEditObject={() => {}}
           onEditInsured={() => setExternalView("external-underwriting")}
           onBack={() => {
+            if (sharedOfferSnapshot) {
+              setExternalView("offer-indicative");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              return;
+            }
             if (embedded && entryMode === "external") {
               if (onExit) onExit();
               return;
             }
             setExternalView("");
           }}
+          backLabel="Kembali ke Penawaran"
+          showBackButton={!sharedOfferSnapshot}
           onPrimary={() => setExternalView("external-underwriting")}
           onSecondary={() => setHelpRequestSent(true)}
           onReject={() => setShowRejectModal(true)}
@@ -2646,12 +2731,18 @@ export default function PropertyStepOneFrontendCompact({
           onEditObject={() => setExternalView("offer-indicative")}
           onEditInsured={() => setExternalView("external-underwriting")}
           onBack={() => {
+            if (sharedOfferSnapshot) {
+              setExternalView("offer-indicative");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              return;
+            }
             if (embedded && entryMode === "external") {
               if (onExit) onExit();
               return;
             }
             setExternalView("");
           }}
+          backLabel={sharedOfferSnapshot ? "Kembali ke Penawaran" : "Kembali ke Produk"}
           onPrimary={() => setExternalView("payment")}
           onSecondary={() => setExternalView("offer-indicative")}
           onReject={() => setShowRejectModal(true)}
