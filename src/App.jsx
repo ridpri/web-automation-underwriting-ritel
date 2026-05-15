@@ -759,6 +759,7 @@ export default function App() {
               <button
                 type="button"
                 className="production-view-as__button"
+                aria-label={`View as ${resolveRoleLabel(sessionRole)}`}
                 aria-expanded={roleMenuOpen}
                 aria-haspopup="menu"
                 aria-controls="production-role-menu"
@@ -768,7 +769,7 @@ export default function App() {
                 }}
               >
                 <span className="production-view-as__label">View as</span>
-                <span>{resolveRoleLabel(sessionRole)}</span>
+                <span className="production-view-as__value">{resolveRoleLabel(sessionRole)}</span>
                 <ChevronDown
                   className={cls("production-view-as__chevron", roleMenuOpen && "is-open")}
                   size={15}
