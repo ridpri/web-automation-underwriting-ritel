@@ -49,8 +49,14 @@ for (const snippet of requiredCssSnippets) {
   if (!css.includes(snippet)) failures.push(`index.css missing ${snippet}`);
 }
 
-if (app.includes("Cek Premi")) {
-  failures.push("App.jsx product landing must not include Cek Premi");
+const forbiddenAppSnippets = [
+  ["Cek Premi", "App.jsx product landing must not include Cek Premi"],
+  ["View as", "App.jsx product landing must not expose View as controls"],
+  ["VIEW AS", "App.jsx product landing must not expose VIEW AS controls"],
+];
+
+for (const [snippet, message] of forbiddenAppSnippets) {
+  if (app.includes(snippet)) failures.push(message);
 }
 
 for (const file of requiredAssets) {
