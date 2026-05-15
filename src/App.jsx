@@ -1,4 +1,5 @@
 ﻿import { Building2, Car, ChevronDown, Home, Plane, Shield } from "lucide-react";
+import { LogIn, MapPin, Phone } from "lucide-react";
 import { createElement, Suspense, useEffect, useMemo, useState } from "react";
 import { OPERATING_QUEUE_SEED, buildTimelineEvent, statusTone } from "./operatingLayer.js";
 import { buildPropertyCatalog, buildVehicleCatalog, PERSONAL_PRODUCTS } from "./app/catalogData.js";
@@ -172,6 +173,171 @@ function ProductCard({ item, onClick }) {
         </div>
       </div>
     </button>
+  );
+}
+
+function PublicBrandLogo({ compact = false }) {
+  return (
+    <div className="flex items-center gap-2 text-white">
+      <div className="relative h-5 w-5 overflow-hidden rounded-full bg-white">
+        <div className="absolute inset-x-0 top-0 h-1/2 bg-red-600" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-white" />
+        <div className="absolute inset-0 rounded-full ring-1 ring-black/10" />
+      </div>
+      <div className={cls("font-black leading-[0.95]", compact ? "text-[11px]" : "text-[13px]")}>
+        Danantara
+        <div>Indonesia</div>
+      </div>
+    </div>
+  );
+}
+
+function JasindoLogo({ dark = false }) {
+  return (
+    <div className={cls("flex flex-col leading-none", dark ? "text-[#0A4D82]" : "text-white")}>
+      <div className="flex items-end gap-1">
+        <span className="text-[24px] font-black italic text-[#F5A623]">j</span>
+        <span className="text-[13px] font-black">asuransi</span>
+      </div>
+      <span className="ml-4 text-[15px] font-black">jasindo</span>
+      <span className="ml-4 mt-1 text-[7px] font-semibold opacity-80">A member of IFG</span>
+    </div>
+  );
+}
+
+function PublicProductCard({ item, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={item.active ? onClick : undefined}
+      className={cls(
+        "group relative h-[240px] overflow-hidden rounded-[4px] text-left shadow-sm transition",
+        item.active ? "hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(15,23,42,0.18)]" : "cursor-not-allowed opacity-80",
+      )}
+    >
+      <img src={item.image} alt={item.title} width="480" height="576" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.18)_0%,rgba(15,23,42,0.30)_48%,rgba(15,23,42,0.74)_100%)]" />
+      <div className="absolute left-3 top-4 inline-flex items-center gap-2 rounded-[5px] bg-slate-500/80 px-3 py-2 text-[11px] font-bold text-white backdrop-blur-sm">
+        {item.category === "Perjalanan" ? <Plane className="h-3.5 w-3.5" aria-hidden="true" /> : <Shield className="h-3.5 w-3.5" aria-hidden="true" />}
+        <span>{item.category}</span>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 p-4">
+        <div className="text-[18px] font-black leading-tight text-white drop-shadow-sm">{item.title}</div>
+      </div>
+    </button>
+  );
+}
+
+function PublicProductLanding({ onOpen }) {
+  return (
+    <div className="min-h-screen bg-white text-slate-950">
+      <header className="bg-[#004B78] text-white">
+        <div className="mx-auto flex h-[52px] max-w-[1800px] items-center justify-between px-8">
+          <div className="flex items-center gap-8">
+            <PublicBrandLogo />
+            <JasindoLogo />
+          </div>
+          <nav className="flex items-center gap-2">
+            <button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex h-8 items-center gap-2 rounded-[4px] bg-[#064467] px-4 text-sm font-semibold text-white hover:bg-[#0A5A86]">
+              <Home className="h-3.5 w-3.5" aria-hidden="true" />
+              Beranda
+            </button>
+            <button type="button" className="inline-flex h-8 items-center gap-2 rounded-[4px] bg-[#F5A623] px-4 text-sm font-bold text-white shadow-sm">
+              <Shield className="h-3.5 w-3.5" aria-hidden="true" />
+              Produk
+            </button>
+          </nav>
+          <div className="flex items-center gap-4">
+            <div className="inline-flex h-8 items-center gap-2 rounded-full bg-[#064467] px-3 text-sm font-bold">
+              <span className="relative h-5 w-5 overflow-hidden rounded-full bg-white">
+                <span className="absolute inset-x-0 top-0 h-1/2 bg-red-600" />
+                <span className="absolute inset-x-0 bottom-0 h-1/2 bg-white" />
+              </span>
+              ID
+            </div>
+            <button type="button" className="inline-flex h-8 items-center gap-2 rounded-[4px] bg-[#064467] px-4 text-sm font-bold text-white hover:bg-[#0A5A86]">
+              <LogIn className="h-4 w-4" aria-hidden="true" />
+              Masuk
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-[1820px] px-8 pb-14 pt-8">
+        <h1 className="text-center text-[17px] font-black tracking-tight text-black">Pilihan Produk Asuransi Jasindo</h1>
+        <section className="mt-7 rounded-[4px] bg-[#F1F2F2] px-3 py-5 md:px-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[8px] bg-white text-slate-800 shadow-sm ring-1 ring-slate-200">
+                <Shield className="h-7 w-7" aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-[20px] font-black leading-tight text-[#004B78]">Asuransi Kecelakaan Diri</h2>
+                <p className="mt-1 text-[15px] leading-6 text-slate-600">Perlindungan biaya pengobatan akibat kecelakaan</p>
+              </div>
+            </div>
+            <ChevronDown className="mt-5 h-5 w-5 shrink-0 text-slate-800" aria-hidden="true" />
+          </div>
+          <div className="mt-5 grid max-w-[840px] grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            {PERSONAL_PRODUCTS.map((item) => (
+              <PublicProductCard key={item.title} item={item} onClick={() => onOpen(item.key)} />
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <footer className="mt-auto">
+        <div className="mx-auto grid max-w-[1800px] gap-8 px-10 pb-10 pt-2 lg:grid-cols-[1.2fr_0.9fr_0.9fr]">
+          <div>
+            <JasindoLogo dark />
+            <div className="mt-7 flex gap-4">
+              {["ig", "f", "x"].map((label) => (
+                <button key={label} type="button" className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-[12px] font-bold text-slate-700">
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h2 className="text-[17px] font-black">Hubungi Kami</h2>
+            <div className="mt-5 space-y-5 text-sm">
+              <div className="flex items-start gap-3">
+                <MapPin className="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
+                <div>
+                  <div className="font-bold">Graha Jasindo</div>
+                  <div className="mt-2 text-slate-700">Jln. Menteng Raya No. 21 Jakarta Pusat, 10340</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Phone className="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
+                <div>
+                  <div className="font-bold">Contact Center</div>
+                  <div className="mt-2 font-bold">1500073</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h2 className="text-[17px] font-black">Tautan Cepat</h2>
+            <div className="mt-4 space-y-2 text-sm text-slate-700">
+              <div>Website Asuransi Jasindo</div>
+              <div>Representative Office</div>
+              <div>Pusat Privasi</div>
+            </div>
+            <div className="mt-6 flex items-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-300 text-center text-[9px] font-black text-[#004B78]">OJK</div>
+              <div className="text-[18px] font-black leading-tight text-[#0A4D82]">PAHAMI & MILIKI<br />ASURANSI</div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[#004B78] text-white">
+          <div className="mx-auto flex max-w-[1800px] items-center justify-between px-8 py-4 text-[12px] font-semibold">
+            <span>Copyright 2026 PT. Asuransi Jasa Indonesia, Hak Cipta Dilindungi Undang-undang</span>
+            <span>PT Asuransi Jasa Indonesia Berizin dan Diawasi oleh OJK</span>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
 
@@ -601,6 +767,9 @@ export default function App() {
         <PropertySafeBrdPage onBack={() => setActiveJourney("")} />
       </Suspense>
     );
+  }
+  if (!isInternalSession) {
+    return <PublicProductLanding onOpen={handleOpenJourney} />;
   }
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
