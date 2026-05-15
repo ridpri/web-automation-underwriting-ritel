@@ -1430,7 +1430,7 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <header className="sticky top-0 z-30 bg-[#0A4D82] shadow-sm">
-        <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4">
+        <div className="mx-auto grid max-w-[1800px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4">
           <div className="flex min-w-0 items-center gap-3 text-white md:gap-6">
             <div className="flex min-w-0 items-center gap-2.5">
               <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-sm bg-[#091E42] md:h-8 md:w-8">
@@ -1464,7 +1464,7 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
             </button>
           </div>
 
-          <div className="relative flex items-center gap-2 md:gap-3">
+          <div className="relative flex items-center justify-end gap-2 md:gap-3">
             <div className="relative hidden md:block">
               <button
                 type="button"
@@ -1959,18 +1959,16 @@ function ExternalPaymentPage({
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
-        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-3 md:px-6">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 text-white">
+        <div className="mx-auto grid max-w-[1280px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 md:px-6">
+          <div className="flex min-w-0 items-center gap-3 text-white">
               <div className="text-[15px] font-black leading-tight md:text-[18px]">Danantara<div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div></div>
               <div className="hidden text-[15px] font-semibold text-white/95 sm:block">asuransi jasindo</div>
-            </div>
-            <div className="hidden items-center gap-3 md:flex">
-              <button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button>
-              <button type="button" onClick={onNavigateProducts} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button>
-            </div>
           </div>
-          <div className="flex items-center gap-3 text-white">
+          <div className="hidden items-center gap-3 md:flex">
+            <button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button>
+            <button type="button" onClick={onNavigateProducts} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button>
+          </div>
+          <div className="flex items-center justify-end gap-3 text-white">
             {onSimulate ? <button type="button" onClick={onSimulate} className="hidden h-10 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 md:inline-flex">Simulasi</button> : null}
             {guestMode ? (
               <button
@@ -2950,12 +2948,12 @@ export default function PropertyStepOneFrontendCompact({
       <IndicationModal open={showIndicationModal} onClose={() => { setShowIndicationModal(false); setShareFeedback(""); }} onOpenIndicativeOffer={() => { setExternalViewerMode("customer"); setShowIndicationModal(false); setExternalView("offer-indicative"); openShareWindow(shareUrl); }} onOpenFinalOffer={internalStep === 2 ? () => { setExternalViewerMode("customer"); setShowIndicationModal(false); setExternalView("offer-final"); openShareWindow(shareUrl); } : null} customerName={effectiveCustomerName} shareUrl={shareUrl} onShowQrInfo={() => setQrInfoVisible((prev) => !prev)} onCopyLink={handleCopyLink} copyStatus={shareFeedback} shareLabel={activeVariant.shareLabel} shareSubject={activeVariant.shareSubject} />
 
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
-        <div className="mx-auto flex max-w-[1800px] items-center justify-between px-4 py-3 md:px-6">
-          <div className="flex items-center gap-6">
+        <div className="mx-auto grid max-w-[1800px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 md:px-6">
+          <div className="flex min-w-0 items-center gap-6">
             <div className="flex items-center gap-3 text-white"><div className="text-[15px] font-black leading-tight md:text-[18px]">Danantara<div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div></div><div className="hidden text-[15px] font-semibold text-white/95 sm:block">asuransi jasindo</div></div>
-                <div className="hidden items-center gap-3 md:flex"><button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button><button type="button" onClick={() => { if (embedded && onExit) onExit(); else setScreen("catalog"); }} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button></div>
           </div>
-          <div className="relative flex items-center gap-4 text-white">
+          <div className="hidden items-center gap-3 md:flex"><button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button><button type="button" onClick={() => { if (embedded && onExit) onExit(); else setScreen("catalog"); }} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button></div>
+          <div className="relative flex items-center justify-end gap-4 text-white">
             <button type="button" onClick={fillDemoForCurrentStep} className="hidden rounded-[10px] border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15 md:inline-flex md:text-sm">Simulasi</button>
             <button type="button" onClick={() => setShowUserMenu((prev) => !prev)} className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm"><span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">ID</span>{sessionName}{helpRequestSent ? <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" /> : null}</button>
             <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex"><Bell className="h-4 w-4" /></button>
