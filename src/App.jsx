@@ -186,7 +186,15 @@ function ProductionProductCard({ item, onClick }) {
       className={cls("production-product-card", !item.active && "is-disabled")}
       aria-label={item.title}
     >
-      <img src={item.image} alt="" width="640" height="720" className="production-product-card__image" />
+      <img
+        src={item.image}
+        alt=""
+        width="640"
+        height="720"
+        loading="lazy"
+        decoding="async"
+        className="production-product-card__image"
+      />
       <span className="production-product-card__shade" />
       <span className="production-product-card__tag">
         <ProductionCategoryIcon category={item.category} />
@@ -306,6 +314,224 @@ function resolveRoleLabel(sessionRole) {
   return "Tanpa Login";
 }
 
+function ProductionHeader({
+  sessionRole,
+  sessionName,
+  onOpenProducts,
+  onSelectRole,
+  onGuestLogin,
+  onOpenJourney,
+}) {
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [roleMenuPrewarm, setRoleMenuPrewarm] = useState(false);
+  const isGuestSession = sessionRole === "guest";
+  const isInternalSession = sessionRole === "internal";
+  const accountPrimaryDestination = isInternalSession ? "internal-workspace" : "self-care-portal";
+  const accountPrimaryLabel = isInternalSession ? "Ruang Kerja Saya" : "Polis Saya";
+  const roleMenuVisible = roleMenuOpen || roleMenuPrewarm;
+
+  const closeMenus = () => {
+    setRoleMenuOpen(false);
+    setAccountMenuOpen(false);
+  };
+
+  useEffect(() => {
+    const win = typeof window !== "undefined" ? window : null;
+    if (!win) return undefined;
+
+    let cancelled = false;
+    let firstFrame = 0;
+    let secondFrame = 0;
+    const timeout = win.setTimeout(() => {
+      if (cancelled) return;
+      setRoleMenuPrewarm(true);
+      firstFrame = win.requestAnimationFrame(() => {
+        secondFrame = win.requestAnimationFrame(() => {
+          if (!cancelled) setRoleMenuPrewarm(false);
+        });
+      });
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      win.clearTimeout(timeout);
+      win.cancelAnimationFrame(firstFrame);
+      win.cancelAnimationFrame(secondFrame);
+    };
+  }, []);
+
+  return (
+    <header className="production-header">
+      <div className="production-header__inner">
+        <div className="production-header__brand">
+          <img src={PRODUCTION_ASSETS.danantara} alt="Danantara Indonesia" />
+          <img src={PRODUCTION_ASSETS.jasindoWhite} alt="Asuransi Jasindo" />
+        </div>
+
+        <nav className="production-nav" aria-label="Navigasi utama">
+          <button
+            type="button"
+            className="production-nav__item"
+            onClick={() => {
+              window.location.href = "https://esppa.asuransijasindo.co.id/";
+            }}
+          >
+            <Home size={16} strokeWidth={2.2} aria-hidden="true" />
+            <span>Beranda</span>
+          </button>
+          <button
+            type="button"
+            className="production-nav__item is-active"
+            onClick={() => {
+              closeMenus();
+              onOpenProducts();
+            }}
+          >
+            <Package size={16} strokeWidth={2.2} aria-hidden="true" />
+            <span>Produk</span>
+          </button>
+        </nav>
+
+        <div className="production-actions">
+          <div className="production-view-as">
+            <button
+              type="button"
+              className="production-view-as__button"
+              aria-label={`View as ${resolveRoleLabel(sessionRole)}`}
+              aria-expanded={roleMenuOpen}
+              aria-haspopup="menu"
+              aria-controls="production-role-menu"
+              onClick={() => {
+                setAccountMenuOpen(false);
+                setRoleMenuOpen((current) => !current);
+              }}
+            >
+              <span className="production-view-as__label">View as</span>
+              <span className="production-view-as__value">{resolveRoleLabel(sessionRole)}</span>
+              <ChevronDown
+                className={cls("production-view-as__chevron", roleMenuOpen && "is-open")}
+                size={15}
+                strokeWidth={2.2}
+                aria-hidden="true"
+              />
+            </button>
+            <div
+              id="production-role-menu"
+              role="menu"
+              className={cls("production-menu production-menu--role", roleMenuPrewarm && !roleMenuOpen && "is-prewarming")}
+              aria-hidden={roleMenuPrewarm && !roleMenuOpen ? "true" : undefined}
+              hidden={!roleMenuVisible}
+            >
+              {SESSION_OPTIONS.map((item) => (
+                <button
+                  type="button"
+                  role="menuitem"
+                  key={item.key}
+                  onClick={() => {
+                    closeMenus();
+                    onSelectRole(item.key);
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button type="button" className="production-language" aria-label="Bahasa Indonesia">
+            <span className="production-language__flag" aria-hidden="true" />
+            <span>ID</span>
+          </button>
+          <div className="production-account">
+            {isGuestSession ? (
+              <>
+                <button
+                  type="button"
+                  className="production-login"
+                  aria-expanded={accountMenuOpen}
+                  aria-haspopup="menu"
+                  aria-controls="guest-account-menu"
+                  onClick={() => {
+                    setRoleMenuOpen(false);
+                    setAccountMenuOpen((current) => !current);
+                  }}
+                >
+                  <LogIn size={17} strokeWidth={2.25} aria-hidden="true" />
+                  <span>Masuk</span>
+                </button>
+                <div id="guest-account-menu" role="menu" className="production-menu" hidden={!accountMenuOpen}>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      closeMenus();
+                      onGuestLogin();
+                    }}
+                  >
+                    Login / Buat Akun
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      closeMenus();
+                      onOpenJourney("self-care-lookup");
+                    }}
+                  >
+                    Lanjut tanpa Login
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="production-profile"
+                  aria-expanded={accountMenuOpen}
+                  aria-haspopup="menu"
+                  aria-controls="account-menu"
+                  onClick={() => {
+                    setRoleMenuOpen(false);
+                    setAccountMenuOpen((current) => !current);
+                  }}
+                >
+                  <span className="production-profile__badge">ID</span>
+                  <span>{sessionName}</span>
+                  <ChevronDown size={15} strokeWidth={2.2} aria-hidden="true" />
+                </button>
+                <div id="account-menu" role="menu" className="production-menu" hidden={!accountMenuOpen}>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      closeMenus();
+                      onOpenJourney(accountPrimaryDestination);
+                    }}
+                  >
+                    {accountPrimaryLabel}
+                  </button>
+                  {isInternalSession ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        closeMenus();
+                        onOpenJourney("partner-config");
+                      }}
+                    >
+                      Konfigurasi Partner
+                    </button>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 function JourneyFallback() {
   return (
     <div className="min-h-screen bg-[#F3F5F7] px-4 py-10 md:px-6">
@@ -323,8 +549,6 @@ export default function App() {
   const [activeJourney, setActiveJourney] = useState(initialNavigationState.activeJourney);
   const [sessionRole, setSessionRole] = useState(initialNavigationState.sessionRole);
   const [partnerConfigRole, setPartnerConfigRole] = useState("Maker");
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [operatingRecords, setOperatingRecords] = useState(OPERATING_QUEUE_SEED);
   const [activeTransactionId, setActiveTransactionId] = useState(OPERATING_QUEUE_SEED[0]?.id || "");
   const allowSharedOfferJourney = useMemo(() => hasMatchingShareContext(activeJourney), [activeJourney]);
@@ -334,8 +558,6 @@ export default function App() {
   );
   const activeSessionName = resolveSessionName(sessionRole);
   const activeSessionProfile = resolveSessionProfile(sessionRole);
-  const isInternalSession = sessionRole === "internal";
-  const isGuestSession = sessionRole === "guest";
   const isAuthenticatedCustomerSession = sessionRole === "external" || sessionRole === "partner";
   const propertyItems = useMemo(
     () => ({
@@ -363,8 +585,6 @@ export default function App() {
     () => operatingRecords.filter((item) => item.owner === activeSessionName),
     [activeSessionName, operatingRecords],
   );
-  const accountPrimaryDestination = isInternalSession ? "internal-workspace" : "self-care-portal";
-  const accountPrimaryLabel = isInternalSession ? "Ruang Kerja Saya" : "Polis Saya";
   const externalAccountMenuItems = [
     {
       label: "Polis Saya",
@@ -400,8 +620,6 @@ export default function App() {
     clearSharedJourneyParams();
     const matchingRecord = operatingRecords.find((item) => item.journeyKey === target);
     if (matchingRecord) setActiveTransactionId(matchingRecord.id);
-    setAccountMenuOpen(false);
-    setRoleMenuOpen(false);
     setActiveJourney(target);
   };
 
@@ -721,182 +939,23 @@ export default function App() {
   }
   return (
     <div className="production-page">
-      <header className="production-header">
-        <div className="production-header__inner">
-          <div className="production-header__brand">
-            <img src={PRODUCTION_ASSETS.danantara} alt="Danantara Indonesia" />
-            <img src={PRODUCTION_ASSETS.jasindoWhite} alt="Asuransi Jasindo" />
-          </div>
-
-          <nav className="production-nav" aria-label="Navigasi utama">
-            <button
-              type="button"
-              className="production-nav__item"
-              onClick={() => {
-                window.location.href = "https://esppa.asuransijasindo.co.id/";
-              }}
-            >
-              <Home size={16} strokeWidth={2.2} aria-hidden="true" />
-              <span>Beranda</span>
-            </button>
-            <button
-              type="button"
-              className="production-nav__item is-active"
-              onClick={() => {
-                clearSharedJourneyParams();
-                setAccountMenuOpen(false);
-                setRoleMenuOpen(false);
-                setActiveJourney("");
-              }}
-            >
-              <Package size={16} strokeWidth={2.2} aria-hidden="true" />
-              <span>Produk</span>
-            </button>
-          </nav>
-
-          <div className="production-actions">
-            <div className="production-view-as">
-              <button
-                type="button"
-                className="production-view-as__button"
-                aria-label={`View as ${resolveRoleLabel(sessionRole)}`}
-                aria-expanded={roleMenuOpen}
-                aria-haspopup="menu"
-                aria-controls="production-role-menu"
-                onClick={() => {
-                  setAccountMenuOpen(false);
-                  setRoleMenuOpen((current) => !current);
-                }}
-              >
-                <span className="production-view-as__label">View as</span>
-                <span className="production-view-as__value">{resolveRoleLabel(sessionRole)}</span>
-                <ChevronDown
-                  className={cls("production-view-as__chevron", roleMenuOpen && "is-open")}
-                  size={15}
-                  strokeWidth={2.2}
-                  aria-hidden="true"
-                />
-              </button>
-              {roleMenuOpen ? (
-                <div id="production-role-menu" role="menu" className="production-menu production-menu--role">
-                  {SESSION_OPTIONS.map((item) => (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      key={item.key}
-                      onClick={() => {
-                        clearSharedJourneyParams();
-                        setSessionRole(item.key);
-                        setActiveJourney("");
-                        setRoleMenuOpen(false);
-                        setAccountMenuOpen(false);
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <button type="button" className="production-language" aria-label="Bahasa Indonesia">
-              <span className="production-language__flag" aria-hidden="true" />
-              <span>ID</span>
-            </button>
-            <div className="production-account">
-              {isGuestSession ? (
-                <>
-                  <button
-                    type="button"
-                    className="production-login"
-                    aria-expanded={accountMenuOpen}
-                    aria-haspopup="menu"
-                    aria-controls="guest-account-menu"
-                    onClick={() => {
-                      setRoleMenuOpen(false);
-                      setAccountMenuOpen((current) => !current);
-                    }}
-                  >
-                    <LogIn size={17} strokeWidth={2.25} aria-hidden="true" />
-                    <span>Masuk</span>
-                  </button>
-                  {accountMenuOpen ? (
-                    <div id="guest-account-menu" role="menu" className="production-menu">
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          setRoleMenuOpen(false);
-                          setSessionRole("external");
-                        }}
-                      >
-                        Login / Buat Akun
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          setRoleMenuOpen(false);
-                          setActiveJourney("self-care-lookup");
-                        }}
-                      >
-                        Lanjut tanpa Login
-                      </button>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="production-profile"
-                    aria-expanded={accountMenuOpen}
-                    aria-haspopup="menu"
-                    aria-controls="account-menu"
-                    onClick={() => {
-                      setRoleMenuOpen(false);
-                      setAccountMenuOpen((current) => !current);
-                    }}
-                  >
-                    <span className="production-profile__badge">ID</span>
-                    <span>{activeSessionName}</span>
-                    <ChevronDown size={15} strokeWidth={2.2} aria-hidden="true" />
-                  </button>
-                  {accountMenuOpen ? (
-                    <div id="account-menu" role="menu" className="production-menu">
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          setRoleMenuOpen(false);
-                          setActiveJourney(accountPrimaryDestination);
-                        }}
-                      >
-                        {accountPrimaryLabel}
-                      </button>
-                      {isInternalSession ? (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            setAccountMenuOpen(false);
-                            setRoleMenuOpen(false);
-                            setActiveJourney("partner-config");
-                          }}
-                        >
-                          Konfigurasi Partner
-                        </button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <ProductionHeader
+        sessionRole={sessionRole}
+        sessionName={activeSessionName}
+        onOpenProducts={() => {
+          clearSharedJourneyParams();
+          setActiveJourney("");
+        }}
+        onSelectRole={(nextRole) => {
+          clearSharedJourneyParams();
+          setSessionRole(nextRole);
+          setActiveJourney("");
+        }}
+        onGuestLogin={() => {
+          setSessionRole("external");
+        }}
+        onOpenJourney={setActiveJourney}
+      />
 
       <main className="production-main">
         <h1>Pilihan Produk Asuransi Jasindo</h1>
