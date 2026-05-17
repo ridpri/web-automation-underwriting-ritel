@@ -144,31 +144,10 @@ const PRODUCTION_ASSETS = {
   jasindoPositive: "/production-assets/Jasindo_Positive-2.adb9525c.png",
   iso: "/production-assets/iso-jasindo.0f9f4aa7.png",
   mari: "/production-assets/logo-mari-berasuransi.803b8b56.png",
-  lifeGuard: "/production-assets/product-lintasan.df53665c.jpg",
-  tripGuard: "/production-assets/product-kecelakaan-diri.31916e3d.jpg",
-  eduProtect: "/production-assets/product-anak-sekolah.56785bac.jpg",
-  travelSafe: "/production-assets/product-travel.51b3edff.jpg",
-  propertyFire: "/production-assets/property-fire.jpg",
-  propertyAllRisk: "/production-assets/property-all-risk.jpg",
-  vehicleMotor: "/production-assets/vehicle-motor-tlo.jpg",
-  vehicleCarTlo: "/production-assets/vehicle-car-tlo.jpg",
-  vehicleCarComp: "/production-assets/vehicle-car-comp.jpg",
-};
-
-const PRODUCT_IMAGE_BY_TITLE = {
-  "Life Guard": PRODUCTION_ASSETS.lifeGuard,
-  "Trip Guard": PRODUCTION_ASSETS.tripGuard,
-  "Edu Protect": PRODUCTION_ASSETS.eduProtect,
-  "Travel Safe": PRODUCTION_ASSETS.travelSafe,
-  "Asuransi Kebakaran": PRODUCTION_ASSETS.propertyFire,
-  "Asuransi Property All Risk": PRODUCTION_ASSETS.propertyAllRisk,
-  "Asuransi Sepeda Motor - Total Loss": PRODUCTION_ASSETS.vehicleMotor,
-  "Asuransi Mobil - Total Loss": PRODUCTION_ASSETS.vehicleCarTlo,
-  "Asuransi Mobil Komprehensif": PRODUCTION_ASSETS.vehicleCarComp,
 };
 
 function productionImageFor(item) {
-  return PRODUCT_IMAGE_BY_TITLE[item.title] || item.image;
+  return item.image;
 }
 
 function ProductionCategoryIcon({ category }) {
