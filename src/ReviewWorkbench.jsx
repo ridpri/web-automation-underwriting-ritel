@@ -1,15 +1,26 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, Bell, CheckCircle2, ChevronDown, Clock3, FileText, Filter, Home, Search, Shield, ShieldAlert } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardList,
+  Clock3,
+  FileText,
+  Gauge,
+  Home,
+  LogOut,
+  Search,
+  Settings2,
+  Shield,
+  ShieldAlert,
+  SlidersHorizontal,
+} from "lucide-react";
+import { buildTimelineEvent, createOfferValidUntil, getEffectiveOperatingStatus } from "./operatingLayer.js";
+import { buildInternalWorkspaceSummary, getInternalPortalMenus, getTaskListRecords } from "./workspacePortalModel.js";
 
 function cls() {
   return Array.from(arguments).filter(Boolean).join(" ");
-}
-
-function toneClasses(status) {
-  if (status === "Pending Review Internal" || status === "Perlu Revisi") return "border-amber-200 bg-amber-50 text-amber-900";
-  if (status === "Siap Bayar" || status === "Paid") return "border-emerald-200 bg-emerald-50 text-emerald-900";
-  if (status === "Expired" || status === "Rejected") return "border-red-200 bg-red-50 text-red-900";
-  return "border-sky-200 bg-sky-50 text-sky-900";
 }
 
 function displayWorkbenchStatus(status) {
@@ -27,303 +38,225 @@ function displayWorkbenchChannel(channel) {
   return channel;
 }
 
-const FILTERS = ["Semua", "Perlu Ditindak", "Menunggu Tinjauan", "Perlu Revisi", "Kedaluwarsa", "Selesai Dibayar"];
+function statusClass(status) {
+  const effectiveStatus = typeof status === "string" ? status : getEffectiveOperatingStatus(status);
+  if (effectiveStatus === "Expired" || effectiveStatus === "Rejected") return "border-rose-200 bg-rose-50 text-rose-700";
+  if (effectiveStatus === "Pending Review Internal" || effectiveStatus === "Perlu Revisi") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (effectiveStatus === "Siap Bayar" || effectiveStatus === "Paid") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  return "border-[#D9E1EA] bg-[#F6F8FA] text-[#5F7A99]";
+}
 
-const WORKSPACE_LANES = [
-  {
-    key: "review",
-    label: "Perlu Saya Tinjau",
-    helper: "Dokumen dan validasi",
-    icon: ShieldAlert,
-  },
-  {
-    key: "waiting",
-    label: "Menunggu Respons Nasabah",
-    helper: "Tindak lanjut dan kelengkapan",
-    icon: Clock3,
-  },
-  {
-    key: "ready",
-    label: "Siap Kirim / Bayar",
-    helper: "Versi aktif dan final",
-    icon: CheckCircle2,
-  },
-];
+function getInitials(name) {
+  return String(name || "IW")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((item) => item[0])
+    .join("")
+    .toUpperCase();
+}
 
-const WORKSPACE_LANE_CONTENT = {
-  review: {
-    title: "Perlu Saya Tinjau",
-    subtitle: "Transaksi yang sedang menunggu tinjauan dan keputusan internal.",
-    emptyMessage: "Belum ada transaksi yang perlu Anda tinjau saat ini.",
-  },
-  waiting: {
-    title: "Menunggu Respons Nasabah",
-    subtitle: "Transaksi yang masih menunggu kelengkapan atau tindak lanjut dari nasabah.",
-    emptyMessage: "Belum ada transaksi yang sedang menunggu respons nasabah.",
-  },
-  ready: {
-    title: "Siap Kirim / Bayar",
-    subtitle: "Transaksi yang sudah cukup lengkap untuk dikirim atau dilanjutkan ke pembayaran.",
-    emptyMessage: "Belum ada transaksi yang siap dikirim atau dibayar saat ini.",
-  },
-};
+function formatMenuIcon(menuKey) {
+  if (menuKey === "dashboard") return Gauge;
+  if (menuKey === "policies") return Shield;
+  if (menuKey === "claims") return ShieldAlert;
+  if (menuKey === "tasks") return ClipboardList;
+  return Settings2;
+}
 
-function matchesWorkspaceLane(record, laneKey) {
-  if (laneKey === "review") return ["Pending Review Internal", "Perlu Revisi"].includes(record.status);
-  if (laneKey === "waiting") return ["Isi Data Lanjutan", "Indikasi Terkirim", "Dibuka Calon Tertanggung"].includes(record.status);
-  if (laneKey === "ready") return ["Siap Bayar", "Paid"].includes(record.status);
+function nextRevisionLabel(version = "Rev 1") {
+  const current = Number(String(version || "").match(/\d+/)?.[0] || "1");
+  return `Rev ${current + 1}`;
+}
+
+function workspaceActionItems(status) {
+  if (status === "Expired") {
+    return [
+      { key: "reissue", label: "Buat Versi Baru", helper: "Membentuk revisi aktif dengan masa berlaku baru sebelum dikirim ulang." },
+      { key: "handoff", label: "Kirim ke Staf", helper: "Masukkan kembali ke antrean review internal untuk disiapkan ulang." },
+    ];
+  }
+  if (["Isi Data Lanjutan", "Indikasi Terkirim", "Dibuka Calon Tertanggung"].includes(status)) {
+    return [
+      { key: "remind", label: "Kirim Pengingat", helper: "Catat pengingat ke calon pemegang polis untuk melengkapi data." },
+      { key: "assist", label: "Ambil Alih ke Staf", helper: "Pindahkan transaksi ke review internal karena calon pemegang polis butuh bantuan." },
+    ];
+  }
+  if (["Pending Review Internal", "Perlu Revisi"].includes(status)) {
+    return [
+      { key: "approve", label: "Tandai Siap Bayar", helper: "Setujui versi aktif dan buka jalur final offer atau pembayaran." },
+      { key: "request-revision", label: "Minta Revisi Data", helper: "Kembalikan transaksi ke status perlu revisi dengan alasan aktif." },
+    ];
+  }
+  if (status === "Siap Bayar") {
+    return [
+      { key: "resend-final", label: "Kirim Ulang Link Final", helper: "Catat pengiriman ulang tautan pembayaran final." },
+      { key: "expire-now", label: "Tandai Kedaluwarsa", helper: "Tutup versi aktif agar tidak bisa dibayar sebelum reissue." },
+    ];
+  }
+  return [];
+}
+
+function buildWorkspaceActionPatch(actionKey, record, sessionName) {
+  const actor = sessionName || "System";
+  const eventText = {
+    reissue: "Versi baru disiapkan karena penawaran sebelumnya kedaluwarsa.",
+    handoff: "Transaksi dikirim kembali ke staf untuk penyiapan ulang.",
+    remind: "Pengingat kelengkapan data dikirim ke calon pemegang polis.",
+    assist: "Transaksi diambil alih staf untuk membantu pengisian data lanjutan.",
+    approve: "Review selesai. Transaksi ditandai siap bayar.",
+    "request-revision": "Transaksi dikembalikan untuk revisi data.",
+    "resend-final": "Tautan final offer dikirim ulang ke calon pemegang polis.",
+    "expire-now": "Versi aktif ditandai kedaluwarsa oleh staf.",
+  }[actionKey] || "Status transaksi diperbarui.";
+  const event = buildTimelineEvent(eventText, actor);
+  const patch = {
+    lastActivity: event.at,
+    timeline: [event, ...(record.timeline || [])],
+  };
+
+  if (actionKey === "reissue") {
+    return {
+      ...patch,
+      status: "Perlu Revisi",
+      version: nextRevisionLabel(record.version),
+      validUntil: createOfferValidUntil(7),
+      reason: "Penawaran kedaluwarsa; siapkan versi baru sebelum dikirim ulang.",
+      notes: "Versi sebelumnya tidak bisa dilanjutkan ke pembayaran karena masa berlaku telah berakhir.",
+    };
+  }
+  if (actionKey === "handoff" || actionKey === "assist") {
+    return {
+      ...patch,
+      status: "Pending Review Internal",
+      reason: "Butuh bantuan staf asuransi",
+      notes: "Calon pemegang polis membutuhkan bantuan staf sebelum proses dilanjutkan.",
+    };
+  }
+  if (actionKey === "approve") {
+    return {
+      ...patch,
+      status: "Siap Bayar",
+      validUntil: createOfferValidUntil(7),
+      reason: "",
+      notes: "Review internal selesai. Penawaran final aktif dan siap dilanjutkan ke pembayaran.",
+    };
+  }
+  if (actionKey === "request-revision") {
+    return {
+      ...patch,
+      status: "Perlu Revisi",
+      reason: "Perlu revisi data penawaran",
+      notes: "Perubahan material harus dibuat sebagai revisi sebelum penawaran dikirim ulang.",
+    };
+  }
+  if (actionKey === "expire-now") {
+    return {
+      ...patch,
+      status: "Expired",
+      reason: "Masa berlaku penawaran ditutup",
+      notes: "Versi aktif ditutup dan perlu dibuatkan versi baru sebelum pembayaran.",
+    };
+  }
+  return patch;
+}
+
+function matchesTaskScope(record, scope) {
+  const status = getEffectiveOperatingStatus(record);
+  if (scope === "review") return ["Pending Review Internal", "Perlu Revisi"].includes(status);
+  if (scope === "waiting") return ["Isi Data Lanjutan", "Indikasi Terkirim", "Dibuka Calon Tertanggung"].includes(status);
+  if (scope === "ready") return ["Siap Bayar", "Paid"].includes(status);
+  if (scope === "expired") return status === "Expired";
   return true;
 }
 
-function workspaceLaneDone(activeLane, laneKey) {
-  const order = ["review", "waiting", "ready"];
-  return order.indexOf(laneKey) < order.indexOf(activeLane);
+function recordMatchesFilter(record, filterKey) {
+  const status = getEffectiveOperatingStatus(record);
+  if (filterKey === "all") return true;
+  if (filterKey === "action") return ["Pending Review Internal", "Perlu Revisi", "Isi Data Lanjutan", "Expired"].includes(status);
+  if (filterKey === "review") return status === "Pending Review Internal";
+  if (filterKey === "revision") return status === "Perlu Revisi";
+  if (filterKey === "ready") return status === "Siap Bayar";
+  if (filterKey === "done") return status === "Paid";
+  return true;
 }
 
-function AuditFeedRow({ item }) {
-  const actorInitial = String(item.actor || "S").trim().charAt(0).toUpperCase();
+function normalizeDefaultFilter(filterKey) {
+  if (filterKey === "Perlu Ditindak") return "action";
+  if (filterKey === "Menunggu Tinjauan") return "review";
+  if (filterKey === "Perlu Revisi") return "revision";
+  if (filterKey === "Selesai Dibayar") return "done";
+  if (filterKey === "Semua") return "all";
+  return filterKey || "all";
+}
+
+function taskScopeLabel(scope) {
+  if (scope === "review") return "Perlu Saya Tinjau";
+  if (scope === "waiting") return "Menunggu Respons";
+  if (scope === "ready") return "Siap Kirim / Bayar";
+  if (scope === "expired") return "Kedaluwarsa / Reissue";
+  return "Semua Task";
+}
+
+function AppLogo() {
   return (
-    <div className="flex items-start gap-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EAF3FF] text-[11px] font-bold text-[#0A4D82]">
-        {actorInitial}
+    <div className="flex items-center gap-4 text-white">
+      <div className="leading-none">
+        <div className="text-[14px] font-bold">Danantara</div>
+        <div className="text-[13px] font-bold">Indonesia</div>
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <div className="text-sm font-semibold text-[#041E42]">{item.actor}</div>
-          <div className="text-[12px] text-slate-400">{item.at}</div>
-        </div>
-        <div className="mt-1 rounded-2xl border border-[#D8E1EA] bg-slate-50 px-3.5 py-2.5 text-[14px] leading-6 text-[#5F7A99]">
-          {item.text}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function WorkbenchSection({ title, subtitle, action, children, className = "" }) {
-  return (
-    <section className={cls("rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 md:p-6", className)}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="text-[15px] font-semibold leading-6 text-[#041E42] md:text-[16px]">{title}</div>
-          {subtitle ? <div className="mt-1 max-w-3xl text-[14px] leading-6 text-[#5F7A99]">{subtitle}</div> : null}
-        </div>
-        {action ? <div className="shrink-0">{action}</div> : null}
-      </div>
-      <div className="mt-5">{children}</div>
-    </section>
-  );
-}
-
-function FilterChip({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cls(
-        "inline-flex rounded-full px-4 py-2 text-sm font-semibold transition",
-        active ? "bg-[#0A4D82] text-white" : "bg-[#F1F5F9] text-slate-600 hover:bg-slate-200",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function WorkspaceRail({ activeLane, onChange, records }) {
-  return (
-    <div className="mx-auto max-w-3xl rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:max-w-4xl md:p-5">
-      <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5">
-        <div className="flex flex-col gap-5 md:flex-row md:gap-5">
-          {WORKSPACE_LANES.map((item, index) => {
-            const Icon = item.icon;
-            const active = activeLane === item.key;
-            const done = workspaceLaneDone(activeLane, item.key);
-            const count = records.filter((record) => matchesWorkspaceLane(record, item.key)).length;
-            const showConnector = index < WORKSPACE_LANES.length - 1;
-            const subtitle = active ? "Sedang dibuka" : done ? `${count} selesai` : "Klik untuk buka";
-
-            return (
-              <React.Fragment key={item.key}>
-                <button
-                  type="button"
-                  onClick={() => onChange(item.key)}
-                  className="group relative flex flex-1 flex-col items-center text-center"
-                >
-                  <div
-                    className={cls(
-                      "relative flex w-full flex-col items-center text-center transition",
-                      active
-                        ? "rounded-[20px] border border-[#D8E1EA] bg-white px-4 py-4 shadow-sm md:min-h-[128px] md:justify-center"
-                        : "px-1 py-2 md:min-h-[128px] md:justify-center"
-                    )}
-                  >
-                    <div className={cls("flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white transition", done ? "border-green-600 text-green-600" : active ? "border-[#0A4D82] text-[#0A4D82]" : "border-slate-300 text-slate-300 group-hover:border-[#0A4D82] group-hover:text-[#0A4D82]")}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className={cls("mt-3 text-[14px] font-bold leading-5 transition md:text-[16px]", active || done ? "text-[#041E42]" : "text-[#5F7A99] group-hover:text-[#041E42]")}>{item.label}</div>
-                    <div className={cls("mt-2 rounded-full px-3 py-1 text-[11px] font-medium leading-4 transition", active ? "bg-[#EAF3FF] text-[#0A4D82]" : done ? "border border-emerald-200 bg-white text-emerald-700" : "border border-[#D8E1EA] bg-white text-[#8EA3BC] group-hover:text-[#0A4D82]")}>
-                      {subtitle}
-                    </div>
-                    <div className={cls("mt-2 text-[13px] leading-5 transition", active || done ? "text-[#8EA3BC]" : "text-[#8EA3BC] group-hover:text-[#5F7A99]")}>
-                      {item.helper}
-                    </div>
-                  </div>
-                </button>
-                {showConnector ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
-              </React.Fragment>
-            );
-          })}
-        </div>
+      <div className="h-7 w-px bg-white/25" />
+      <div className="leading-none">
+        <div className="text-[18px] font-bold italic">J</div>
+        <div className="-mt-1 text-[11px] font-semibold">asuransi jasindo</div>
       </div>
     </div>
   );
 }
 
-export default function ReviewWorkbench({
-  records,
-  onBack,
-  onOpenJourney,
-  title = "Tinjauan Internal",
-  subtitle = "Antrean operasional lintas produk untuk transaksi yang perlu dipantau, ditinjau, atau ditindaklanjuti.",
-  emptyMessage = "Belum ada transaksi yang cocok dengan filter saat ini.",
-  defaultFilter = "Semua",
-  showWorkspaceRail = false,
-  defaultWorkspaceLane = "review",
-  sessionName = "Taqwim (Internal)",
-  sessionRoleLabel = "Internal",
-  onNavigateHome,
-  onNavigateProducts,
-  onOpenWorkspace,
-  onOpenPartnerConfig,
-}) {
-  const [activeFilter, setActiveFilter] = useState(defaultFilter);
-  const [activeWorkspaceLane, setActiveWorkspaceLane] = useState(defaultWorkspaceLane);
-  const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState(records[0]?.id || "");
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-
-  const laneRecords = useMemo(() => {
-    if (!showWorkspaceRail) return records;
-    return records.filter((item) => matchesWorkspaceLane(item, activeWorkspaceLane));
-  }, [activeWorkspaceLane, records, showWorkspaceRail]);
-
-  const filtered = useMemo(() => {
-    return records.filter((item) => {
-      const matchesLane = showWorkspaceRail ? matchesWorkspaceLane(item, activeWorkspaceLane) : true;
-      const matchesQuery =
-        !query ||
-        [item.id, item.product, item.customer, item.status, item.owner].join(" ").toLowerCase().includes(query.toLowerCase());
-
-      const matchesFilter =
-        activeFilter === "Semua"
-          ? true
-          : activeFilter === "Perlu Ditindak"
-            ? ["Pending Review Internal", "Perlu Revisi", "Isi Data Lanjutan"].includes(item.status)
-            : activeFilter === "Menunggu Tinjauan"
-              ? item.status === "Pending Review Internal"
-              : activeFilter === "Perlu Revisi"
-                ? item.status === "Perlu Revisi"
-                : activeFilter === "Kedaluwarsa"
-                  ? item.status === "Expired"
-                  : item.status === "Paid";
-
-      return matchesLane && matchesQuery && matchesFilter;
-    });
-  }, [activeFilter, activeWorkspaceLane, query, records, showWorkspaceRail]);
-
-  useEffect(() => {
-    if (!showWorkspaceRail) return;
-    setActiveFilter("Semua");
-    setSelectedId(laneRecords[0]?.id || "");
-  }, [activeWorkspaceLane, laneRecords, showWorkspaceRail]);
-
-  useEffect(() => {
-    if (!filtered.length) {
-      setSelectedId("");
-      return;
-    }
-
-    const stillVisible = filtered.some((item) => item.id === selectedId);
-    if (!stillVisible) setSelectedId(filtered[0].id);
-  }, [filtered, selectedId]);
-
-  const selected = filtered.find((item) => item.id === selectedId) || filtered[0] || null;
-  const workspaceCopy = showWorkspaceRail ? WORKSPACE_LANE_CONTENT[activeWorkspaceLane] : null;
-
+function TopBar({ sessionName, sessionRoleLabel, onGoHome, onGoProducts, accountMenuOpen, setAccountMenuOpen, onOpenWorkspace, onOpenPartnerConfig }) {
   return (
-    <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
-        <div className="mx-auto grid max-w-[1800px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 md:px-6">
-          <div className="flex min-w-0 items-center gap-3 text-white">
-              <div className="text-[15px] font-black leading-tight md:text-[18px]">
-                Danantara
-                <div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div>
-              </div>
-              <div className="hidden items-center gap-2.5 text-white md:flex">
-                <div className="text-[14px] font-semibold leading-none md:text-[15px]">asuransi</div>
-                <div className="h-1.5 w-1.5 rounded-full bg-white/70" />
-                <div className="text-[14px] font-semibold leading-none md:text-[15px]">jasindo</div>
-              </div>
+    <header className="fixed left-0 right-0 top-0 z-30 h-[52px] bg-[#004B78] text-white shadow-sm">
+      <div className="flex h-full items-center justify-between px-5 md:px-[70px]">
+        <AppLogo />
+        <div className="hidden items-center gap-1 rounded-md bg-[#00436F] p-1 md:flex">
+          <button type="button" onClick={onGoHome} className="inline-flex h-8 items-center gap-2 rounded px-3 text-[13px] font-semibold hover:bg-white/10">
+            <Home className="h-4 w-4" />
+            Beranda
+          </button>
+          <button type="button" onClick={onGoProducts} className="inline-flex h-8 items-center gap-2 rounded px-3 text-[13px] font-semibold hover:bg-white/10">
+            <Shield className="h-4 w-4" />
+            Produk
+          </button>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden items-center gap-2 md:flex">
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-[10px] font-bold text-red-600">ID</span>
+            <span className="text-[12px] font-semibold">{sessionRoleLabel}</span>
           </div>
-
-          <div className="hidden items-center gap-3 md:flex">
-              <button
-                type="button"
-                onClick={onNavigateHome}
-                className="inline-flex items-center gap-2 rounded-[8px] bg-white/6 px-5 py-3 text-sm font-medium text-white hover:bg-white/10"
-              >
-                <Home className="h-4 w-4" />
-                Beranda
-              </button>
-              <button
-                type="button"
-                onClick={onNavigateProducts}
-                className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-5 py-3 text-sm font-semibold text-white shadow-sm"
-              >
-                <Shield className="h-4 w-4" />
-                Produk
-              </button>
-          </div>
-
-          <div className="relative flex items-center justify-end gap-2 md:gap-3">
-            <button
-              type="button"
-              className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm"
-            >
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">View as</span>
-              <span className="max-w-[124px] truncate">{sessionRoleLabel}</span>
-            </button>
-            <button
-              type="button"
-              aria-expanded={accountMenuOpen}
-              aria-haspopup="menu"
-              onClick={() => setAccountMenuOpen((current) => !current)}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-slate-800 shadow-sm md:px-4"
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#EA4335] text-[10px] font-bold text-white">ID</span>
-              <span className="max-w-[108px] truncate text-[13px] md:max-w-none md:text-sm">{sessionName}</span>
-              <ChevronDown className={cls("h-4 w-4 text-slate-500 transition", accountMenuOpen && "rotate-180")} aria-hidden="true" />
-            </button>
-            <button type="button" aria-label="Lihat notifikasi" className="hidden h-11 w-11 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 md:inline-flex">
-              <Bell className="h-4 w-4" />
+          <button type="button" className="grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white/15">
+            <Bell className="h-4 w-4" />
+          </button>
+          <div className="relative">
+            <button type="button" onClick={() => setAccountMenuOpen((current) => !current)} className="flex items-center gap-2">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-slate-300 text-[12px] font-bold text-[#004B78]">{getInitials(sessionName)}</span>
+              <span className="hidden text-[13px] font-bold md:inline">{sessionName}</span>
+              <ChevronDown className={cls("hidden h-4 w-4 md:inline", accountMenuOpen && "rotate-180")} />
             </button>
             {accountMenuOpen ? (
-              <div role="menu" className="absolute right-0 top-[calc(100%+12px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
+              <div className="absolute right-0 top-[calc(100%+10px)] z-40 w-[220px] rounded-[14px] border border-[#D9E1EA] bg-white p-2 text-slate-900 shadow-[0_20px_45px_rgba(15,23,42,0.16)]">
                 <button
                   type="button"
-                  role="menuitem"
                   onClick={() => {
                     setAccountMenuOpen(false);
                     onOpenWorkspace?.();
                   }}
-                  className="flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-[#0A4D82] hover:bg-[#F7FAFD]"
+                  className="flex w-full items-center justify-center rounded-[10px] px-3 py-3 text-center text-sm font-semibold text-[#004B78] hover:bg-[#F7FAFD]"
                 >
                   Ruang Kerja Saya
                 </button>
                 <button
                   type="button"
-                  role="menuitem"
                   onClick={() => {
                     setAccountMenuOpen(false);
                     onOpenPartnerConfig?.();
@@ -336,166 +269,634 @@ export default function ReviewWorkbench({
             ) : null}
           </div>
         </div>
-      </header>
+      </div>
+    </header>
+  );
+}
 
-      <section className="bg-[#0A4D82] pb-12 pt-6 md:pb-16 md:pt-8">
-        <div className="mx-auto max-w-[1280px] px-4 md:px-6">
-          <div className="flex items-center justify-between gap-4">
+function Sidebar({ activeMenu, onMenuChange, sessionName, onExit }) {
+  const menus = getInternalPortalMenus();
+  return (
+    <aside className="fixed bottom-0 left-0 top-[52px] z-20 hidden w-[270px] border-r border-[#D9E1EA] bg-white md:flex md:flex-col">
+      <nav className="space-y-2 px-3 py-5">
+        {menus.map((item) => {
+          const Icon = formatMenuIcon(item.key);
+          const active = activeMenu === item.key;
+          return (
             <button
+              key={item.key}
               type="button"
-              onClick={onBack}
-              className="inline-flex items-center gap-2 rounded-[12px] border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white hover:bg-white/15"
+              onClick={() => onMenuChange(item.key)}
+              className={cls(
+                "flex h-10 w-full items-center gap-3 rounded px-3 text-left text-[14px] font-semibold transition",
+                active ? "bg-[#004B78] text-white" : "text-[#004B78] hover:bg-[#EEF5FA]",
+              )}
             >
-              <ArrowLeft className="h-4 w-4" />
-              Kembali
+              <Icon className="h-4 w-4" />
+              {item.label}
             </button>
-            <div className="h-[48px] w-[120px] shrink-0 opacity-0" aria-hidden="true" />
+          );
+        })}
+      </nav>
+      <div className="mt-auto space-y-4 p-3">
+        <div className="flex items-center gap-3 rounded-md bg-[#EAF0F4] p-2">
+          <span className="grid h-9 w-9 place-items-center rounded bg-[#004B78] text-[12px] font-bold text-white">{getInitials(sessionName)}</span>
+          <div className="min-w-0">
+            <div className="truncate text-[12px] font-bold text-[#041E42]">{sessionName}</div>
+            <div className="truncate text-[11px] text-[#5F7A99]">internal@asuransijasindo.co.id</div>
           </div>
-
-          <div className="mx-auto mt-8 max-w-[900px] text-center text-white md:mt-10">
-            <div className="text-[40px] font-black tracking-tight md:text-[48px]">{title}</div>
-            <div className="mx-auto mt-4 max-w-[760px] text-[17px] leading-8 text-white/95">{subtitle}</div>
-          </div>
-
-          {showWorkspaceRail ? <div className="mx-auto mt-8 max-w-[900px]">{<WorkspaceRail activeLane={activeWorkspaceLane} onChange={setActiveWorkspaceLane} records={records} />}</div> : null}
         </div>
-      </section>
+        <button type="button" onClick={onExit} className="flex h-10 items-center gap-3 px-2 text-[14px] font-medium text-red-500 hover:text-red-600">
+          <LogOut className="h-4 w-4" />
+          Keluar
+        </button>
+      </div>
+    </aside>
+  );
+}
 
-      <div className="mx-auto max-w-[1280px] px-4 py-6 md:px-6 md:py-8">
-        <div className="space-y-6">
-          <WorkbenchSection
-            title={workspaceCopy?.title || "Ruang Kerja Saya"}
-            subtitle={workspaceCopy?.subtitle || "Cari dan pilih transaksi yang ingin dipantau atau ditinjau."}
+function MobileTabs({ activeMenu, onMenuChange }) {
+  const menus = getInternalPortalMenus();
+  return (
+    <div className="mb-3 flex gap-1.5 overflow-x-auto md:hidden">
+      {menus.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => onMenuChange(item.key)}
+          className={cls("h-8 shrink-0 rounded-full border px-3 text-[12px] font-bold", activeMenu === item.key ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#004B78]")}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PageShell({ children }) {
+  return (
+    <main className="min-h-screen bg-white pt-[52px] md:pl-[270px]">
+      <div className="px-3 py-3 md:px-[22px] md:py-5">{children}</div>
+    </main>
+  );
+}
+
+function WorkPanel({ children }) {
+  return <section className="rounded-xl border border-[#D9E1EA] bg-[#F6F8FA] p-2 shadow-sm md:rounded-[20px] md:p-4">{children}</section>;
+}
+
+function Toolbar({ search, setSearch, activeFilter, setActiveFilter, filters }) {
+  return (
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-wrap gap-2">
+        {filters.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => setActiveFilter(item.key)}
+            className={cls(
+              "h-8 rounded-full border px-3.5 text-[12px] font-bold",
+              activeFilter === item.key ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#5F7A99] hover:bg-[#F6F8FA]",
+            )}
           >
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {FILTERS.map((item) => (
-                  <FilterChip key={item} active={activeFilter === item} onClick={() => setActiveFilter(item)}>
-                    {item}
-                  </FilterChip>
-                ))}
-              </div>
-              <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                <div className="relative flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Cari nomor, nama, produk, atau penanggung jawab"
-                    className="h-11 w-full rounded-xl border border-[#D9E1EA] bg-white pl-10 pr-3 text-sm text-slate-700 outline-none focus:border-[#0A4D82]"
-                  />
-                </div>
-                <button type="button" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D9E1EA] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                  <Filter className="h-4 w-4" />
-                  Filter
-                </button>
-              </div>
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <label className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-[#D9E1EA] bg-white px-3 sm:w-[280px]">
+          <Search className="h-4 w-4 text-[#9AAAC0]" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Cari nomor, nama, produk"
+            className="h-full min-w-0 flex-1 border-0 bg-transparent text-[12px] text-[#041E42] outline-none placeholder:text-[#9AAAC0]"
+          />
+        </label>
+        <button type="button" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#304B68] hover:bg-[#F6F8FA]">
+          <SlidersHorizontal className="h-4 w-4" />
+          Filter
+          <ChevronDown className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ children, tone }) {
+  return <span className={cls("inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-bold", tone)}>{children}</span>;
+}
+
+function InfoBox({ label, value }) {
+  return (
+    <div className="rounded-lg border border-[#D9E1EA] bg-white px-2.5 py-2 md:px-3 md:py-2.5">
+      <div className="truncate text-[9px] font-bold uppercase tracking-[0.08em] text-[#9AAAC0] md:text-[10px] md:tracking-[0.16em]">{label}</div>
+      <div className="mt-0.5 truncate text-[12px] font-bold text-[#041E42] md:mt-1 md:text-[13px]">{value || "-"}</div>
+    </div>
+  );
+}
+
+function SectionBox({ title, icon = Shield, children }) {
+  const SectionIcon = icon;
+  return (
+    <div className="rounded-xl border border-[#D9E1EA] bg-white p-3">
+      <div className="mb-2.5 flex items-center gap-2 text-[13px] font-bold text-[#041E42]">
+        <SectionIcon className="h-4 w-4 text-[#004B78]" />
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PageIntro({ title, description, action, tone = "light" }) {
+  return (
+    <div className={cls("rounded-xl border p-3 md:p-4", tone === "brand" ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#041E42]")}>
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-[17px] font-bold leading-6 md:text-[20px] md:leading-7">{title}</h1>
+          <p className={cls("mt-1 max-w-3xl text-[12px] leading-5 md:text-[13px] md:leading-6", tone === "brand" ? "text-white/80" : "text-[#5F7A99]")}>{description}</p>
+        </div>
+        {action}
+      </div>
+    </div>
+  );
+}
+
+function SmallActionCard({ icon = Shield, title, helper, onClick, tone = "default" }) {
+  const Icon = icon;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cls(
+        "rounded-lg border px-3 py-3 text-left transition hover:border-[#004B78]/60 hover:bg-[#F8FAFC]",
+        tone === "brand" ? "border-[#B8D7EF] bg-[#F1F8FE]" : "border-[#D9E1EA] bg-white",
+      )}
+    >
+      <Icon className="h-4 w-4 text-[#004B78]" />
+      <div className="mt-2 text-[12px] font-bold text-[#041E42]">{title}</div>
+      <div className="mt-1 text-[11px] leading-4 text-[#5F7A99]">{helper}</div>
+    </button>
+  );
+}
+
+function Timeline({ items }) {
+  return (
+    <div className="space-y-3">
+      {items.map((item, index) => (
+        <div key={`${item.at || item.date}-${index}`} className="flex gap-3">
+          <div className="mt-1 grid h-4 w-4 place-items-center rounded-full border-2 border-[#004B78] bg-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#004B78]" />
+          </div>
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9AAAC0]">{item.at || item.date}</div>
+            <div className="text-[12px] font-bold text-[#041E42]">{item.actor || "System"}</div>
+            <div className="text-[12px] leading-5 text-[#5F7A99]">{item.text}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TaskScopeTabs({ activeScope, setActiveScope, records }) {
+  const scopes = ["all", "review", "waiting", "ready", "expired"];
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {scopes.map((scope) => {
+        const count = scope === "all" ? records.length : records.filter((item) => matchesTaskScope(item, scope)).length;
+        return (
+          <button
+            key={scope}
+            type="button"
+            onClick={() => setActiveScope(scope)}
+            className={cls(
+              "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-[12px] font-bold",
+              activeScope === scope ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#304B68] hover:bg-[#F8FAFC]",
+            )}
+          >
+            <span>{taskScopeLabel(scope)}</span>
+            <span className={cls("rounded-full px-2 py-0.5 text-[11px]", activeScope === scope ? "bg-white/20 text-white" : "bg-[#EEF5FA] text-[#004B78]")}>{count}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RecordRow({ record, expanded, onToggle, onOpenJourney, onAction, actionItems }) {
+  const status = getEffectiveOperatingStatus(record);
+  return (
+    <div className={cls("overflow-hidden rounded-xl border bg-white transition", expanded ? "border-[#004B78] shadow-[0_0_0_1px_#004B78]" : "border-[#D9E1EA]")}>
+      <button type="button" onClick={onToggle} className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-2 px-3 py-2.5 text-left hover:bg-[#F8FAFC] sm:gap-3 sm:px-4 sm:py-3 lg:grid-cols-[minmax(220px,1.4fr)_minmax(180px,1fr)_140px_140px_120px_32px] lg:items-center">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="truncate text-[13px] font-bold text-[#041E42] md:text-[14px]">{record.product}</div>
+            <StatusBadge tone={statusClass(status)}>{displayWorkbenchStatus(status)}</StatusBadge>
+          </div>
+          <div className="mt-0.5 truncate text-[11px] text-[#5F7A99] md:mt-1 md:text-[12px]">{record.id}</div>
+        </div>
+        <div className="hidden min-w-0 sm:block">
+          <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#9AAAC0]">Tertanggung</div>
+          <div className="truncate text-[12px] font-semibold text-[#304B68]">{record.customer}</div>
+        </div>
+        <div className="hidden lg:block">
+          <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#9AAAC0]">PIC</div>
+          <div className="text-[12px] font-semibold text-[#304B68]">{record.owner}</div>
+        </div>
+        <div className="hidden lg:block">
+          <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#9AAAC0]">Berlaku</div>
+          <div className="text-[12px] font-semibold text-[#304B68]">{record.validUntil}</div>
+        </div>
+        <div className="hidden text-[12px] font-semibold text-[#5F7A99] sm:block">{displayWorkbenchChannel(record.channel)}</div>
+        <div className="inline-flex items-center gap-1 self-start text-[11px] font-bold text-[#004B78] sm:self-auto md:text-[12px] lg:justify-self-end">
+          <span className="hidden sm:inline">{expanded ? "Tutup" : "Detail"}</span>
+          <ChevronDown className={cls("h-4 w-4 text-[#5F7A99] transition", expanded ? "rotate-180" : "")} />
+        </div>
+      </button>
+      {expanded ? (
+        <div className="border-t border-[#D9E1EA] bg-[#FBFCFD] p-2 md:p-3">
+          <div className="space-y-3">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              <InfoBox label="Versi" value={record.version} />
+              <InfoBox label="SLA" value={record.sla} />
+              <InfoBox label="Alasan" value={record.reason || "-"} />
+              <InfoBox label="Aktivitas" value={record.lastActivity} />
             </div>
-          </WorkbenchSection>
-
-          <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <WorkbenchSection title="Daftar transaksi" subtitle="Transaksi yang sesuai dengan filter aktif.">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="space-y-3">
-                {filtered.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedId(item.id)}
-                    className={cls(
-                      "w-full rounded-[20px] border bg-white p-4 text-left shadow-sm transition",
-                      selected?.id === item.id ? "border-[#0A4D82] bg-[#F8FBFE]" : "border-[#D8E1EA] hover:bg-slate-50",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8EA3BC]">{item.id}</div>
-                        <div className="mt-2 text-[15px] font-semibold leading-6 text-[#041E42] md:text-[16px]">{item.product}</div>
-                      </div>
-                      <span className={cls("inline-flex rounded-full border px-3 py-1 text-xs font-semibold", toneClasses(item.status))}>{displayWorkbenchStatus(item.status)}</span>
-                    </div>
-                    <div className="mt-3 grid gap-2 text-[14px] leading-6 text-[#5F7A99] sm:grid-cols-2">
-                      <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Tertanggung</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.customer}</div></div>
-                      <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Penanggung jawab</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.owner}</div></div>
-                      <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Alasan</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.reason || "-"}</div></div>
-                      <div><span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Aktivitas terakhir</span><div className="mt-1 text-[14px] font-semibold text-[#041E42]">{item.lastActivity}</div></div>
-                    </div>
-                  </button>
-                ))}
-                {!filtered.length ? (
-                  <div className="rounded-[24px] border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-                    {workspaceCopy?.emptyMessage || emptyMessage}
-                  </div>
-                ) : null}
+                <SectionBox title="Catatan Transaksi" icon={ClipboardList}>
+                  <div className="text-[12px] leading-5 text-[#5F7A99]">{record.notes}</div>
+                </SectionBox>
+                <SectionBox title="Linimasa" icon={Clock3}>
+                  <Timeline items={record.timeline || []} />
+                </SectionBox>
               </div>
-            </WorkbenchSection>
-
-            {selected ? (
-              <div className="space-y-6">
-                <WorkbenchSection
-                  title="Ringkasan transaksi"
-                  subtitle="Lihat konteks utama transaksi sebelum membuka alur detailnya."
-                  action={
-                    <button type="button" onClick={() => onOpenJourney(selected)} className="inline-flex h-11 items-center justify-center rounded-xl bg-[#F5A623] px-4 text-sm font-semibold text-white hover:brightness-105">
+              <div className="space-y-3">
+                <SectionBox title="Aksi Cepat" icon={ShieldAlert}>
+                  <div className="grid gap-2">
+                    <button type="button" onClick={() => onOpenJourney(record)} className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-4 text-[12px] font-bold text-white hover:bg-[#DF9620]">
                       Buka Transaksi
                     </button>
-                  }
-                >
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{selected.version}</span>
-                        <span className={cls("inline-flex rounded-full border px-3 py-1 text-xs font-semibold", toneClasses(selected.status))}>{displayWorkbenchStatus(selected.status)}</span>
-                        <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{displayWorkbenchChannel(selected.channel)}</span>
+                    {actionItems.length ? actionItems.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => onAction(item.key, record)}
+                        className="rounded-lg border border-[#D9E1EA] bg-white px-3 py-2 text-left hover:bg-[#EEF5FA]"
+                      >
+                        <span className="block text-[12px] font-bold text-[#041E42]">{item.label}</span>
+                        <span className="mt-1 block text-[11px] leading-4 text-[#5F7A99]">{item.helper}</span>
+                      </button>
+                    )) : (
+                      <div className="rounded-lg border border-[#D9E1EA] bg-[#F8FAFC] px-3 py-2 text-[12px] leading-5 text-[#5F7A99]">
+                        Tidak ada aksi tambahan untuk status ini.
                       </div>
-                      <div className="mt-3 text-[28px] font-black tracking-tight text-slate-900">{selected.product}</div>
-                      <div className="mt-2 text-[14px] leading-6 text-[#5F7A99]">{selected.notes}</div>
-                    </div>
+                    )}
                   </div>
-
-                  <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Tertanggung</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.customer}</div></div>
-                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Penanggung jawab</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.owner}</div></div>
-                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">SLA</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.sla}</div></div>
-                    <div className="rounded-2xl border border-[#D8E1EA] bg-white p-4"><div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Berlaku sampai</div><div className="mt-1.5 text-[15px] font-semibold leading-6 text-[#041E42]">{selected.validUntil}</div></div>
-                  </div>
-                </WorkbenchSection>
-
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-                  <WorkbenchSection title="Linimasa" subtitle="Pantau update terakhir pada transaksi ini.">
-                    <div className="space-y-4">
-                      {selected.timeline.map((item, index) => (
-                        <AuditFeedRow key={`${item.at}-${index}`} item={item} />
+                </SectionBox>
+                {record.flags?.length ? (
+                  <SectionBox title="Penanda Review" icon={AlertTriangle}>
+                    <div className="space-y-2">
+                      {record.flags.map((flag) => (
+                        <div key={flag} className="rounded-md border border-[#D9E1EA] bg-white px-3 py-2 text-[12px] leading-5 text-[#5F7A99]">
+                          {flag}
+                        </div>
                       ))}
                     </div>
-                  </WorkbenchSection>
-
-                  <div className="space-y-6">
-                    <WorkbenchSection title="Alasan Tinjauan" subtitle="Fokus review aktif untuk transaksi ini.">
-                      <div className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3 text-[14px] leading-6 text-[#041E42]">{selected.reason || "Belum ada alasan tinjauan yang aktif."}</div>
-                      {selected.flags?.length ? <div className="mt-3 space-y-2">{selected.flags.map((flag) => <div key={flag} className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3 text-[14px] leading-6 text-[#041E42]">{flag}</div>)}</div> : null}
-                    </WorkbenchSection>
-
-                    <WorkbenchSection title="Langkah Berikutnya" subtitle="Tindakan yang biasanya perlu diperhatikan sebelum lanjut.">
-                      <div className="space-y-2 text-[14px] leading-6 text-[#5F7A99]">
-                        <div className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3">Pastikan versi aktif masih berlaku sebelum mengarahkan calon tertanggung ke pembayaran.</div>
-                        <div className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3">Setiap perubahan material harus membentuk revisi baru dan menjadikan versi lama hanya sebagai riwayat.</div>
-                        <div className="rounded-xl border border-[#D8E1EA] bg-slate-50 p-3">Jika ada data dokumen yang tidak cocok, arahkan transaksi ke Menunggu Tinjauan Internal atau Perlu Revisi.</div>
-                      </div>
-                    </WorkbenchSection>
-
-                    <div className="rounded-2xl bg-[#0A4D82] p-4 text-sm text-white shadow-sm">
-                      <div className="flex items-start gap-2">
-                        {selected.status === "Siap Bayar" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
-                        <span>{selected.status === "Siap Bayar" ? "Transaksi ini sudah cukup lengkap untuk masuk ke proposal final dan pembayaran." : "Transaksi ini masih butuh perhatian internal sebelum aman dilanjutkan."}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  </SectionBox>
+                ) : null}
               </div>
-            ) : null}
+            </div>
           </div>
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+function EmptyState({ message }) {
+  return (
+    <div className="rounded-xl border border-dashed border-[#D9E1EA] bg-white px-4 py-6 text-center text-[12px] text-[#5F7A99]">
+      {message}
+    </div>
+  );
+}
+
+function DashboardView({ title, subtitle, records, onMenuChange, onOpenJourney }) {
+  const summary = buildInternalWorkspaceSummary(records);
+  const taskRecords = getTaskListRecords(records);
+  const priorityRecord =
+    taskRecords.find((item) => ["Pending Review Internal", "Perlu Revisi"].includes(getEffectiveOperatingStatus(item))) ||
+    taskRecords.find((item) => ["Isi Data Lanjutan", "Expired"].includes(getEffectiveOperatingStatus(item))) ||
+    taskRecords[0];
+
+  return (
+    <WorkPanel>
+      <div className="grid gap-2 md:gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.55fr)]">
+        <PageIntro
+          title={title}
+          description={subtitle}
+          action={
+            <button type="button" onClick={() => onMenuChange("claims")} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#004B78] px-4 text-[12px] font-bold text-white hover:bg-[#003F65]">
+              <ShieldAlert className="h-4 w-4" />
+              Review Queue
+            </button>
+          }
+        />
+        <div className="rounded-xl border border-[#D9E1EA] bg-[#004B78] p-3 text-white md:p-5">
+          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/70 md:text-[12px] md:tracking-[0.16em]">Prioritas Saat Ini</div>
+          <div className="mt-2 text-[15px] font-bold md:mt-3 md:text-[18px]">{priorityRecord ? priorityRecord.product : "Belum ada task aktif"}</div>
+          <div className="mt-1 text-[12px] leading-5 text-white/80 md:mt-2 md:text-[13px] md:leading-6">
+            {priorityRecord ? priorityRecord.reason || priorityRecord.notes : "Saat ini belum ada transaksi yang perlu perhatian segera."}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (priorityRecord) onOpenJourney(priorityRecord);
+              else onMenuChange("tasks");
+            }}
+            className="mt-3 h-8 rounded-lg bg-white px-3 text-[11px] font-bold text-[#004B78] hover:bg-slate-100 md:mt-4 md:h-9 md:px-4 md:text-[12px]"
+          >
+            {priorityRecord ? "Buka Transaksi" : "Lihat Task List"}
+          </button>
+        </div>
       </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 md:gap-3 xl:grid-cols-4">
+        <InfoBox label="Total Transaksi" value={`${summary.total} item`} />
+        <InfoBox label="Perlu Tindakan" value={`${summary.needAction} item`} />
+        <InfoBox label="Menunggu Review" value={`${summary.reviewCount} item`} />
+        <InfoBox label="Siap / Selesai" value={`${summary.readyCount} item`} />
+      </div>
+
+      <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <SectionBox title="Yang Perlu Anda Tahu" icon={ClipboardList}>
+          <div className="grid gap-2">
+            <SmallActionCard icon={ClipboardList} title="Task List" helper="Buka daftar kerja aktif per transaksi." onClick={() => onMenuChange("tasks")} tone="brand" />
+            <SmallActionCard icon={ShieldAlert} title="Review Queue" helper="Fokus ke transaksi yang perlu review, revisi, dan reissue." onClick={() => onMenuChange("claims")} />
+            <SmallActionCard icon={Shield} title="Semua Transaksi" helper="Pantau semua transaksi internal lintas produk." onClick={() => onMenuChange("policies")} />
+          </div>
+        </SectionBox>
+        <div className="space-y-3">
+          <SectionBox title="Akses Cepat" icon={Gauge}>
+            <div className="grid grid-cols-2 gap-2">
+              <SmallActionCard icon={ClipboardList} title="Task Aktif" helper="Lanjut kerja" onClick={() => onMenuChange("tasks")} tone="brand" />
+              <SmallActionCard icon={ShieldAlert} title="Review Queue" helper="Prioritas staf" onClick={() => onMenuChange("claims")} />
+              <SmallActionCard icon={Shield} title="Semua Transaksi" helper="Lihat portofolio lengkap" onClick={() => onMenuChange("policies")} />
+              <SmallActionCard icon={Settings2} title="Partner Config" helper="Atur studio partner" onClick={() => onMenuChange("settings")} />
+            </div>
+          </SectionBox>
+          <SectionBox title="Transaksi Prioritas" icon={Clock3}>
+            <div className="space-y-2">
+              {taskRecords.slice(0, 3).map((record) => (
+                <div key={record.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#D9E1EA] bg-[#F8FAFC] px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-[12px] font-bold text-[#041E42]">{record.product}</div>
+                    <div className="truncate text-[11px] text-[#5F7A99]">{record.customer}</div>
+                  </div>
+                  <div className="shrink-0 text-[11px] font-bold text-[#5F7A99]">{displayWorkbenchStatus(getEffectiveOperatingStatus(record))}</div>
+                </div>
+              ))}
+            </div>
+          </SectionBox>
+        </div>
+      </div>
+    </WorkPanel>
+  );
+}
+
+function RecordsView({ title, description, records, search, setSearch, activeFilter, setActiveFilter, expandedId, setExpandedId, onOpenJourney, onAction, emptyMessage }) {
+  const filters = [
+    { key: "all", label: "Semua" },
+    { key: "action", label: "Perlu Tindakan" },
+    { key: "review", label: "Review" },
+    { key: "revision", label: "Revisi" },
+    { key: "ready", label: "Siap Bayar" },
+    { key: "done", label: "Selesai" },
+  ];
+  const keyword = search.trim().toLowerCase();
+  const filteredRecords = records.filter((record) => {
+    const matchesKeyword = !keyword || [record.id, record.product, record.customer, record.owner, record.reason].some((field) => String(field || "").toLowerCase().includes(keyword));
+    return matchesKeyword && recordMatchesFilter(record, activeFilter);
+  });
+
+  useEffect(() => {
+    if (filteredRecords.length && !filteredRecords.some((item) => item.id === expandedId)) {
+      setExpandedId(filteredRecords[0].id);
+    }
+    if (!filteredRecords.length) {
+      setExpandedId("");
+    }
+  }, [expandedId, filteredRecords, setExpandedId]);
+
+  return (
+    <div className="space-y-3">
+      <PageIntro title={title} description={description} />
+
+      <WorkPanel>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <InfoBox label="Total" value={`${records.length} item`} />
+          <InfoBox label="Review" value={`${records.filter((item) => matchesTaskScope(item, "review")).length} item`} />
+          <InfoBox label="Menunggu" value={`${records.filter((item) => matchesTaskScope(item, "waiting")).length} item`} />
+          <InfoBox label="Kedaluwarsa" value={`${records.filter((item) => matchesTaskScope(item, "expired")).length} item`} />
+        </div>
+      </WorkPanel>
+
+      <WorkPanel>
+        <Toolbar search={search} setSearch={setSearch} activeFilter={activeFilter} setActiveFilter={setActiveFilter} filters={filters} />
+        <div className="mt-3 space-y-2">
+          {filteredRecords.length ? (
+            filteredRecords.map((record) => {
+              const status = getEffectiveOperatingStatus(record);
+              return (
+                <RecordRow
+                  key={record.id}
+                  record={record}
+                  expanded={expandedId === record.id}
+                  onToggle={() => setExpandedId(expandedId === record.id ? "" : record.id)}
+                  onOpenJourney={onOpenJourney}
+                  onAction={onAction}
+                  actionItems={workspaceActionItems(status)}
+                />
+              );
+            })
+          ) : (
+            <EmptyState message={emptyMessage} />
+          )}
+        </div>
+      </WorkPanel>
+    </div>
+  );
+}
+
+function TaskListView({ records, search, setSearch, activeFilter, setActiveFilter, activeScope, setActiveScope, expandedId, setExpandedId, onOpenJourney, onAction }) {
+  const scopeRecords = records.filter((record) => matchesTaskScope(record, activeScope));
+  return (
+    <div className="space-y-3">
+        <PageIntro
+        title="Task List"
+        description="Daftar kerja internal untuk task aktif, tindak lanjut, dan eksekusi transaksi lintas produk."
+        action={<StatusBadge tone="border-[#B8D7EF] bg-[#F1F8FE] text-[#004B78]">{`${scopeRecords.length} task aktif`}</StatusBadge>}
+      />
+
+      <WorkPanel>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <InfoBox label="Total Task" value={`${records.length} item`} />
+          <InfoBox label="Perlu Review" value={`${records.filter((item) => matchesTaskScope(item, "review")).length} item`} />
+          <InfoBox label="Menunggu Respons" value={`${records.filter((item) => matchesTaskScope(item, "waiting")).length} item`} />
+          <InfoBox label="Siap / Bayar" value={`${records.filter((item) => matchesTaskScope(item, "ready")).length} item`} />
+        </div>
+        <TaskScopeTabs activeScope={activeScope} setActiveScope={setActiveScope} records={records} />
+      </WorkPanel>
+
+      <RecordsView
+        title="Task operasional"
+        description="Pilih satu task untuk membuka detail, lanjutkan review, atau buka transaksi asal."
+        records={scopeRecords}
+        search={search}
+        setSearch={setSearch}
+        activeFilter={activeFilter}
+        setActiveFilter={setActiveFilter}
+        expandedId={expandedId}
+        setExpandedId={setExpandedId}
+        onOpenJourney={onOpenJourney}
+        onAction={onAction}
+        emptyMessage="Belum ada task yang cocok dengan filter ini."
+      />
+    </div>
+  );
+}
+
+export default function ReviewWorkbench({
+  records,
+  allRecords,
+  onBack,
+  onOpenJourney,
+  title = "Tinjauan Internal",
+  subtitle = "Antrean operasional lintas produk untuk transaksi yang perlu dipantau, ditinjau, atau ditindaklanjuti.",
+  emptyMessage = "Belum ada transaksi yang cocok dengan filter saat ini.",
+  defaultFilter = "all",
+  showWorkspaceRail = false,
+  defaultWorkspaceLane = "review",
+  sessionName = "Taqwim (Internal)",
+  sessionRoleLabel = "Internal",
+  onNavigateHome,
+  onNavigateProducts,
+  onOpenWorkspace,
+  onOpenQueue,
+  onOpenPartnerConfig,
+  onUpdateRecord,
+  defaultMenu,
+}) {
+  const resolvedDefaultMenu = defaultMenu || (showWorkspaceRail ? "dashboard" : "claims");
+  const [activeMenu, setActiveMenu] = useState(resolvedDefaultMenu);
+  const [activeFilter, setActiveFilter] = useState(normalizeDefaultFilter(defaultFilter));
+  const [activeScope, setActiveScope] = useState(showWorkspaceRail ? defaultWorkspaceLane : "all");
+  const [query, setQuery] = useState("");
+  const [expandedId, setExpandedId] = useState("");
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+
+  const transactionRecords = allRecords?.length ? allRecords : records;
+  const openTaskRecords = useMemo(() => getTaskListRecords(records), [records]);
+  const queueRecords = useMemo(() => transactionRecords.filter((item) => ["Pending Review Internal", "Perlu Revisi", "Isi Data Lanjutan", "Expired"].includes(getEffectiveOperatingStatus(item))), [transactionRecords]);
+
+  const handleAction = (actionKey, record) => {
+    if (!onUpdateRecord) return;
+    onUpdateRecord(record.id, buildWorkspaceActionPatch(actionKey, record, sessionName));
+  };
+
+  const handleMenuChange = (nextMenu) => {
+    if (nextMenu === "settings") {
+      onOpenPartnerConfig?.();
+      return;
+    }
+    if (nextMenu === "claims" && !showWorkspaceRail) {
+      onOpenQueue?.();
+    }
+    setActiveMenu(nextMenu);
+  };
+
+  const workspaceTitle = showWorkspaceRail ? "Ruang Kerja Saya" : title;
+  const workspaceSubtitle = showWorkspaceRail
+    ? `Transaksi yang saat ini menjadi tanggung jawab ${sessionName}. Tampilan workspace ini mengikuti portal eksternal, dengan Task List sebagai pusat kerja operasional.`
+    : subtitle;
+
+  let content = null;
+  if (activeMenu === "dashboard") {
+    content = <DashboardView title={workspaceTitle} subtitle={workspaceSubtitle} records={records} onMenuChange={handleMenuChange} onOpenJourney={onOpenJourney} />;
+  } else if (activeMenu === "policies") {
+    content = (
+      <RecordsView
+        title="Semua transaksi"
+        description="Portofolio transaksi underwriting lintas produk yang sedang berjalan di jalur internal."
+        records={transactionRecords}
+        search={query}
+        setSearch={setQuery}
+        activeFilter={activeFilter}
+        setActiveFilter={setActiveFilter}
+        expandedId={expandedId}
+        setExpandedId={setExpandedId}
+        onOpenJourney={onOpenJourney}
+        onAction={handleAction}
+        emptyMessage={emptyMessage}
+      />
+    );
+  } else if (activeMenu === "claims") {
+    content = (
+      <RecordsView
+        title="Review Queue"
+        description="Antrean review internal untuk transaksi yang perlu keputusan staf, revisi, tindak lanjut, atau reissue."
+        records={queueRecords}
+        search={query}
+        setSearch={setQuery}
+        activeFilter={activeFilter}
+        setActiveFilter={setActiveFilter}
+        expandedId={expandedId}
+        setExpandedId={setExpandedId}
+        onOpenJourney={onOpenJourney}
+        onAction={handleAction}
+        emptyMessage="Belum ada transaksi yang masuk antrean review internal."
+      />
+    );
+  } else if (activeMenu === "tasks") {
+    content = (
+      <TaskListView
+        records={openTaskRecords}
+        search={query}
+        setSearch={setQuery}
+        activeFilter={activeFilter}
+        setActiveFilter={setActiveFilter}
+        activeScope={activeScope}
+        setActiveScope={setActiveScope}
+        expandedId={expandedId}
+        setExpandedId={setExpandedId}
+        onOpenJourney={onOpenJourney}
+        onAction={handleAction}
+      />
+    );
+  } else {
+    content = null;
+  }
+
+  return (
+    <div className="min-h-screen bg-white text-slate-900">
+      <TopBar
+        sessionName={sessionName}
+        sessionRoleLabel={sessionRoleLabel}
+        onGoHome={onNavigateHome || onBack}
+        onGoProducts={onNavigateProducts || onBack}
+        accountMenuOpen={accountMenuOpen}
+        setAccountMenuOpen={setAccountMenuOpen}
+        onOpenWorkspace={onOpenWorkspace}
+        onOpenPartnerConfig={onOpenPartnerConfig}
+      />
+      <Sidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} sessionName={sessionName} onExit={onBack} />
+      <PageShell>
+        <MobileTabs activeMenu={activeMenu} onMenuChange={handleMenuChange} />
+        {content}
+      </PageShell>
     </div>
   );
 }

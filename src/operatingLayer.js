@@ -182,18 +182,57 @@ export function statusTone(status) {
   return "slate";
 }
 
-export function canProceedToPaymentFromOperating(record) {
-  if (!record) return true;
-  return ["Siap Bayar", "Pending Payment", "Paid"].includes(record.status);
+function pad2(value) {
+  return String(value).padStart(2, "0");
 }
 
-export function paymentBlockMessage(record) {
+function parseOfferValidUntil(value) {
+  if (!value) return null;
+  const normalized = String(value)
+    .replace("Mei", "May")
+    .replace("Agu", "Aug")
+    .replace("Okt", "Oct")
+    .replace("Des", "Dec")
+    .replace(",", "");
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function createOfferValidUntil(days = 7, now = new Date()) {
+  const expiresAt = new Date(now);
+  expiresAt.setDate(expiresAt.getDate() + Number(days || 7));
+  expiresAt.setHours(23, 59, 0, 0);
+  const day = pad2(expiresAt.getDate());
+  const month = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"][expiresAt.getMonth()];
+  return `${day} ${month} ${expiresAt.getFullYear()}, ${pad2(expiresAt.getHours())}:${pad2(expiresAt.getMinutes())}`;
+}
+
+export function isOperatingRecordExpired(record, now = new Date()) {
+  if (!record) return false;
+  if (record.status === "Expired") return true;
+  const validUntil = parseOfferValidUntil(record.validUntil || record.offerMeta?.validUntil || record.validity?.validUntil);
+  return Boolean(validUntil && validUntil.getTime() < now.getTime());
+}
+
+export function getEffectiveOperatingStatus(record, now = new Date()) {
   if (!record) return "";
-  if (record.status === "Pending Review Internal") return "Status internal belum disetujui. Penawaran menunggu tindak lanjut tim internal sebelum bisa lanjut ke pembayaran.";
-  if (record.status === "Perlu Revisi") return "Transaksi ini masih perlu revisi sebelum dapat dilanjutkan ke pembayaran.";
-  if (record.status === "Rejected") return "Transaksi ini telah ditolak dan tidak dapat dilanjutkan ke pembayaran.";
-  if (record.status === "Expired") return "Versi transaksi ini sudah expired. Buat versi penawaran terbaru sebelum melanjutkan pembayaran.";
-  if (record.status === "Draft" || record.status === "Indikasi Terkirim" || record.status === "Dibuka Calon Tertanggung" || record.status === "Isi Data Lanjutan") {
+  if (isOperatingRecordExpired(record, now)) return "Expired";
+  return record.status || "";
+}
+
+export function canProceedToPaymentFromOperating(record, now = new Date()) {
+  if (!record) return true;
+  return ["Siap Bayar", "Pending Payment", "Paid"].includes(getEffectiveOperatingStatus(record, now));
+}
+
+export function paymentBlockMessage(record, now = new Date()) {
+  if (!record) return "";
+  const status = getEffectiveOperatingStatus(record, now);
+  if (status === "Pending Review Internal") return "Status internal belum disetujui. Penawaran menunggu tindak lanjut tim internal sebelum bisa lanjut ke pembayaran.";
+  if (status === "Perlu Revisi") return "Transaksi ini masih perlu revisi sebelum dapat dilanjutkan ke pembayaran.";
+  if (status === "Rejected") return "Transaksi ini telah ditolak dan tidak dapat dilanjutkan ke pembayaran.";
+  if (status === "Expired") return "Versi transaksi ini sudah expired. Buat versi penawaran terbaru sebelum melanjutkan ke pembayaran.";
+  if (status === "Draft" || status === "Indikasi Terkirim" || status === "Dibuka Calon Tertanggung" || status === "Isi Data Lanjutan") {
     return "Transaksi ini belum siap bayar. Lengkapi atau review dahulu sebelum melanjutkan.";
   }
   return "";

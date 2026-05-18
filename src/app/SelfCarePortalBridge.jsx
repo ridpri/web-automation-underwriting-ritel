@@ -160,12 +160,12 @@ const DEMO_INVOICES = [
   {
     id: "INV-2604-1001",
     policyId: "policy-home",
-    title: "Renewal polis rumah tinggal",
+    title: "Perpanjangan polis rumah tinggal",
     dueDate: "11 Apr 2026",
     amount: 3520000,
-    status: "Perlu dibayar",
+    status: "Perlu Dibayar",
     paymentMethod: "BCA Virtual Account",
-    helper: "Bayar hari ini agar renewal tidak tertunda.",
+    helper: "Bayar hari ini agar perpanjangan tidak tertunda.",
   },
 ];
 
@@ -322,7 +322,7 @@ export default function SelfCarePortalBridge({ sessionRole = "external", session
     policies: DEMO_POLICIES,
     claims: DEMO_CLAIMS,
     invoices: DEMO_INVOICES,
-    defaultTab: "policies",
+    defaultTab: "dashboard",
   });
 
   return (

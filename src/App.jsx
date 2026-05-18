@@ -706,6 +706,7 @@ export default function App() {
       <Suspense fallback={<JourneyFallback />}>
         <ReviewWorkbench
           records={operatingRecords}
+          allRecords={operatingRecords}
           onBack={() => setActiveJourney("")}
           onOpenJourney={(record) => { setActiveTransactionId(record.id); setActiveJourney(record.journeyKey); }}
           sessionName={activeSessionName}
@@ -713,7 +714,9 @@ export default function App() {
           onNavigateHome={() => setActiveJourney("")}
           onNavigateProducts={() => setActiveJourney("")}
           onOpenWorkspace={() => setActiveJourney("internal-workspace")}
+          onOpenQueue={() => setActiveJourney("review-internal")}
           onOpenPartnerConfig={() => setActiveJourney("partner-config")}
+          onUpdateRecord={updateOperatingRecord}
         />
       </Suspense>
     );
@@ -730,6 +733,7 @@ export default function App() {
           showWorkspaceRail
           defaultWorkspaceLane="review"
           records={ownedOperatingRecords}
+          allRecords={operatingRecords}
           onBack={() => setActiveJourney("")}
           onOpenJourney={(record) => { setActiveTransactionId(record.id); setActiveJourney(record.journeyKey); }}
           sessionName={activeSessionName}
@@ -737,7 +741,9 @@ export default function App() {
           onNavigateHome={() => setActiveJourney("")}
           onNavigateProducts={() => setActiveJourney("")}
           onOpenWorkspace={() => setActiveJourney("internal-workspace")}
+          onOpenQueue={() => setActiveJourney("review-internal")}
           onOpenPartnerConfig={() => setActiveJourney("partner-config")}
+          onUpdateRecord={updateOperatingRecord}
         />
       </Suspense>
     );
