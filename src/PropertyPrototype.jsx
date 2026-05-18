@@ -56,6 +56,28 @@ const FLAMMABLE_MATERIAL_OPTIONS = ["Tidak ada", "Ada"];
 const FIRE_PROTECTION_CHOICES = ["Tidak Ada", "Ada"];
 const FIRE_PROTECTION_ITEMS = ["APAR", "Hydrant", "Sprinkler"];
 const CLAIM_HISTORY_OPTIONS = ["Tidak Ada", "Ada 1 Klaim", "Ada Lebih dari 1 Klaim"];
+const REQUIRED_PROPERTY_WARRANTIES = [
+  {
+    title: "Objek pertanggungan tidak boleh dibiarkan kosong, tidak aktif, atau tidak diawasi selama masa pertanggungan. Bangunan/aset harus tetap digunakan dan tidak dalam kondisi terbengkalai.",
+    english: "The insured property must not be left vacant, inactive, or unattended during the policy period. The building/assets must remain in use and not be in a neglected or abandoned condition.",
+    badge: "Wajib",
+  },
+  {
+    title: "Tidak ada riwayat klaim (kerugian/kerusakan yang sudah pernah diajukan ke asuransi) dalam 3 tahun terakhir atas objek pertanggungan yang sama.",
+    english: "There must be no claim history (losses/damages previously submitted to insurance) within the last 3 years for the same insured property.",
+    badge: "Wajib",
+  },
+  {
+    title: "Tertanggung wajib menjaga kebersihan area di premises selama masa periode Pertanggungan.",
+    english: "The Insured is required to maintain cleanliness of the premises throughout the policy period.",
+    badge: "Wajib",
+  },
+];
+const FLOOD_PROPERTY_WARRANTY = {
+  title: "Lokasi objek pertanggungan tidak berada di daerah yang rawan atau sering terkena banjir (No flood prone area).",
+  english: "The insured property location must not be situated in an area prone to or frequently affected by flooding.",
+  badge: "Jika Banjir/TSFWD dipilih",
+};
 const PAYMENT_METHOD_GROUPS = [
   {
     label: "Bank Transfer",
@@ -836,6 +858,46 @@ function PropertyGuaranteeDetailCard({ title, icon, premium, detail, deductible,
   );
 }
 
+function SpecialWarrantiesAccordion({ includeFloodWarranty = false }) {
+  const [expanded, setExpanded] = useState(false);
+  const warranties = includeFloodWarranty ? [FLOOD_PROPERTY_WARRANTY, ...REQUIRED_PROPERTY_WARRANTIES] : REQUIRED_PROPERTY_WARRANTIES;
+
+  return (
+    <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
+      <button type="button" onClick={() => setExpanded((prev) => !prev)} className="flex w-full items-start justify-between gap-3 px-3.5 py-3 text-left">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-[#0A4D82]">
+            <Shield className="h-4 w-4 shrink-0" />
+            <div className="text-[14px] font-medium leading-[1.35] text-slate-900">Ketentuan Khusus / Warranties</div>
+          </div>
+          <div className="mt-1 text-[12px] leading-5 text-slate-500">
+            {includeFloodWarranty ? "4 ketentuan berlaku untuk penawaran ini." : "3 ketentuan wajib berlaku untuk penawaran ini."}
+          </div>
+        </div>
+        <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
+      </button>
+      {expanded ? (
+        <div className="space-y-2 border-t border-[#D6E0EA] px-3.5 py-3">
+          {warranties.map((item) => (
+            <div key={item.title} className="rounded-lg border border-[#DDE7F1] bg-white px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0A4D82]" />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-[#EEF6FC] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#0A4D82]">{item.badge}</span>
+                  </div>
+                  <div className="mt-1.5 text-[12.5px] leading-5 text-slate-800">{item.title}</div>
+                  <div className="mt-1 text-[12px] leading-5 text-slate-500">{item.english}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function OfferSummaryKeyValue({ label, value, emphasize = false }) {
   const normalizedLabel = String(label || "").replace(/:\s*$/, "");
   const isEmptyString = typeof value === "string" && (!value.trim() || value.trim() === "-" || value.trim().toLowerCase() === "belum dipilih");
@@ -1387,6 +1449,7 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
   }, [activeVariant.productCode, customerName, isIndicative, operatingId, operatingOwner, operatingStatusValue, operatingValidUntil, operatingVersion, preparedBy, propertyType, transactionAuthority, uwForm.coverageStartDate]);
 
   const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
+  const includeFloodWarranty = Boolean(selectedGuarantees.flood || selectedGuarantees.tsfwd);
   const phoneDisplay = form.phone || "-";
   const emailDisplay = form.email || "-";
   const offerPhoneFieldError = form.phone.trim() && !isValidPhone(form.phone) ? "Nomor handphone harus 10-15 digit angka." : "";
@@ -1824,6 +1887,9 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                         </div>
                       ) : null}
                     </div>
+                    <div className="space-y-2">
+                      <SpecialWarrantiesAccordion includeFloodWarranty={includeFloodWarranty} />
+                    </div>
                   </div>
                 </OfferSummarySection>
 
@@ -1919,6 +1985,7 @@ function ExternalPaymentPage({
     ? `${formatDisplayDate(new Date(`${uwForm.coverageStartDate}T00:00:00`))} - ${formatDisplayDate(new Date(`${coverageEndDate}T00:00:00`))}`
     : "-";
   const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
+  const includeFloodWarranty = Boolean(selectedGuarantees.flood || selectedGuarantees.tsfwd);
   const guaranteeSummaryItems = selectedExtensions.map((item) => ({
     title: item.title,
     icon: item.icon || Shield,
@@ -2074,6 +2141,9 @@ function ExternalPaymentPage({
                           ))}
                         </div>
                       ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <SpecialWarrantiesAccordion includeFloodWarranty={includeFloodWarranty} />
                     </div>
                   </div>
                 </OfferSummarySection>
