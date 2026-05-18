@@ -76,16 +76,15 @@ export function CustomerDataJourneyShell({
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
-        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-3 md:px-6">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 text-white">
+        <div className="mx-auto grid max-w-[1280px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 md:px-6">
+          <div className="flex min-w-0 items-center gap-3 text-white">
               <div className="text-[15px] font-black leading-tight md:text-[18px]">
                 Danantara
                 <div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div>
               </div>
               <div className="hidden text-[15px] font-semibold text-white/95 sm:block">asuransi jasindo</div>
-            </div>
-            <div className="hidden items-center gap-3 md:flex">
+          </div>
+          <div className="hidden items-center gap-3 md:flex">
               <button
                 type="button"
                 onClick={() => {
@@ -103,9 +102,8 @@ export function CustomerDataJourneyShell({
                 <Package className="h-4 w-4" />
                 Produk
               </button>
-            </div>
           </div>
-          <div className="flex items-center gap-4 text-white">
+          <div className="flex items-center justify-end gap-4 text-white">
             {topActionLabel && onTopAction ? (
               <button
                 type="button"
@@ -151,7 +149,7 @@ export function CustomerDataJourneyShell({
       <div className="bg-[linear-gradient(135deg,#0A4D82_0%,#0F5F9C_60%,#1B78B6_100%)] pb-8">
         <div className="mx-auto max-w-[1280px] px-4 pt-6 md:px-6">
           <div className="mx-auto max-w-[960px]">
-            <div className="flex items-center justify-start">
+            <div className="flex items-center justify-center">
               <button
                 type="button"
                 onClick={onBack}

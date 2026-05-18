@@ -4035,18 +4035,16 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
         feedback={shareFeedback}
       />
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
-        <div className="mx-auto flex max-w-[1800px] items-center justify-between px-4 py-3 md:px-6">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 text-white">
+        <div className="mx-auto grid max-w-[1800px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 md:px-6">
+          <div className="flex min-w-0 items-center gap-3 text-white">
               <div className="text-[15px] font-black leading-tight md:text-[18px]">Danantara<div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div></div>
               <div className="hidden text-[15px] font-semibold text-white/95 sm:block">asuransi jasindo</div>
-            </div>
-            <div className="hidden items-center gap-3 md:flex">
-              <button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button>
-              <button onClick={returnToLauncher} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button>
-            </div>
           </div>
-          <div className="flex items-center gap-4 text-white">
+          <div className="hidden items-center gap-3 md:flex">
+            <button type="button" onClick={() => { window.location.href = "https://esppa.asuransijasindo.co.id/"; }} className="inline-flex items-center gap-2 rounded-[8px] bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"><Home className="h-4 w-4" />Beranda</button>
+            <button onClick={returnToLauncher} className="inline-flex items-center gap-2 rounded-[8px] bg-[#F5A623] px-4 py-2 text-sm font-semibold text-white shadow-sm"><Package className="h-4 w-4" />Produk</button>
+          </div>
+          <div className="flex items-center justify-end gap-4 text-white">
             {screen === "flow" ? (
               <button
                 type="button"

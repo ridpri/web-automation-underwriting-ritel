@@ -254,9 +254,8 @@ export default function ReviewWorkbench({
   return (
     <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A4D82] shadow-sm">
-        <div className="mx-auto flex max-w-[1800px] items-center justify-between px-4 py-3 md:px-6">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 text-white">
+        <div className="mx-auto grid max-w-[1800px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 md:px-6">
+          <div className="flex min-w-0 items-center gap-3 text-white">
               <div className="text-[15px] font-black leading-tight md:text-[18px]">
                 Danantara
                 <div className="-mt-1 text-[15px] md:text-[18px]">Indonesia</div>
@@ -266,9 +265,9 @@ export default function ReviewWorkbench({
                 <div className="h-1.5 w-1.5 rounded-full bg-white/70" />
                 <div className="text-[14px] font-semibold leading-none md:text-[15px]">jasindo</div>
               </div>
-            </div>
+          </div>
 
-            <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-3 md:flex">
               <button
                 type="button"
                 onClick={onNavigateHome}
@@ -285,10 +284,9 @@ export default function ReviewWorkbench({
                 <Shield className="h-4 w-4" />
                 Produk
               </button>
-            </div>
           </div>
 
-          <div className="relative flex items-center gap-2 md:gap-3">
+          <div className="relative flex items-center justify-end gap-2 md:gap-3">
             <button
               type="button"
               className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm"

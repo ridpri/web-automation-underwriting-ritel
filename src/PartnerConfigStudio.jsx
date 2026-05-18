@@ -7329,7 +7329,7 @@ function AppProductHeader({
 }) {
   return (
     <header className="sticky top-0 z-30 bg-[#0A4D82] shadow-sm">
-      <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4">
+      <div className="mx-auto grid max-w-[1800px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 md:gap-4 md:px-6 md:py-4">
         <div className="flex min-w-0 items-center gap-3 text-white md:gap-6">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-sm bg-[#091E42] md:h-8 md:w-8">
@@ -7364,7 +7364,7 @@ function AppProductHeader({
           </button>
         </div>
 
-        <div className="relative flex items-center gap-2 md:gap-3">
+        <div className="relative flex items-center justify-end gap-2 md:gap-3">
           <button
             type="button"
             className="inline-flex h-11 items-center gap-2 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm"
