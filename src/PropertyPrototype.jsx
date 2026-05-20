@@ -837,52 +837,64 @@ function PropertyGuaranteeDetailCard({ title, icon, premium, detail, deductible,
   );
 }
 
-function SpecialWarrantiesAccordion({ stockAmount = 0, occupancy = "" }) {
-  const [expanded, setExpanded] = useState(false);
-  const terms = buildPropertyTerms({ stockAmount, occupancy });
-  const totalTerms = terms.clauses.length + terms.warranties.length;
+function TermsGroupAccordion({ title, items, subtitle, icon = Shield, defaultExpanded = false }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const description = subtitle || `${items.length} ketentuan berlaku untuk penawaran ini.`;
+  const HeaderIcon = icon;
 
   return (
     <div className="rounded-xl border border-[#C9D5E3] bg-[#F8FBFE]">
       <button type="button" onClick={() => setExpanded((prev) => !prev)} className="flex w-full items-start justify-between gap-3 px-3.5 py-3 text-left">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-[#0A4D82]">
-            <Shield className="h-4 w-4 shrink-0" />
-            <div className="text-[14px] font-medium leading-[1.35] text-slate-900">{terms.heading}</div>
+            <HeaderIcon className="h-4 w-4 shrink-0" />
+            <div className="text-[14px] font-medium leading-[1.35] text-slate-900">{title}</div>
           </div>
-          <div className="mt-1 text-[12px] leading-5 text-slate-500">
-            {terms.clauses.length} klausul tambahan dan {terms.warranties.length} warranty berlaku untuk penawaran ini.
-          </div>
+          <div className="mt-1 text-[12px] leading-5 text-slate-500">{description}</div>
         </div>
         <ChevronDown className={cls("mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition", expanded && "rotate-180")} />
       </button>
       {expanded ? (
         <div className="space-y-2 border-t border-[#D6E0EA] px-3.5 py-3">
-          {[
-            { title: "Klausul Tambahan", items: terms.clauses },
-            { title: "Warranty", items: terms.warranties },
-          ].map((section) => (
-            <div key={section.title} className="space-y-2">
-              <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-500">{section.title}</div>
-              {section.items.map((item) => (
-                <div key={item.key} className="rounded-lg border border-[#DDE7F1] bg-white px-3 py-2.5">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0A4D82]" />
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-[#EEF6FC] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#0A4D82]">{item.badge}</span>
-                      </div>
-                      <div className="mt-1.5 text-[12.5px] leading-5 text-slate-800">{item.title}</div>
-                      {item.english ? <div className="mt-1 text-[12px] leading-5 text-slate-500">{item.english}</div> : null}
-                    </div>
-                  </div>
+          {items.map((item) => (
+            <div key={item.key} className="rounded-lg border border-[#DDE7F1] bg-white px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0A4D82]" />
+                <div className="min-w-0">
+                  <div className="text-[12.5px] leading-5 text-slate-800">{item.title}</div>
+                  {item.english ? <div className="mt-1 text-[12px] leading-5 text-slate-500">{item.english}</div> : null}
                 </div>
-              ))}
+              </div>
             </div>
           ))}
-          <div className="text-[11.5px] leading-5 text-slate-500">{totalTerms} syarat dan ketentuan ditampilkan sesuai data penawaran.</div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function SpecialWarrantiesAccordion({ productKey = "property-safe", stockAmount = 0, occupancyCode = "", selectedGuarantees = {} }) {
+  const terms = buildPropertyTerms({ productKey, stockAmount, occupancyCode, selectedGuarantees });
+  const totalTerms = terms.clauses.length + terms.warranties.length;
+
+  return (
+    <div className="space-y-2">
+      <div className="text-[12px] leading-5 text-slate-500">
+        {terms.clauses.length} klausul tambahan dan {terms.warranties.length} warranty berlaku untuk penawaran ini.
+      </div>
+      <TermsGroupAccordion
+        title="Klausul dan/atau Endorsemen yang melekat"
+        items={terms.clauses}
+        icon={FileText}
+        subtitle="Bagian yang tidak terpisahkan dari polis dan berlaku sebagai ketentuan yang mengikat."
+      />
+      <TermsGroupAccordion
+        title="Warranty"
+        items={terms.warranties}
+        icon={AlertTriangle}
+        subtitle="Kewajiban yang harus dipatuhi selama polis berlaku agar perlindungan asuransi tetap berjalan sesuai ketentuan."
+      />
+      <div className="text-[11.5px] leading-5 text-slate-500">{totalTerms} syarat dan ketentuan ditampilkan sesuai data penawaran.</div>
     </div>
   );
 }
@@ -1438,6 +1450,7 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
   }, [activeVariant.productCode, customerName, isIndicative, operatingId, operatingOwner, operatingStatusValue, operatingValidUntil, operatingVersion, preparedBy, propertyType, transactionAuthority, uwForm.coverageStartDate]);
 
   const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
+  const occupancyCode = getOccupancyCode(propertyType, occupancy);
   const phoneDisplay = form.phone || "-";
   const emailDisplay = form.email || "-";
   const offerPhoneFieldError = form.phone.trim() && !isValidPhone(form.phone) ? "Nomor handphone harus 10-15 digit angka." : "";
@@ -1879,7 +1892,8 @@ function ExternalProposalPage({ mode, customerName, form, setFormField = () => {
                       ) : null}
                     </div>
                     <div className="space-y-2">
-                      <SpecialWarrantiesAccordion stockAmount={stockAmount} occupancy={occupancy} />
+                      <div className="text-[14px] font-medium text-slate-600">Syarat dan Ketentuan Lainnya</div>
+                      <SpecialWarrantiesAccordion productKey={activeVariant.key} stockAmount={stockAmount} occupancyCode={occupancyCode} selectedGuarantees={selectedGuarantees} />
                     </div>
                   </div>
                 </OfferSummarySection>
@@ -1976,6 +1990,7 @@ function ExternalPaymentPage({
     ? `${formatDisplayDate(new Date(`${uwForm.coverageStartDate}T00:00:00`))} - ${formatDisplayDate(new Date(`${coverageEndDate}T00:00:00`))}`
     : "-";
   const selectedExtensions = extensionOptions.filter((item) => selectedGuarantees[item.key]);
+  const occupancyCode = getOccupancyCode(form.propertyType, occupancy);
   const guaranteeSummaryItems = selectedExtensions.map((item) => ({
     title: item.title,
     icon: item.icon || Shield,
@@ -2136,7 +2151,8 @@ function ExternalPaymentPage({
                       ) : null}
                     </div>
                     <div className="space-y-2">
-                      <SpecialWarrantiesAccordion stockAmount={stockAmount} occupancy={occupancy} />
+                      <div className="text-[13px] font-medium text-slate-500">Syarat dan Ketentuan Lainnya</div>
+                      <SpecialWarrantiesAccordion productKey={activeVariant.key} stockAmount={stockAmount} occupancyCode={occupancyCode} selectedGuarantees={selectedGuarantees} />
                     </div>
                   </div>
                 </OfferSummarySection>
