@@ -237,17 +237,6 @@ const STAFF_NAV_ITEMS = [
   { key: "master-data", slug: "master-data", label: "Master Data", icon: Settings },
   { key: "settings", slug: "setelan", label: "Setelan", icon: Settings },
 ];
-const STAFF_ROLES = ["RO", "Underwriter", "Head Of"];
-const UNDERWRITER_ONLY_MENUS = new Set(["add-user", "master-data"]);
-
-function staffRoleCanOpen(role, menuKey) {
-  return role === "Underwriter" || !UNDERWRITER_ONLY_MENUS.has(menuKey);
-}
-
-function staffNavItemsForRole(role) {
-  return STAFF_NAV_ITEMS.filter((item) => staffRoleCanOpen(role, item.key));
-}
-
 const PRODUCT_IMAGES = {
   "Life Guard": "/production-assets/product-lintasan.df53665c.jpg",
   "Trip Guard": "/production-assets/product-kecelakaan-diri.31916e3d.jpg",
@@ -467,27 +456,6 @@ function AppLogo() {
   );
 }
 
-function RoleSelector({ role, onChange }) {
-  return (
-    <div className="flex flex-wrap gap-2" aria-label="Simulasi role">
-      {STAFF_ROLES.map((item) => (
-        <button
-          key={item}
-          type="button"
-          onClick={() => onChange(item)}
-          className={cls(
-            "inline-flex h-9 items-center rounded-full border px-3 text-[12px] font-bold transition",
-            role === item ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#5F7A99] hover:bg-[#F6F8FA]",
-          )}
-          aria-pressed={role === item}
-        >
-          {item}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function TopBar({ sessionName, onGoHome, onExit }) {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const openProducts = () => {
@@ -588,25 +556,19 @@ function Sidebar({ activeMenu, setActiveMenu, navItems }) {
   );
 }
 
-function WorkspaceFilters({ activeMenu, setActiveMenu, staffRole, onStaffRoleChange, navItems }) {
+function WorkspaceFilters({ activeMenu, setActiveMenu, navItems }) {
   return (
-    <div className="mb-3 space-y-2">
-      <div>
-        <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9AAAC0]">Simulasi Role</div>
-        <RoleSelector role={staffRole} onChange={onStaffRoleChange} />
-      </div>
-      <div className="flex gap-1.5 overflow-x-auto md:hidden">
-        {navItems.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            onClick={() => setActiveMenu(item.key)}
-            className={cls("h-8 shrink-0 rounded-full border px-3 text-[12px] font-bold", activeMenu === item.key ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#004B78]")}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+    <div className="mb-3 flex gap-1.5 overflow-x-auto md:hidden">
+      {navItems.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => setActiveMenu(item.key)}
+          className={cls("h-8 shrink-0 rounded-full border px-3 text-[12px] font-bold", activeMenu === item.key ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#004B78]")}
+        >
+          {item.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -1812,9 +1774,9 @@ function StaffListView({ page, items, filters, activeFilter, onFilterChange }) {
   );
 }
 
-function StaffSettingsView({ sessionName, staffRole }) {
+function StaffSettingsView({ sessionName }) {
   const settings = [
-    { title: "Profil Staff", sub: sessionName, value: staffRole, status: "Aktif" },
+    { title: "Profil Staff", sub: sessionName, value: "Internal", status: "Aktif" },
     { title: "Notifikasi Tasklist", sub: "Pengingat pekerjaan dan tindak lanjut nasabah.", value: "Email + Portal", status: "Aktif" },
     { title: "Preferensi Tampilan", sub: "Mode ringkas untuk daftar kerja operasional.", value: "Default", status: "Aktif" },
   ];
@@ -2536,56 +2498,38 @@ export default function StaffWorkspacePortal({
   defaultTab = "dashboard",
 }) {
   const staffSessionName = sessionName;
-  const [staffRole, setStaffRole] = useState("RO");
   const [activeMenu, setActiveMenu] = useState(() => readPortalMenu(defaultTab));
   const [linkProduct, setLinkProduct] = useState(null);
-  const availableNavItems = useMemo(() => staffNavItemsForRole(staffRole), [staffRole]);
-  const handleStaffRoleChange = useCallback((nextRole) => {
-    setStaffRole(nextRole);
-    setActiveMenu((currentMenu) => {
-      if (staffRoleCanOpen(nextRole, currentMenu)) return currentMenu;
-      replacePortalMenu("dashboard");
-      return "dashboard";
-    });
-  }, []);
+  const availableNavItems = STAFF_NAV_ITEMS;
   const handleMenuChange = useCallback((nextMenu) => {
     const normalizedMenu = normalizePortalMenu(nextMenu);
-    if (!staffRoleCanOpen(staffRole, normalizedMenu)) {
-      setActiveMenu("dashboard");
-      writePortalMenu("dashboard");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
     setActiveMenu(normalizedMenu);
     writePortalMenu(normalizedMenu);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [staffRole]);
+  }, []);
 
   useEffect(() => {
-    const initialMenu = readPortalMenu(defaultTab);
-    replacePortalMenu(staffRoleCanOpen(staffRole, initialMenu) ? initialMenu : "dashboard");
+    replacePortalMenu(readPortalMenu(defaultTab));
     const handlePopState = () => {
-      const nextMenu = readPortalMenu(defaultTab);
-      setActiveMenu(staffRoleCanOpen(staffRole, nextMenu) ? nextMenu : "dashboard");
+      setActiveMenu(readPortalMenu(defaultTab));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [defaultTab, staffRole]);
+  }, [defaultTab]);
 
   const content = useMemo(() => {
-    if (!staffRoleCanOpen(staffRole, activeMenu)) return <StaffDashboardView />;
     if (activeMenu === "dashboard") return <StaffDashboardView />;
     if (activeMenu === "buat-penawaran") return <OfferProductsView onLink={setLinkProduct} />;
-    if (activeMenu === "settings") return <StaffSettingsView sessionName={staffSessionName} staffRole={staffRole} />;
+    if (activeMenu === "settings") return <StaffSettingsView sessionName={staffSessionName} />;
     return <GenericStaffView active={activeMenu} />;
-  }, [activeMenu, staffRole, staffSessionName]);
+  }, [activeMenu, staffSessionName]);
 
   return (
     <div className="min-h-screen bg-white text-[#041E42]" style={{ fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>
-      <TopBar sessionName={staffSessionName} onGoHome={onGoHome} onOpenSettings={() => handleMenuChange("settings")} onExit={onExit} />
+      <TopBar sessionName={staffSessionName} onGoHome={onGoHome} onExit={onExit} />
       <Sidebar activeMenu={activeMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} />
       <PageShell>
-        <WorkspaceFilters activeMenu={activeMenu} setActiveMenu={handleMenuChange} staffRole={staffRole} onStaffRoleChange={handleStaffRoleChange} navItems={availableNavItems} />
+        <WorkspaceFilters activeMenu={activeMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} />
         {content}
       </PageShell>
       <ProductLinkModal product={linkProduct} onClose={() => setLinkProduct(null)} />
