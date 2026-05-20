@@ -13,6 +13,7 @@ import {
   PropertyPrototype,
   ReviewWorkbench,
   SelfCarePortalBridge,
+  StaffWorkspacePortal,
 } from "./app/lazyJourneys.js";
 import { resolveSessionName, resolveSessionProfile, SESSION_OPTIONS } from "./app/sessionConfig.js";
 
@@ -571,10 +572,6 @@ export default function App() {
     () => buildVehicleCatalog({ motorItem, carTloItem, carCompItem, sessionRole }).map((item) => ({ ...item, image: productionImageFor(item) })),
     [carCompItem, carTloItem, motorItem, sessionRole],
   );
-  const ownedOperatingRecords = useMemo(
-    () => operatingRecords.filter((item) => item.owner === activeSessionName),
-    [activeSessionName, operatingRecords],
-  );
   const externalAccountMenuItems = [
     {
       label: "Polis Saya",
@@ -725,25 +722,10 @@ export default function App() {
   if (resolvedActiveJourney === "internal-workspace") {
     return (
       <Suspense fallback={<JourneyFallback />}>
-        <ReviewWorkbench
-          title="Ruang Kerja Saya"
-          subtitle={`Transaksi yang saat ini menjadi tanggung jawab ${activeSessionName}. Dari sini Anda bisa lanjut review, revisi, atau buka transaksi yang sedang aktif.`}
-          emptyMessage="Belum ada transaksi yang menjadi tanggung jawab Anda saat ini."
-          defaultFilter="Perlu Ditindak"
-          showWorkspaceRail
-          defaultWorkspaceLane="review"
-          records={ownedOperatingRecords}
-          allRecords={operatingRecords}
-          onBack={() => setActiveJourney("")}
-          onOpenJourney={(record) => { setActiveTransactionId(record.id); setActiveJourney(record.journeyKey); }}
+        <StaffWorkspacePortal
           sessionName={activeSessionName}
-          sessionRoleLabel={resolveRoleLabel(sessionRole)}
-          onNavigateHome={() => setActiveJourney("")}
-          onNavigateProducts={() => setActiveJourney("")}
-          onOpenWorkspace={() => setActiveJourney("internal-workspace")}
-          onOpenQueue={() => setActiveJourney("review-internal")}
-          onOpenPartnerConfig={() => setActiveJourney("partner-config")}
-          onUpdateRecord={updateOperatingRecord}
+          onGoHome={() => setActiveJourney("")}
+          onExit={() => setActiveJourney("")}
         />
       </Suspense>
     );

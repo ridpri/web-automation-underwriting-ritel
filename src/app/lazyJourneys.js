@@ -11,3 +11,4 @@ export const PropertyPrototype = lazy(() => import("../PropertyPrototype.jsx"));
 export const PartnerConfigStudio = lazy(() => import("../PartnerConfigStudio.jsx"));
 export const ReviewWorkbench = lazy(() => import("../ReviewWorkbench.jsx"));
 export const SelfCarePortalBridge = lazy(() => import("./SelfCarePortalBridge.jsx"));
+export const StaffWorkspacePortal = lazy(() => import("../StaffWorkspacePortal.jsx"));
