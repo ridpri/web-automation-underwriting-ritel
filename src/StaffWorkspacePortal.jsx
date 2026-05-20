@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bell,
+  Building2,
+  Car,
   CheckCircle2,
   ChevronDown,
   ClipboardList,
@@ -15,11 +17,12 @@ import {
   List,
   Home,
   Lock,
-  LogOut,
   Mail,
   MapPin,
   MessageCircle,
+  Package,
   Phone,
+  Plane,
   Printer,
   QrCode,
   Search,
@@ -217,6 +220,10 @@ const DEFAULT_OFFICIAL_CONTACTS = [
 
 const TOKEN = "tk8f3x9q2m";
 const BASE_URL = "https://esppa.asuransijasindo.co.id/product";
+const PRODUCTION_ASSETS = {
+  danantara: "/production-assets/danantara.57629308.png",
+  jasindoWhite: "/production-assets/jasindo-white-all.814f5299.png",
+};
 
 const STAFF_NAV_ITEMS = [
   { key: "dashboard", slug: "dashboard", label: "Dashboard", icon: Gauge },
@@ -228,7 +235,18 @@ const STAFF_NAV_ITEMS = [
   { key: "riwayat-klaim", slug: "riwayat-klaim", label: "Riwayat Klaim", icon: FileText },
   { key: "add-user", slug: "add-user", label: "Add User", icon: User },
   { key: "master-data", slug: "master-data", label: "Master Data", icon: Settings },
+  { key: "settings", slug: "setelan", label: "Setelan", icon: Settings },
 ];
+const STAFF_ROLES = ["RO", "Underwriter", "Head Of"];
+const UNDERWRITER_ONLY_MENUS = new Set(["add-user", "master-data"]);
+
+function staffRoleCanOpen(role, menuKey) {
+  return role === "Underwriter" || !UNDERWRITER_ONLY_MENUS.has(menuKey);
+}
+
+function staffNavItemsForRole(role) {
+  return STAFF_NAV_ITEMS.filter((item) => staffRoleCanOpen(role, item.key));
+}
 
 const PRODUCT_IMAGES = {
   "Life Guard": "/production-assets/product-lintasan.df53665c.jpg",
@@ -442,56 +460,99 @@ function findPolicy(policies, policyId) {
 
 function AppLogo() {
   return (
-    <div className="flex items-center gap-4 text-white">
-      <div className="leading-none">
-        <div className="text-[14px] font-bold">Danantara</div>
-        <div className="text-[13px] font-bold">Indonesia</div>
-      </div>
-      <div className="h-7 w-px bg-white/25" />
-      <div className="leading-none">
-        <div className="text-[18px] font-bold italic">J</div>
-        <div className="-mt-1 text-[11px] font-semibold">asuransi jasindo</div>
-      </div>
+    <div className="production-header__brand">
+      <img src={PRODUCTION_ASSETS.danantara} alt="Danantara Indonesia" />
+      <img src={PRODUCTION_ASSETS.jasindoWhite} alt="Asuransi Jasindo" />
     </div>
   );
 }
 
-function TopBar({ sessionName, onGoHome }) {
+function RoleSelector({ role, onChange }) {
   return (
-    <header className="fixed left-0 right-0 top-0 z-30 h-[58px] bg-[#004B78] text-white shadow-sm">
-      <div className="flex h-full items-center justify-between gap-4 px-5 md:px-[70px]">
+    <div className="flex flex-wrap gap-2" aria-label="Simulasi role">
+      {STAFF_ROLES.map((item) => (
+        <button
+          key={item}
+          type="button"
+          onClick={() => onChange(item)}
+          className={cls(
+            "inline-flex h-9 items-center rounded-full border px-3 text-[12px] font-bold transition",
+            role === item ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#5F7A99] hover:bg-[#F6F8FA]",
+          )}
+          aria-pressed={role === item}
+        >
+          {item}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TopBar({ sessionName, onGoHome, onExit }) {
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const openProducts = () => {
+    if (typeof window !== "undefined") {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.pathname = "/";
+      nextUrl.searchParams.delete("menu");
+      window.history.pushState({}, "", nextUrl);
+    }
+    onGoHome?.();
+  };
+
+  return (
+    <header className="production-header fixed left-0 right-0 top-0 z-30 h-[58px] shadow-sm">
+      <div className="production-header__inner h-full">
         <AppLogo />
-        <label className="hidden h-9 min-w-0 flex-1 max-w-[520px] items-center gap-2 rounded-lg bg-white px-3 md:flex">
-          <Search className="h-4 w-4 text-[#9AAAC0]" />
-          <input
-            placeholder="Cari nasabah, polis, atau nomor referensi..."
-            className="h-full min-w-0 flex-1 border-0 bg-transparent text-[12px] font-semibold text-[#041E42] outline-none placeholder:text-[#9AAAC0]"
-          />
-        </label>
-        <div className="hidden items-center gap-1 rounded-md bg-[#00436F] p-1 lg:flex">
-          <button type="button" onClick={onGoHome} className="inline-flex h-8 items-center gap-2 rounded px-3 text-[13px] font-semibold hover:bg-white/10">
-            <Home className="h-4 w-4" />
-            Beranda
+
+        <nav className="production-nav" aria-label="Navigasi utama">
+          <button
+            type="button"
+            className="production-nav__item"
+            onClick={() => {
+              window.location.href = "https://esppa.asuransijasindo.co.id/";
+            }}
+          >
+            <Home size={16} strokeWidth={2.2} aria-hidden="true" />
+            <span>Beranda</span>
           </button>
-          <button type="button" className="inline-flex h-8 items-center gap-2 rounded px-3 text-[13px] font-semibold hover:bg-white/10">
-            <Shield className="h-4 w-4" />
-            Produk
+          <button type="button" className="production-nav__item is-active" onClick={openProducts}>
+            <Package size={16} strokeWidth={2.2} aria-hidden="true" />
+            <span>Produk</span>
           </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="hidden items-center gap-2 md:flex">
-            <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-[10px] font-bold text-red-600">ID</span>
-            <span className="text-[12px] font-semibold">ID</span>
-          </div>
-          <button type="button" className="grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white/15">
-            <Bell className="h-4 w-4" />
+        </nav>
+
+        <div className="production-actions">
+          <button type="button" className="production-language" aria-label="Bahasa Indonesia">
+            <span className="production-language__flag" aria-hidden="true" />
+            <span>ID</span>
           </button>
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-slate-300 text-[12px] font-bold text-[#004B78]">{getInitials(sessionName)}</span>
-            <span className="hidden md:inline">
-              <span className="block text-[13px] font-bold leading-4">{sessionName}</span>
-              <span className="block text-[11px] font-semibold text-white/70">Staff RO / Maker</span>
-            </span>
+          <div className="production-account">
+            <button
+              type="button"
+              className="production-profile"
+              aria-label={`Akun ${sessionName}`}
+              aria-expanded={accountMenuOpen}
+              aria-haspopup="menu"
+              aria-controls="staff-account-menu"
+              onClick={() => setAccountMenuOpen((current) => !current)}
+            >
+              <span className="production-profile__badge">{getInitials(sessionName)}</span>
+              <span>{sessionName}</span>
+              <ChevronDown size={15} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+            <div id="staff-account-menu" role="menu" className="production-menu" hidden={!accountMenuOpen}>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setAccountMenuOpen(false);
+                  onExit?.();
+                }}
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -499,11 +560,11 @@ function TopBar({ sessionName, onGoHome }) {
   );
 }
 
-function Sidebar({ activeMenu, setActiveMenu, sessionName, onExit }) {
+function Sidebar({ activeMenu, setActiveMenu, navItems }) {
   return (
     <aside className="fixed bottom-0 left-0 top-[58px] z-20 hidden w-[270px] border-r border-[#D9E1EA] bg-white md:flex md:flex-col">
       <nav className="space-y-2 px-3 py-5">
-        {STAFF_NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           const active = activeMenu === item.key;
           return (
@@ -523,37 +584,29 @@ function Sidebar({ activeMenu, setActiveMenu, sessionName, onExit }) {
           );
         })}
       </nav>
-      <div className="mt-auto space-y-4 p-3">
-        <div className="flex items-center gap-3 rounded-md bg-[#EAF0F4] p-2">
-          <span className="grid h-9 w-9 place-items-center rounded bg-[#004B78] text-[12px] font-bold text-white">{getInitials(sessionName)}</span>
-          <div className="min-w-0">
-            <div className="truncate text-[12px] font-bold text-[#041E42]">{sessionName}</div>
-            <div className="truncate text-[11px] text-[#5F7A99]">Portal Internal Staff</div>
-            <div className="truncate text-[10px] text-[#5F7A99]">Prototype 4.1</div>
-          </div>
-        </div>
-        <button type="button" onClick={onExit} className="flex h-10 items-center gap-3 px-2 text-[14px] font-medium text-red-500 hover:text-red-600">
-          <LogOut className="h-4 w-4" />
-          Logout
-        </button>
-      </div>
     </aside>
   );
 }
 
-function MobileTabs({ activeMenu, setActiveMenu }) {
+function WorkspaceFilters({ activeMenu, setActiveMenu, staffRole, onStaffRoleChange, navItems }) {
   return (
-    <div className="mb-3 flex gap-1.5 overflow-x-auto md:hidden">
-      {STAFF_NAV_ITEMS.map((item) => (
-        <button
-          key={item.key}
-          type="button"
-          onClick={() => setActiveMenu(item.key)}
-          className={cls("h-8 shrink-0 rounded-full border px-3 text-[12px] font-bold", activeMenu === item.key ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#004B78]")}
-        >
-          {item.label}
-        </button>
-      ))}
+    <div className="mb-3 space-y-2">
+      <div>
+        <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9AAAC0]">Simulasi Role</div>
+        <RoleSelector role={staffRole} onChange={onStaffRoleChange} />
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto md:hidden">
+        {navItems.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => setActiveMenu(item.key)}
+            className={cls("h-8 shrink-0 rounded-full border px-3 text-[12px] font-bold", activeMenu === item.key ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#004B78]")}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -568,6 +621,26 @@ function PageShell({ children }) {
 
 function WorkPanel({ children }) {
   return <section className="rounded-xl border border-[#D9E1EA] bg-[#F6F8FA] p-2 shadow-sm md:rounded-[20px] md:p-4">{children}</section>;
+}
+
+function FilterPills({ items, active, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <button
+          key={item}
+          type="button"
+          onClick={() => onChange(item)}
+          className={cls(
+            "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-bold",
+            active === item ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#5F7A99] hover:bg-[#F6F8FA]",
+          )}
+        >
+          {item}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function Toolbar({ search, setSearch, activeFilter, setActiveFilter, filters }) {
@@ -639,7 +712,7 @@ function PageIntro({ title, description, action, tone = "light" }) {
     <div className={cls("rounded-xl border p-3 md:p-4", tone === "brand" ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#041E42]")}>
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <h1 className="text-[17px] font-bold leading-6 md:text-[20px] md:leading-7">{title}</h1>
+          <h1 className="text-[17px] font-bold leading-6 md:text-[18px] md:leading-7">{title}</h1>
           <p className={cls("mt-1 max-w-3xl text-[12px] leading-5 md:text-[13px] md:leading-6", tone === "brand" ? "text-white/80" : "text-[#5F7A99]")}>{description}</p>
         </div>
         {action}
@@ -1161,7 +1234,7 @@ function StaffStat({ icon = Shield, title, value, note }) {
         </div>
         <div className="min-w-0">
           <div className="text-[12px] font-bold text-[#304B68]">{title}</div>
-          <div className="mt-1 text-[24px] font-black leading-none text-[#041E42]">{value}</div>
+          <div className="mt-1 text-[24px] font-bold leading-none text-[#041E42]">{value}</div>
           <div className="mt-1 text-[11px] leading-4 text-[#5F7A99]">{note}</div>
         </div>
       </div>
@@ -1287,9 +1360,9 @@ function StaffPipeline() {
               <div className="mx-auto grid h-10 w-10 place-items-center rounded-full border bg-white">
                 <Icon className="h-5 w-5" />
               </div>
-              <div className="mx-auto mt-2 grid h-5 w-5 place-items-center rounded-full bg-white text-[10px] font-black">{index + 1}</div>
+              <div className="mx-auto mt-2 grid h-5 w-5 place-items-center rounded-full bg-white text-[10px] font-bold">{index + 1}</div>
               <div className="mt-2 text-[12px] font-bold text-[#304B68]">{step.label}</div>
-              <div className="mt-1 text-[26px] font-black">{step.value}</div>
+              <div className="mt-1 text-[26px] font-bold">{step.value}</div>
               <div className="mt-1 text-[11px] leading-4 text-[#5F7A99]">{step.note}</div>
             </div>
           );
@@ -1318,7 +1391,7 @@ function StaffPipeline() {
                       <div className="mt-1 text-[11px] leading-4 text-[#5F7A99]">{item.note}</div>
                     </div>
                   </div>
-                  <div className="text-[22px] font-black">{item.value}</div>
+                  <div className="text-[22px] font-bold">{item.value}</div>
                 </div>
                 <div className="mt-2"><StaffBadge>Owner: {item.owner}</StaffBadge></div>
               </div>
@@ -1332,6 +1405,11 @@ function StaffPipeline() {
 }
 
 function StaffDashboardView() {
+  const [activeFilter, setActiveFilter] = useState("Semua");
+  const dashboardFilters = ["Semua", "Penawaran", "Tasklist", "Transaksi Polis", "Klaim"];
+  const showOverview = activeFilter === "Semua" || activeFilter === "Penawaran";
+  const showTasklist = activeFilter === "Semua" || activeFilter === "Tasklist";
+  const showPipeline = activeFilter === "Semua" || activeFilter === "Transaksi Polis";
   return (
     <div className="space-y-3">
       <PageIntro
@@ -1339,42 +1417,59 @@ function StaffDashboardView() {
         description="Ringkasan aktivitas penawaran, tasklist, transaksi polis, dan monitoring klaim."
         action={<span className="rounded-lg bg-[#EEF5FA] px-3 py-2 text-[11px] font-bold text-[#004B78]">Data diperbarui: 18 Mei 2026 09:30 WIB</span>}
       />
-      <WorkPanel>
-        <div className="rounded-xl border border-[#004B78] bg-[#004B78] p-4 text-white md:p-5">
+      <FilterPills items={dashboardFilters} active={activeFilter} onChange={setActiveFilter} />
+      {showOverview ? (
+        <WorkPanel>
+          <div className="rounded-xl border border-[#004B78] bg-[#004B78] p-4 text-white md:p-5">
           <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">Portal Web Automation Flow Internal</div>
-          <div className="mt-2 text-[24px] font-black leading-tight md:text-[30px]">Dashboard Monitoring Aktivitas Staff</div>
-          <div className="mt-2 max-w-3xl text-[13px] leading-6 text-white/85">Pantau assisted selling, penawaran, assist pengisian data, pembayaran, penerbitan polis, dan tindak lanjut klaim.</div>
-        </div>
-        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-          <StaffStat icon={ShoppingCart} title="Penawaran Hari Ini" value="24" note="4 menunggu respons nasabah" />
-          <StaffStat icon={ClipboardList} title="Tasklist Aktif" value="5" note="1 butuh assist internal" />
-          <StaffStat icon={CheckCircle2} title="Transaksi Polis" value="18" note="10 polis sudah terbit" />
-          <StaffStat icon={FileText} title="Klaim Dipantau" value="9" note="2 butuh tindak lanjut" />
-        </div>
-      </WorkPanel>
-      <WorkPanel>
-        <StaffPipeline />
-      </WorkPanel>
-      <WorkPanel>
-        <StaffTaskTable rows={TASKS} title="Tasklist Prioritas" />
-      </WorkPanel>
+          <div className="mt-2 text-[22px] font-bold leading-tight md:text-[26px]">Dashboard Monitoring Aktivitas Staff</div>
+            <div className="mt-2 max-w-3xl text-[13px] leading-6 text-white/85">Pantau assisted selling, penawaran, assist pengisian data, pembayaran, penerbitan polis, dan tindak lanjut klaim.</div>
+          </div>
+          <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            <StaffStat icon={ShoppingCart} title="Penawaran Hari Ini" value="24" note="4 menunggu respons nasabah" />
+            <StaffStat icon={ClipboardList} title="Tasklist Aktif" value="5" note="1 butuh assist internal" />
+            <StaffStat icon={CheckCircle2} title="Transaksi Polis" value="18" note="10 polis sudah terbit" />
+            <StaffStat icon={FileText} title="Klaim Dipantau" value="9" note="2 butuh tindak lanjut" />
+          </div>
+        </WorkPanel>
+      ) : null}
+      {showPipeline ? (
+        <WorkPanel>
+          <StaffPipeline />
+        </WorkPanel>
+      ) : null}
+      {showTasklist || activeFilter === "Klaim" ? (
+        <WorkPanel>
+          <StaffTaskTable rows={activeFilter === "Klaim" ? TASKS.filter((item) => item.product.includes("Travel") || item.product.includes("Life")) : TASKS} title={activeFilter === "Klaim" ? "Task Klaim Terkait" : "Tasklist Prioritas"} />
+        </WorkPanel>
+      ) : null}
     </div>
   );
 }
 
+function ProductCategoryIcon({ category }) {
+  const iconMap = {
+    "Kecelakaan Diri": User,
+    "Harta Benda": Home,
+    Kendaraan: Car,
+  };
+  const Icon = iconMap[category] || FileText;
+  return <Icon className="production-product-card__tag-icon" aria-hidden="true" />;
+}
+
 function ProductCard({ product, onLink }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[#D9E1EA] bg-white">
-      <div className="relative min-h-[180px] overflow-hidden bg-[#004B78] p-4 text-white">
-        <img src={product.image} alt={product.title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#041E42]/90 via-[#041E42]/45 to-[#041E42]/15" />
-        <div className="relative flex min-h-[148px] flex-col justify-end">
-          <div className="inline-flex w-fit rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white">{product.category}</div>
-          <div className="mt-2 text-[18px] font-black leading-tight">{product.title}</div>
-          <div className="mt-2 min-h-[42px] text-[12px] leading-5 text-white/85">{product.desc}</div>
-        </div>
-      </div>
-      <div className="grid gap-2 p-3 sm:grid-cols-2">
+    <div className="w-[200px]">
+      <button type="button" onClick={() => onLink(product)} className="production-product-card block">
+        <img src={product.image} alt="" width="640" height="720" loading="lazy" decoding="async" className="production-product-card__image" />
+        <span className="production-product-card__shade" />
+        <span className="production-product-card__tag">
+          <ProductCategoryIcon category={product.category} />
+          <span>{product.category}</span>
+        </span>
+        <span className="production-product-card__title">{product.title}</span>
+      </button>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-3 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buat Penawaran</a>
         <button type="button" onClick={() => onLink(product)} className="h-9 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">Link Produk</button>
       </div>
@@ -1387,8 +1482,11 @@ function ProductListItem({ product, onLink }) {
     <div className="grid gap-3 rounded-xl border border-[#D9E1EA] bg-white p-3 transition hover:border-[#004B78]/50 hover:bg-[#F8FAFC] md:grid-cols-[150px_minmax(0,1fr)_260px] md:items-center">
       <img src={product.image} alt={product.title} className="h-[120px] w-full rounded-lg object-cover md:h-[96px]" loading="lazy" />
       <div className="min-w-0">
-        <div className="inline-flex rounded-full bg-[#EEF5FA] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#004B78]">{product.category}</div>
-        <div className="mt-2 text-[15px] font-black leading-5 text-[#041E42]">{product.title}</div>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#EEF5FA] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#004B78]">
+          <ProductCategoryIcon category={product.category} />
+          {product.category}
+        </div>
+        <div className="mt-2 text-[14px] font-bold leading-5 text-[#041E42] md:text-[15px]">{product.title}</div>
         <div className="mt-1 text-[12px] leading-5 text-[#5F7A99]">{product.desc}</div>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1">
@@ -1403,7 +1501,12 @@ function OfferProductsView({ onLink }) {
   const [category, setCategory] = useState("Semua");
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState("card");
-  const categories = ["Semua", "Kecelakaan Diri", "Harta Benda", "Kendaraan"];
+  const categories = [
+    { label: "Semua", icon: Grid2X2 },
+    { label: "Kecelakaan Diri", icon: User },
+    { label: "Harta Benda", icon: Home },
+    { label: "Kendaraan", icon: Car },
+  ];
   const filteredProducts = PRODUCTS.filter((product) => {
     const keyword = query.toLowerCase();
     return (category === "Semua" || product.category === category) && (product.title.toLowerCase().includes(keyword) || product.desc.toLowerCase().includes(keyword));
@@ -1411,12 +1514,6 @@ function OfferProductsView({ onLink }) {
 
   return (
     <div className="space-y-3">
-      <PageIntro
-        title="Buat Penawaran"
-        description="Pilih produk asuransi untuk memulai simulasi premi dan membuat draft penawaran."
-        tone="brand"
-        action={<a href="https://esppadev.asuransijasindo.co.id/" target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-4 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buka ESPPA Dev</a>}
-      />
       <WorkPanel>
         <SectionBox title="Pilih Produk Asuransi" icon={ShoppingCart}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1426,16 +1523,23 @@ function OfferProductsView({ onLink }) {
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari produk asuransi..." className="h-full min-w-0 flex-1 border-0 bg-transparent text-[12px] text-[#041E42] outline-none placeholder:text-[#9AAAC0]" />
             </label>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {categories.map((item) => (
-              <button key={item} type="button" onClick={() => setCategory(item)} className={cls("h-9 rounded-full border px-3.5 text-[12px] font-bold", category === item ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#004B78] hover:bg-[#EEF5FA]")}>{item}</button>
-            ))}
-          </div>
-          <div className="mt-4 flex flex-col gap-3 border-t border-[#E7EDF4] pt-3 lg:flex-row lg:items-center lg:justify-between">
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#9AAAC0]">Tampilan Produk</span>
-              <span className="text-[12px] text-[#5F7A99]">Pilih mode card atau list untuk melihat pilihan produk asuransi.</span>
-            </label>
+          <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {categories.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setCategory(item.label)}
+                  className={cls(
+                    "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-bold",
+                    category === item.label ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#5F7A99] hover:bg-[#F6F8FA]",
+                  )}
+                >
+                  <item.icon className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2} />
+                  {item.label}
+                </button>
+              ))}
+            </div>
             <div className="inline-flex w-fit rounded-lg border border-[#D9E1EA] bg-white p-1">
               {[
                 { key: "card", label: "Card", icon: Grid2X2 },
@@ -1459,7 +1563,7 @@ function OfferProductsView({ onLink }) {
             </div>
           </div>
           {viewMode === "card" ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-4 grid grid-cols-[repeat(auto-fill,200px)] justify-start gap-3">
               {filteredProducts.map((product) => <ProductCard key={product.title} product={product} onLink={onLink} />)}
             </div>
           ) : (
@@ -1535,6 +1639,11 @@ function PromotionView() {
     const keyword = search.toLowerCase();
     return (promo.code.toLowerCase().includes(keyword) || promo.products.toLowerCase().includes(keyword)) && (status === "Semua" || promo.status === status);
   });
+  const promoStats = [
+    { label: "Total Promo", value: PROMOS.length },
+    { label: "Aktif", value: PROMOS.filter((promo) => promo.status === "Aktif").length },
+    { label: "Tidak Aktif", value: PROMOS.filter((promo) => promo.status === "Tidak Aktif").length },
+  ];
   const updateForm = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
   const toggleProduct = (title) => setSelectedProducts((current) => (current.includes(title) ? current.filter((item) => item !== title) : [...current, title]));
 
@@ -1592,17 +1701,22 @@ function PromotionView() {
       />
       <WorkPanel>
         <SectionBox title="Promo Code" icon={CreditCard}>
-          <div className="grid gap-3 lg:grid-cols-[1fr_240px_auto] lg:items-end">
+          <div className="mb-3 grid gap-2 md:grid-cols-3">
+            {promoStats.map((item) => (
+              <div key={item.label} className="rounded-xl border border-[#D9E1EA] bg-white px-3 py-3">
+                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9AAAC0]">{item.label}</div>
+                <div className="mt-1 text-[22px] font-black text-[#041E42]">{item.value}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
             <StaffField label="Masukan Promo Code / Produk" value={search} onChange={setSearch} placeholder="Contoh: JASINDO20" />
-            <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#9AAAC0]">Status</span>
-              <select value={status} onChange={(event) => setStatus(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#D9E1EA] bg-white px-3 text-[13px] font-semibold text-[#041E42]">
-                <option>Semua</option>
-                <option>Aktif</option>
-                <option>Tidak Aktif</option>
-              </select>
-            </label>
             <button type="button" onClick={() => { setSearch(""); setStatus("Semua"); }} className="h-10 rounded-lg bg-[#F2A62A] px-4 text-[12px] font-bold text-white">Reset Filter</button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {["Semua", "Aktif", "Tidak Aktif"].map((item) => (
+              <button key={item} type="button" onClick={() => setStatus(item)} className={cls("inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-bold", status === item ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#5F7A99] hover:bg-[#F6F8FA]")}>{item}</button>
+            ))}
           </div>
         </SectionBox>
       </WorkPanel>
@@ -1632,6 +1746,11 @@ function PromotionView() {
                   <td className="px-4 py-3"><button type="button" className="h-8 rounded-lg border border-[#D9E1EA] px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">Detail</button></td>
                 </tr>
               ))}
+              {!rows.length ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-[13px] font-semibold text-[#5F7A99]">Tidak ada promo yang sesuai filter.</td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -1647,10 +1766,11 @@ function PromotionView() {
   );
 }
 
-function StaffCardGrid({ page, items }) {
+function StaffCardGrid({ page, items, filters, activeFilter, onFilterChange }) {
   return (
     <div className="space-y-3">
       <PageIntro title={page.label} description={page.subtitle} />
+      {filters?.length ? <FilterPills items={filters} active={activeFilter} onChange={onFilterChange} /> : null}
       <WorkPanel>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {items.map((item) => (
@@ -1667,8 +1787,48 @@ function StaffCardGrid({ page, items }) {
   );
 }
 
+function StaffListView({ page, items, filters, activeFilter, onFilterChange }) {
+  return (
+    <div className="space-y-3">
+      <PageIntro title={page.label} description={page.subtitle} />
+      {filters?.length ? <FilterPills items={filters} active={activeFilter} onChange={onFilterChange} /> : null}
+      <WorkPanel>
+        <div className="overflow-hidden rounded-xl border border-[#D9E1EA] bg-white">
+          <div className="divide-y divide-[#E7EDF4]">
+            {items.map((item) => (
+              <div key={item.title} className="grid gap-3 px-4 py-3 hover:bg-[#F8FAFC] md:grid-cols-[minmax(0,1fr)_160px_120px] md:items-center">
+                <div className="min-w-0">
+                <div className="text-[14px] font-bold text-[#041E42]">{item.title}</div>
+                  <div className="mt-1 text-[12px] leading-5 text-[#5F7A99]">{item.sub}</div>
+                </div>
+                <div className="text-[12px] font-bold text-[#304B68]">{item.value}</div>
+                <div className="md:text-right"><StaffBadge>{item.status}</StaffBadge></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </WorkPanel>
+    </div>
+  );
+}
+
+function StaffSettingsView({ sessionName, staffRole }) {
+  const settings = [
+    { title: "Profil Staff", sub: sessionName, value: staffRole, status: "Aktif" },
+    { title: "Notifikasi Tasklist", sub: "Pengingat pekerjaan dan tindak lanjut nasabah.", value: "Email + Portal", status: "Aktif" },
+    { title: "Preferensi Tampilan", sub: "Mode ringkas untuk daftar kerja operasional.", value: "Default", status: "Aktif" },
+  ];
+  return (
+    <StaffListView
+      page={{ label: "Setelan", subtitle: "Pengaturan akun internal, notifikasi, dan preferensi portal kerja." }}
+      items={settings}
+    />
+  );
+}
+
 function GenericStaffView({ active }) {
   const [filter, setFilter] = useState("Semua");
+  const [pageFilter, setPageFilter] = useState("Semua");
   const pages = {
     tasklist: { label: "Tasklist", subtitle: "Daftar pekerjaan operasional sesuai status dan kebutuhan tindak lanjut." },
     "add-partner": { label: "Add Partner", subtitle: "Maker input partner, Checker verifikasi, Approver memberikan persetujuan final." },
@@ -1690,7 +1850,7 @@ function GenericStaffView({ active }) {
         <WorkPanel>
           <div className="mb-3 flex flex-wrap gap-2">
             {filters.map((item) => (
-              <button key={item} type="button" onClick={() => setFilter(item)} className={cls("h-8 rounded-full border px-3 text-[12px] font-bold", filter === item ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#004B78] hover:bg-[#EEF5FA]")}>{item}</button>
+              <button key={item} type="button" onClick={() => setFilter(item)} className={cls("inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-bold", filter === item ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#5F7A99] hover:bg-[#F6F8FA]")}>{item}</button>
             ))}
           </div>
           <StaffTaskTable rows={rows} title="Daftar Task" />
@@ -1698,16 +1858,45 @@ function GenericStaffView({ active }) {
       </div>
     );
   }
-  if (active === "transaksi-polis") return <StaffCardGrid page={page} items={TRANSACTIONS} />;
-  if (active === "riwayat-klaim") return <StaffCardGrid page={page} items={STAFF_CLAIMS} />;
+  if (active === "transaksi-polis") {
+    const filters = ["Semua", ...Array.from(new Set(TRANSACTIONS.map((item) => item.status)))];
+    const rows = pageFilter === "Semua" ? TRANSACTIONS : TRANSACTIONS.filter((item) => item.status === pageFilter);
+    return <StaffListView page={page} items={rows} filters={filters} activeFilter={pageFilter} onFilterChange={setPageFilter} />;
+  }
+  if (active === "riwayat-klaim") {
+    const filters = ["Semua", ...STAFF_CLAIMS.map((item) => item.title)];
+    const rows = pageFilter === "Semua" ? STAFF_CLAIMS : STAFF_CLAIMS.filter((item) => item.title === pageFilter);
+    return <StaffListView page={page} items={rows} filters={filters} activeFilter={pageFilter} onFilterChange={setPageFilter} />;
+  }
 
-  const listMap = {
-    "add-partner": ["Dealer Mobil Jakarta", "Klinik Sehat Bersama", "Travel Agent", "Broker Properti BSD"],
-    "add-user": ["Budi Santoso", "Sarah Amalia", "Dimas Putra"],
-    "master-data": ["Produk", "Parameter Premi", "Wilayah OJK", "Role Akses", "Metode Bayar", "Template Penawaran", "Status Tasklist", "Referensi Dokumen"],
+  const itemMap = {
+    "add-partner": [
+      { title: "Dealer Mobil Jakarta", sub: "Partner kanal kendaraan", value: "Dealer", status: "Aktif" },
+      { title: "Klinik Sehat Bersama", sub: "Partner kanal kesehatan", value: "Klinik", status: "Aktif" },
+      { title: "Travel Agent", sub: "Partner kanal perjalanan", value: "Travel", status: "Aktif" },
+      { title: "Broker Properti BSD", sub: "Partner kanal properti", value: "Broker", status: "Aktif" },
+    ],
+    "add-user": [
+      { title: "Budi Santoso", sub: "Staff RO / Maker", value: "RO", status: "Aktif" },
+      { title: "Sarah Amalia", sub: "Underwriter / Reviewer", value: "Underwriter", status: "Aktif" },
+      { title: "Dimas Putra", sub: "Head Of / Approver", value: "Head Of", status: "Aktif" },
+    ],
+    "master-data": [
+      { title: "Produk", sub: "Referensi produk asuransi retail.", value: "Produk", status: "Aktif" },
+      { title: "Parameter Premi", sub: "Parameter tarif dan perhitungan.", value: "Parameter", status: "Aktif" },
+      { title: "Wilayah OJK", sub: "Referensi wilayah operasional.", value: "Wilayah", status: "Aktif" },
+      { title: "Role Akses", sub: "Hak akses internal portal.", value: "Role Akses", status: "Aktif" },
+      { title: "Metode Bayar", sub: "Referensi kanal pembayaran.", value: "Pembayaran", status: "Aktif" },
+      { title: "Template Penawaran", sub: "Dokumen dan pesan penawaran.", value: "Template", status: "Aktif" },
+      { title: "Status Tasklist", sub: "Referensi status operasional.", value: "Tasklist", status: "Aktif" },
+      { title: "Referensi Dokumen", sub: "Dokumen pendukung produk.", value: "Dokumen", status: "Aktif" },
+    ],
   };
-  const items = (listMap[active] || []).map((title, index) => ({ title, sub: "Simulasi data prototype", value: index + 1, status: "Aktif" }));
-  return <StaffCardGrid page={page} items={items} />;
+  const items = itemMap[active] || [];
+  const filters = ["Semua", ...Array.from(new Set(items.map((item) => item.value)))];
+  const filteredItems = pageFilter === "Semua" ? items : items.filter((item) => item.value === pageFilter);
+  if (["add-partner", "add-user"].includes(active)) return <StaffListView page={page} items={filteredItems} filters={filters} activeFilter={pageFilter} onFilterChange={setPageFilter} />;
+  return <StaffCardGrid page={page} items={filteredItems} filters={filters} activeFilter={pageFilter} onFilterChange={setPageFilter} />;
 }
 
 function ProductLinkModal({ product, onClose }) {
@@ -2347,34 +2536,56 @@ export default function StaffWorkspacePortal({
   defaultTab = "dashboard",
 }) {
   const staffSessionName = sessionName;
+  const [staffRole, setStaffRole] = useState("RO");
   const [activeMenu, setActiveMenu] = useState(() => readPortalMenu(defaultTab));
   const [linkProduct, setLinkProduct] = useState(null);
+  const availableNavItems = useMemo(() => staffNavItemsForRole(staffRole), [staffRole]);
+  const handleStaffRoleChange = useCallback((nextRole) => {
+    setStaffRole(nextRole);
+    setActiveMenu((currentMenu) => {
+      if (staffRoleCanOpen(nextRole, currentMenu)) return currentMenu;
+      replacePortalMenu("dashboard");
+      return "dashboard";
+    });
+  }, []);
   const handleMenuChange = useCallback((nextMenu) => {
     const normalizedMenu = normalizePortalMenu(nextMenu);
+    if (!staffRoleCanOpen(staffRole, normalizedMenu)) {
+      setActiveMenu("dashboard");
+      writePortalMenu("dashboard");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     setActiveMenu(normalizedMenu);
     writePortalMenu(normalizedMenu);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  }, [staffRole]);
 
   useEffect(() => {
-    replacePortalMenu(readPortalMenu(defaultTab));
-    const handlePopState = () => setActiveMenu(readPortalMenu(defaultTab));
+    const initialMenu = readPortalMenu(defaultTab);
+    replacePortalMenu(staffRoleCanOpen(staffRole, initialMenu) ? initialMenu : "dashboard");
+    const handlePopState = () => {
+      const nextMenu = readPortalMenu(defaultTab);
+      setActiveMenu(staffRoleCanOpen(staffRole, nextMenu) ? nextMenu : "dashboard");
+    };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [defaultTab]);
+  }, [defaultTab, staffRole]);
 
   const content = useMemo(() => {
+    if (!staffRoleCanOpen(staffRole, activeMenu)) return <StaffDashboardView />;
     if (activeMenu === "dashboard") return <StaffDashboardView />;
     if (activeMenu === "buat-penawaran") return <OfferProductsView onLink={setLinkProduct} />;
+    if (activeMenu === "settings") return <StaffSettingsView sessionName={staffSessionName} staffRole={staffRole} />;
     return <GenericStaffView active={activeMenu} />;
-  }, [activeMenu]);
+  }, [activeMenu, staffRole, staffSessionName]);
 
   return (
-    <div className="min-h-screen bg-white text-[#041E42]">
-      <TopBar sessionName={staffSessionName} onGoHome={onGoHome} />
-      <Sidebar activeMenu={activeMenu} setActiveMenu={handleMenuChange} sessionName={staffSessionName} onExit={onExit} />
+    <div className="min-h-screen bg-white text-[#041E42]" style={{ fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>
+      <TopBar sessionName={staffSessionName} onGoHome={onGoHome} onOpenSettings={() => handleMenuChange("settings")} onExit={onExit} />
+      <Sidebar activeMenu={activeMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} />
       <PageShell>
-        <MobileTabs activeMenu={activeMenu} setActiveMenu={handleMenuChange} />
+        <WorkspaceFilters activeMenu={activeMenu} setActiveMenu={handleMenuChange} staffRole={staffRole} onStaffRoleChange={handleStaffRoleChange} navItems={availableNavItems} />
         {content}
       </PageShell>
       <ProductLinkModal product={linkProduct} onClose={() => setLinkProduct(null)} />
