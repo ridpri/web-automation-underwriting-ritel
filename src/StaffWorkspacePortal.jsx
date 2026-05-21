@@ -270,13 +270,13 @@ const TASKS = [
 ];
 
 const PROMOS = [
-  { code: "TESDIS2", products: "Travel Safe, Life Guard", discount: "20%", quota: 100, period: "18-05-2026 - 20-05-2026", status: "Aktif" },
-  { code: "JASINDO20", products: "Asuransi Mobil - Total Loss", discount: "20%", quota: 100, period: "27-04-2026 - 15-05-2026", status: "Aktif" },
-  { code: "GEBYARJASINDO", products: "Trip Guard, Edu Protect", discount: "10%", quota: 100, period: "27-04-2026 - 30-04-2026", status: "Aktif" },
-  { code: "TESDIS3", products: "Property All Risk", discount: "Rp 10.000", quota: 50, period: "23-04-2026 - 30-04-2026", status: "Aktif" },
-  { code: "TESDIS1", products: "Asuransi Kebakaran", discount: "10%", quota: 10, period: "23-04-2026 - 24-04-2026", status: "Tidak Aktif" },
-  { code: "TESTDISKONDUA", products: "Asuransi Mobil - Komprehensif", discount: "3%", quota: 100, period: "13-04-2026 - 28-04-2026", status: "Aktif" },
-  { code: "TESTDISKON", products: "Asuransi Sepeda Motor - Total Loss", discount: "5%", quota: 100, period: "13-04-2026 - 30-04-2026", status: "Aktif" },
+  { code: "JAS26TRV8", products: "Travel Safe", category: "Personal", discount: "20%", quota: 100, period: "20-05-2026 - 27-05-2026", status: "Aktif" },
+  { code: "JAS26LIF5", products: "Life Guard", category: "Personal", discount: "25%", quota: 80, period: "20-05-2026 - 03-06-2026", status: "Aktif" },
+  { code: "JAS26EDU7", products: "Edu Protect", category: "Personal", discount: "30%", quota: 60, period: "20-05-2026 - 20-06-2026", status: "Aktif" },
+  { code: "JAS26TRP4", products: "Trip Guard", category: "Personal", discount: "25%", quota: 50, period: "20-05-2026 - 20-06-2026", status: "Aktif" },
+  { code: "JAS26CAR9", products: "Asuransi Mobil - Total Loss", category: "Mobil", discount: "25%", quota: 100, period: "20-05-2026 - 20-06-2026", status: "Aktif" },
+  { code: "JAS26PRP2", products: "Property All Risk", category: "Properti", discount: "15%", quota: 40, period: "20-05-2026 - 03-06-2026", status: "Aktif" },
+  { code: "JAS26FIR6", products: "Asuransi Kebakaran", category: "Properti", discount: "15%", quota: 10, period: "23-04-2026 - 24-04-2026", status: "Berakhir" },
 ];
 
 const TRANSACTIONS = [
@@ -1539,6 +1539,79 @@ function OfferProductsView({ onLink }) {
   );
 }
 
+function AddPartnerProductCard({ product, tag }) {
+  return (
+    <button type="button" className="production-product-card block" aria-label={product.title}>
+      <img src={product.image} alt="" width="640" height="720" loading="lazy" decoding="async" className="production-product-card__image" />
+      <span className="production-product-card__shade" />
+      <span className="production-product-card__tag">
+        <ProductCategoryIcon category={product.category} />
+        <span>{tag || product.category}</span>
+      </span>
+      <span className="production-product-card__title">{product.title}</span>
+    </button>
+  );
+}
+
+function AddPartnerProductSection({ icon, title, subtitle, products, tag }) {
+  const Icon = icon;
+  return (
+    <section className="production-product-section">
+      <div className="production-product-section__header">
+        <div className="production-product-section__icon" aria-hidden="true">
+          <Icon size={35} strokeWidth={2.25} />
+        </div>
+        <div className="production-product-section__copy">
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
+        </div>
+        <ChevronDown className="production-product-section__chevron" aria-hidden="true" />
+      </div>
+      <div className={cls("production-product-grid", products.length === 3 && "is-three-column")}>
+        {products.map((product) => <AddPartnerProductCard key={product.title} product={product} tag={tag} />)}
+      </div>
+    </section>
+  );
+}
+
+function AddPartnerView() {
+  const personalProducts = [
+    PRODUCTS.find((product) => product.title === "Life Guard"),
+    PRODUCTS.find((product) => product.title === "Trip Guard"),
+    PRODUCTS.find((product) => product.title === "Edu Protect"),
+    PRODUCTS.find((product) => product.title === "Travel Safe"),
+  ].filter(Boolean);
+  const propertyProducts = PRODUCTS.filter((product) => product.category === "Harta Benda");
+  const vehicleProducts = PRODUCTS.filter((product) => product.category === "Kendaraan");
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-center text-[17px] font-black leading-6 text-[#041E42] md:text-[20px]">Pilihan Produk Asuransi Jasindo</h1>
+      <AddPartnerProductSection
+        icon={Shield}
+        title="Asuransi Kecelakaan Diri"
+        subtitle="Perlindungan biaya pengobatan akibat kecelakaan"
+        products={personalProducts}
+        tag="Kecelakaan Diri"
+      />
+      <AddPartnerProductSection
+        icon={Building2}
+        title="Asuransi Harta Benda"
+        subtitle="Perlindungan bangunan dan isi properti dengan simulasi premi dan penawaran digital."
+        products={propertyProducts}
+        tag="Harta Benda"
+      />
+      <AddPartnerProductSection
+        icon={Car}
+        title="Asuransi Kendaraan"
+        subtitle="Perlindungan motor dan mobil dengan simulasi premi dan penawaran digital."
+        products={vehicleProducts}
+        tag="Kendaraan Bermotor"
+      />
+    </div>
+  );
+}
+
 function StaffField({ label, placeholder, type = "text", prefix, suffix, value, onChange }) {
   return (
     <label className="block">
@@ -1585,127 +1658,121 @@ function PromoProductPicker({ selected, onToggle }) {
 }
 
 function PromotionView() {
-  const [mode, setMode] = useState("list");
+  const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Semua");
-  const [selectedProducts, setSelectedProducts] = useState(["Travel Safe", "Life Guard"]);
-  const [active, setActive] = useState(false);
+  const [category, setCategory] = useState("Semua");
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [active, setActive] = useState(true);
   const [form, setForm] = useState({
-    code: "",
-    quota: "",
+    code: "JAS26DKHL",
+    quota: "10",
     percent: "",
-    flat: "",
-    expired: "",
+    period: "1 Minggu",
   });
   const rows = PROMOS.filter((promo) => {
     const keyword = search.toLowerCase();
-    return (promo.code.toLowerCase().includes(keyword) || promo.products.toLowerCase().includes(keyword)) && (status === "Semua" || promo.status === status);
+    const matchesStatus = status === "Semua" || promo.status === status;
+    const matchesCategory = category === "Semua" || promo.category === category;
+    const matchesKeyword = [promo.code, promo.products, promo.discount, String(promo.quota), promo.period].some((value) => value.toLowerCase().includes(keyword));
+    return matchesStatus && matchesCategory && matchesKeyword;
   });
-  const promoStats = [
-    { label: "Total Promo", value: PROMOS.length },
-    { label: "Aktif", value: PROMOS.filter((promo) => promo.status === "Aktif").length },
-    { label: "Tidak Aktif", value: PROMOS.filter((promo) => promo.status === "Tidak Aktif").length },
+  const statusFilters = [
+    { label: "Semua", count: 12 },
+    { label: "Aktif", count: 9 },
+    { label: "Berakhir", count: 3 },
+  ];
+  const categoryFilters = [
+    { label: "Semua", icon: CreditCard },
+    { label: "Properti", icon: Building2 },
+    { label: "Mobil", icon: Car },
+    { label: "Motor", icon: Settings },
+    { label: "Personal", icon: User },
+    { label: "Lainnya", icon: FileText },
   ];
   const updateForm = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
   const toggleProduct = (title) => setSelectedProducts((current) => (current.includes(title) ? current.filter((item) => item !== title) : [...current, title]));
 
-  if (mode === "add") {
-    return (
-      <div className="space-y-3">
-        <PageIntro
-          title="Tambah Promo Code"
-          description="Buat promo code baru dan tentukan produk yang mendapatkan diskon."
-          action={<button type="button" onClick={() => setMode("list")} className="h-9 rounded-lg border border-[#D9E1EA] bg-white px-4 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">← Kembali</button>}
-        />
-        <WorkPanel>
-          <SectionBox title="Form Promo Code" icon={CreditCard}>
-            <div className="grid gap-3">
-              <StaffField label="Kode Promo" placeholder="Contoh: JASINDOHEMAT" value={form.code} onChange={updateForm("code")} />
-              <label className="block">
-                <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#9AAAC0]">Produk yang Didiskon</span>
-                <div className="mt-1"><PromoProductPicker selected={selectedProducts} onToggle={toggleProduct} /></div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedProducts.map((item) => <span key={item} className="rounded-full bg-[#EEF5FA] px-3 py-1 text-[11px] font-bold text-[#004B78]">{item}</span>)}
-                </div>
-              </label>
-              <div className="grid gap-3 md:grid-cols-3">
-                <StaffField label="Kuota" placeholder="Contoh: 100" type="number" value={form.quota} onChange={updateForm("quota")} />
-                <StaffField label="Persentase Diskon" placeholder="Contoh: 10" suffix="%" value={form.percent} onChange={updateForm("percent")} />
-                <StaffField label="Diskon Flat" placeholder="Contoh: 50000" prefix="Rp" value={form.flat} onChange={updateForm("flat")} />
-              </div>
-              <StaffField label="Tanggal Expired" type="date" value={form.expired} onChange={updateForm("expired")} />
-              <label className="flex items-center justify-between gap-4 rounded-xl border border-[#D9E1EA] bg-[#F8FAFC] px-3 py-3">
-                <span>
-                  <span className="block text-[12px] font-bold text-[#041E42]">Status</span>
-                  <span className="mt-1 block text-[11px] text-[#5F7A99]">Aktifkan promo agar dapat digunakan.</span>
-                </span>
-                <button type="button" onClick={() => setActive((current) => !current)} className={cls("relative h-8 w-16 rounded-full transition", active ? "bg-[#F2A62A]" : "bg-[#CBD5E1]")}>
-                  <span className={cls("absolute top-1 h-6 w-6 rounded-full bg-white shadow transition", active ? "left-9" : "left-1")} />
-                </button>
-              </label>
-            </div>
-            <div className="mt-4 flex justify-end gap-2 border-t border-[#E7EDF4] pt-3">
-              <button type="button" onClick={() => setMode("list")} className="h-9 rounded-lg border border-[#D9E1EA] bg-white px-4 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">Batal</button>
-              <button type="button" onClick={() => setMode("list")} className="h-9 rounded-lg bg-[#F2A62A] px-4 text-[12px] font-bold text-white hover:bg-[#DF9620]">Simpan</button>
-            </div>
-          </SectionBox>
-        </WorkPanel>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <PageIntro
         title="Promosi"
-        description="Monitoring dan pengelolaan promo code untuk produk asuransi retail."
-        action={<button type="button" onClick={() => setMode("add")} className="h-9 rounded-lg bg-[#004B78] px-4 text-[12px] font-bold text-white hover:bg-[#003F65]">+ Tambah Promo Code</button>}
+        description="Atur promo code, produk yang berlaku, periode aktif, kuota penggunaan, dan batas diskon."
       />
-      <WorkPanel>
-        <SectionBox title="Promo Code" icon={CreditCard}>
-          <div className="mb-3 grid gap-2 md:grid-cols-3">
-            {promoStats.map((item) => (
-              <div key={item.label} className="rounded-xl border border-[#D9E1EA] bg-white px-3 py-3">
-                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9AAAC0]">{item.label}</div>
-                <div className="mt-1 text-[22px] font-black text-[#041E42]">{item.value}</div>
-              </div>
-            ))}
+      <section className="rounded-xl border border-[#D9E1EA] bg-[#F6F8FA] p-3 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {statusFilters.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setStatus(item.label)}
+                  className={cls("inline-flex h-10 items-center rounded-full border px-4 text-[12px] font-black", status === item.label ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#304B68] hover:bg-[#EEF5FA]")}
+                >
+                  {item.label} ({item.count})
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {categoryFilters.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setCategory(item.label)}
+                  className={cls("inline-flex h-10 items-center gap-2 rounded-full border px-4 text-[12px] font-black", category === item.label ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#304B68] hover:bg-[#EEF5FA]")}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
-            <StaffField label="Masukan Promo Code / Produk" value={search} onChange={setSearch} placeholder="Contoh: JASINDO20" />
-            <button type="button" onClick={() => { setSearch(""); setStatus("Semua"); }} className="h-10 rounded-lg bg-[#F2A62A] px-4 text-[12px] font-bold text-white">Reset Filter</button>
+          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row xl:items-end">
+            <label className="flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#D9E1EA] bg-white px-3 sm:w-[360px]">
+              <Search className="h-4 w-4 text-[#9AAAC0]" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Cari kode promo, produk, diskon, kuota, periode"
+                className="h-full min-w-0 flex-1 border-0 bg-transparent text-[12px] font-bold text-[#041E42] outline-none placeholder:text-[#9AAAC0]"
+              />
+            </label>
+            <button type="button" onClick={() => setModalOpen(true)} className="inline-flex h-10 items-center justify-center rounded-lg bg-[#004B78] px-4 text-[12px] font-black text-white shadow-sm hover:bg-[#003F65]">
+              + Tambah Promo Code
+            </button>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {["Semua", "Aktif", "Tidak Aktif"].map((item) => (
-              <button key={item} type="button" onClick={() => setStatus(item)} className={cls("inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-bold", status === item ? "border-[#004B78] bg-[#004B78] text-white" : "border-[#D9E1EA] bg-white text-[#5F7A99] hover:bg-[#F6F8FA]")}>{item}</button>
-            ))}
-          </div>
-        </SectionBox>
-      </WorkPanel>
-      <WorkPanel>
-        <div className="overflow-auto rounded-xl border border-[#D9E1EA] bg-white">
+        </div>
+      </section>
+      <section className="rounded-xl border border-[#D9E1EA] bg-[#F6F8FA] p-3 shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-[#D9E1EA] bg-white">
           <table className="w-full min-w-[980px] text-left text-[12px]">
-            <thead className="bg-[#EEF5FA] text-[10px] uppercase tracking-[0.12em] text-[#004B78]">
+            <thead className="bg-[#EEF5FA] text-[#004B78]">
               <tr>
-                <th className="px-4 py-3">Promo Code</th>
-                <th className="px-4 py-3">Produk Diskon</th>
-                <th className="px-4 py-3">Diskon</th>
-                <th className="px-4 py-3">Kuota</th>
-                <th className="px-4 py-3">Periode</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Action</th>
+                <th className="px-4 py-3 font-medium">Promo Code</th>
+                <th className="px-4 py-3 font-medium">Produk Diskon</th>
+                <th className="px-4 py-3 font-medium">Diskon</th>
+                <th className="px-4 py-3 font-medium">Kuota</th>
+                <th className="px-4 py-3 font-medium">Periode</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E7EDF4]">
+            <tbody className="divide-y divide-[#E7EDF4] text-[#041E42]">
               {rows.map((promo) => (
                 <tr key={`${promo.code}-${promo.period}`} className="hover:bg-[#F8FAFC]">
-                  <td className="px-4 py-3"><span className="rounded-md bg-[#E7EDF4] px-3 py-1.5 text-[11px] font-black text-[#304B68]">{promo.code}</span></td>
-                  <td className="max-w-[260px] px-4 py-3 text-[#5F7A99]">{promo.products}</td>
-                  <td className="px-4 py-3 font-bold text-[#041E42]">{promo.discount}</td>
-                  <td className="px-4 py-3">{promo.quota}</td>
-                  <td className="px-4 py-3">{promo.period}</td>
-                  <td className="px-4 py-3"><StaffBadge>{promo.status}</StaffBadge></td>
-                  <td className="px-4 py-3"><button type="button" className="h-8 rounded-lg border border-[#D9E1EA] px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">Detail</button></td>
+                  <td className="px-4 py-4 font-medium">{promo.code}</td>
+                  <td className="px-4 py-4">{promo.products}</td>
+                  <td className="px-4 py-4">{promo.discount}</td>
+                  <td className="px-4 py-4">{promo.quota}</td>
+                  <td className="px-4 py-4">{promo.period}</td>
+                  <td className="px-4 py-4"><StaffBadge>{promo.status}</StaffBadge></td>
+                  <td className="px-4 py-4">
+                    <button type="button" className="inline-flex h-8 items-center gap-2 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-medium text-[#004B78] hover:bg-[#EEF5FA]">
+                      Kelola
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
                 </tr>
               ))}
               {!rows.length ? (
@@ -1716,14 +1783,55 @@ function PromotionView() {
             </tbody>
           </table>
         </div>
-      </WorkPanel>
+      </section>
       <div className="flex flex-col gap-2 text-[12px] text-[#5F7A99] md:flex-row md:items-center md:justify-between">
-        <p>Showing 1 of 2 Page</p>
+        <p>Showing Page 1 of 2</p>
         <div className="flex gap-2">
-          <button type="button" className="h-8 rounded-lg border border-[#D9E1EA] bg-white px-3 font-bold text-[#5F7A99]">‹ Prev</button>
-          <button type="button" className="h-8 rounded-lg bg-[#004B78] px-3 font-bold text-white">Next ›</button>
+          <button type="button" className="h-8 rounded-lg border border-[#D9E1EA] bg-white px-3 font-bold text-[#9AAAC0]">Prev</button>
+          <button type="button" className="h-8 rounded-lg bg-[#004B78] px-3 font-bold text-white">Next</button>
         </div>
       </div>
+      {modalOpen ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#041E42]/35 px-4 py-6">
+          <div className="w-full max-w-[570px] overflow-hidden rounded-xl border border-[#D9E1EA] bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#E7EDF4] px-4 py-3">
+              <div className="inline-flex items-center gap-2 text-[15px] font-black text-[#041E42]">
+                <CreditCard className="h-4 w-4 text-[#004B78]" />
+                Tambah Promo Code
+              </div>
+              <button type="button" onClick={() => setModalOpen(false)} className="h-8 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#304B68] hover:bg-[#F8FAFC]">Tutup</button>
+            </div>
+            <div className="grid gap-4 px-4 py-4">
+              <label className="block">
+                <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#9AAAC0]">Produk</span>
+                <div className="mt-2"><PromoProductPicker selected={selectedProducts} onToggle={toggleProduct} /></div>
+              </label>
+              <label className="block">
+                <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#9AAAC0]">Kode Promo</span>
+                <div className="mt-2 flex rounded-lg border border-[#D9E1EA] bg-white">
+                  <input value={form.code} onChange={(event) => updateForm("code")(event.target.value)} className="h-10 min-w-0 flex-1 rounded-lg border-0 bg-transparent px-3 text-[13px] font-black text-[#041E42] outline-none" />
+                  <button type="button" className="m-1 rounded-md border border-[#D9E1EA] px-3 text-[11px] font-black text-[#004B78] hover:bg-[#EEF5FA]">Generate Ulang</button>
+                </div>
+              </label>
+              <div className="grid gap-3 md:grid-cols-[124px_minmax(0,1fr)]">
+                <StaffField label="Kuota" placeholder="10" value={form.quota} onChange={updateForm("quota")} />
+                <StaffField label="Diskon (%)" placeholder={selectedProducts.length ? "Masukkan diskon" : "Pilih produk dulu"} suffix="%" value={form.percent} onChange={updateForm("percent")} />
+              </div>
+              <StaffField label="Periode Promo" value={form.period} onChange={updateForm("period")} />
+              <label className="flex items-center justify-between gap-4 rounded-lg border border-[#D9E1EA] bg-[#F8FAFC] px-3 py-3">
+                <span className="text-[12px] font-black text-[#041E42]">Status Aktif</span>
+                <button type="button" onClick={() => setActive((current) => !current)} className={cls("relative h-8 w-14 rounded-full transition", active ? "bg-[#004B78]" : "bg-[#CBD5E1]")}>
+                  <span className={cls("absolute top-1 h-6 w-6 rounded-full bg-white shadow transition", active ? "left-7" : "left-1")} />
+                </button>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[#E7EDF4] bg-white px-4 py-3">
+              <button type="button" onClick={() => setModalOpen(false)} className="h-9 rounded-lg border border-[#D9E1EA] bg-white px-4 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">Batal</button>
+              <button type="button" onClick={() => setModalOpen(false)} className="h-9 rounded-lg bg-[#9AAAC0] px-4 text-[12px] font-bold text-white">Simpan Promo</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2520,6 +2628,7 @@ export default function StaffWorkspacePortal({
   const content = useMemo(() => {
     if (activeMenu === "dashboard") return <StaffDashboardView />;
     if (activeMenu === "buat-penawaran") return <OfferProductsView onLink={setLinkProduct} />;
+    if (activeMenu === "add-partner") return <AddPartnerView />;
     if (activeMenu === "settings") return <StaffSettingsView sessionName={staffSessionName} />;
     return <GenericStaffView active={activeMenu} />;
   }, [activeMenu, staffSessionName]);
@@ -2536,8 +2645,3 @@ export default function StaffWorkspacePortal({
     </div>
   );
 }
-
-
-
-
-
