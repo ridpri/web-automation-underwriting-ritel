@@ -199,7 +199,7 @@ function ProductShareActions({ product, inline = false }) {
   const trackedUrl = productTrackedUrl(product);
   const whatsappText = `Halo Bapak/Ibu, saya ingin membagikan informasi produk ${product.title} dari Asuransi Jasindo. Silakan cek detail produk dan lanjutkan pengajuan melalui link berikut: ${trackedUrl}`;
   const buttonClass = "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#D9E1EA] bg-white px-2.5 text-[11px] font-bold text-[#004B78] hover:bg-[#EEF5FA]";
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
+  const whatsappUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`;
 
   function markCopied(label) {
     setCopyLabel(label);
@@ -212,8 +212,8 @@ function ProductShareActions({ product, inline = false }) {
         <Copy className="h-3.5 w-3.5" />
         {copyLabel}
       </button>
-      <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#1FAF5D] bg-[#25D366] px-2.5 text-[11px] font-bold text-white hover:bg-[#1FAF5D]">
-        <WhatsAppLogo className="h-4 w-4" />
+      <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={buttonClass}>
+        <WhatsAppLogo className="h-4 w-4 text-[#25D366]" />
         WhatsApp
       </a>
       <button type="button" onClick={() => downloadProductQr(product)} className={buttonClass}>
