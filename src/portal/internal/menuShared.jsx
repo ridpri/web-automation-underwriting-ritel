@@ -194,7 +194,7 @@ async function downloadProductQr(product) {
   }
 }
 
-function ProductShareActions({ product, compact = false }) {
+function ProductShareActions({ product, inline = false }) {
   const [copyLabel, setCopyLabel] = useState("Salin Link");
   const trackedUrl = productTrackedUrl(product);
   const whatsappText = `Halo Bapak/Ibu, saya ingin membagikan informasi produk ${product.title} dari Asuransi Jasindo. Silakan cek detail produk dan lanjutkan pengajuan melalui link berikut: ${trackedUrl}`;
@@ -206,8 +206,8 @@ function ProductShareActions({ product, compact = false }) {
     window.setTimeout(() => setCopyLabel("Salin Link"), 1400);
   }
 
-  return (
-    <div className={cls("grid gap-2", compact ? "sm:grid-cols-3 md:grid-cols-1" : "grid-cols-1")}>
+  const actions = (
+    <>
       <button type="button" onClick={() => copyProductLink(product, markCopied)} className={buttonClass}>
         <Copy className="h-3.5 w-3.5" />
         {copyLabel}
@@ -220,6 +220,13 @@ function ProductShareActions({ product, compact = false }) {
         <Download className="h-3.5 w-3.5" />
         Unduh QR
       </button>
+    </>
+  );
+
+  if (inline) return actions;
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {actions}
     </div>
   );
 }
@@ -233,9 +240,9 @@ export function ProductCard({ product }) {
         <span className="production-product-card__tag"><ProductCategoryIcon category={product.category} /><span>{product.category}</span></span>
         <span className="production-product-card__title">{product.title}</span>
       </div>
-      <div className="mt-2 grid gap-2">
-        <a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-3 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buat Penawaran</a>
-        <ProductShareActions product={product} />
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-2 text-center text-[11px] font-bold leading-4 text-white hover:bg-[#DF9620]">Buat Penawaran</a>
+        <ProductShareActions product={product} inline />
       </div>
     </div>
   );
@@ -246,7 +253,7 @@ export function ProductListItem({ product }) {
     <div className="grid gap-3 rounded-xl border border-[#D9E1EA] bg-white p-3 transition hover:border-[#004B78]/50 hover:bg-[#F8FAFC] md:grid-cols-[150px_minmax(0,1fr)_320px] md:items-center">
       <img src={product.image} alt={product.title} className="h-[120px] w-full rounded-lg object-cover md:h-[96px]" loading="lazy" />
       <div><div className="inline-flex items-center gap-1.5 rounded-full bg-[#EEF5FA] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#004B78]"><ProductCategoryIcon category={product.category} />{product.category}</div><div className="mt-2 text-[14px] font-bold leading-5 text-[#041E42] md:text-[15px]">{product.title}</div><div className="mt-1 text-[12px] leading-5 text-[#5F7A99]">{product.desc}</div></div>
-      <div className="grid gap-2"><a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-3 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buat Penawaran</a><ProductShareActions product={product} compact /></div>
+      <div className="grid grid-cols-2 gap-2"><a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-2 text-center text-[11px] font-bold leading-4 text-white hover:bg-[#DF9620]">Buat Penawaran</a><ProductShareActions product={product} inline /></div>
     </div>
   );
 }
