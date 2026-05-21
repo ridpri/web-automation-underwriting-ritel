@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Building2, Car, CheckCircle2, ChevronDown, ClipboardList, Copy, CreditCard, Download, FileText, Gauge, Grid2X2, Headphones, Home, Mail, MessageCircle, Search, Shield, SlidersHorizontal, User } from "lucide-react";
+import { Building2, Car, CheckCircle2, ChevronDown, ClipboardList, Copy, CreditCard, Download, FileText, Gauge, Grid2X2, Headphones, Home, Mail, Search, Shield, SlidersHorizontal, User } from "lucide-react";
 
 import { PRODUCTS, productBaseUrl, productTrackedUrl } from "./menuData.js";
 
@@ -151,6 +151,14 @@ function qrImageUrl(product) {
   return `https://quickchart.io/qr?text=${encodeURIComponent(productTrackedUrl(product))}&size=480&margin=2&format=png`;
 }
 
+function WhatsAppLogo({ className = "h-4 w-4" }) {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M16.02 3.2c-7.03 0-12.75 5.7-12.75 12.72 0 2.25.59 4.45 1.72 6.38L3.16 29l6.85-1.8a12.7 12.7 0 0 0 6 1.52h.01c7.03 0 12.75-5.7 12.75-12.73S23.05 3.2 16.02 3.2Zm0 23.36h-.01c-1.9 0-3.76-.51-5.39-1.47l-.39-.23-4.06 1.07 1.08-3.96-.26-.41a10.56 10.56 0 0 1-1.62-5.64c0-5.84 4.77-10.59 10.65-10.59 2.84 0 5.52 1.1 7.53 3.1a10.51 10.51 0 0 1 3.12 7.5c0 5.83-4.78 10.58-10.65 10.58Zm5.83-7.92c-.32-.16-1.9-.93-2.19-1.04-.3-.11-.51-.16-.73.16-.21.32-.83 1.04-1.02 1.25-.19.21-.38.24-.7.08-.32-.16-1.36-.5-2.6-1.6a9.8 9.8 0 0 1-1.8-2.24c-.19-.32-.02-.49.14-.65.15-.14.32-.38.48-.57.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.57-.08-.16-.73-1.75-1-2.4-.26-.63-.53-.54-.73-.55h-.62c-.21 0-.56.08-.85.4-.3.32-1.12 1.1-1.12 2.67 0 1.58 1.15 3.1 1.31 3.31.16.21 2.27 3.46 5.5 4.85.77.33 1.37.53 1.84.68.77.24 1.47.21 2.02.13.62-.09 1.9-.77 2.17-1.52.27-.75.27-1.39.19-1.52-.08-.13-.29-.21-.61-.37Z" />
+    </svg>
+  );
+}
+
 async function copyProductLink(product, onDone) {
   const url = productTrackedUrl(product);
   try {
@@ -189,8 +197,9 @@ async function downloadProductQr(product) {
 function ProductShareActions({ product, compact = false }) {
   const [copyLabel, setCopyLabel] = useState("Salin Link");
   const trackedUrl = productTrackedUrl(product);
-  const whatsappText = `Halo, berikut link produk ${product.title} dari Asuransi Jasindo: ${trackedUrl}`;
+  const whatsappText = `Halo Bapak/Ibu, saya ingin membagikan informasi produk ${product.title} dari Asuransi Jasindo. Silakan cek detail produk dan lanjutkan pengajuan melalui link berikut: ${trackedUrl}`;
   const buttonClass = "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#D9E1EA] bg-white px-2.5 text-[11px] font-bold text-[#004B78] hover:bg-[#EEF5FA]";
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
 
   function markCopied(label) {
     setCopyLabel(label);
@@ -203,8 +212,8 @@ function ProductShareActions({ product, compact = false }) {
         <Copy className="h-3.5 w-3.5" />
         {copyLabel}
       </button>
-      <a href={`https://wa.me/?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noopener noreferrer" className={buttonClass}>
-        <MessageCircle className="h-3.5 w-3.5" />
+      <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#1FAF5D] bg-[#25D366] px-2.5 text-[11px] font-bold text-white hover:bg-[#1FAF5D]">
+        <WhatsAppLogo className="h-4 w-4" />
         WhatsApp
       </a>
       <button type="button" onClick={() => downloadProductQr(product)} className={buttonClass}>
