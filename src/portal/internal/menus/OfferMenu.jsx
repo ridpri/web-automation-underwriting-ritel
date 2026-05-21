@@ -4,7 +4,7 @@ import { Car, Grid2X2, Home, List, ShoppingCart, User } from "lucide-react";
 import { PRODUCTS } from "../menuData.js";
 import { cls, ProductCard, ProductListItem, SectionBox, ToolbarSearch, WorkPanel } from "../menuShared.jsx";
 
-export default function OfferMenu({ onLink }) {
+export default function OfferMenu() {
   const [category, setCategory] = useState("Semua");
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState("card");
@@ -35,7 +35,7 @@ export default function OfferMenu({ onLink }) {
               {[{ key: "card", label: "Card", icon: Grid2X2 }, { key: "list", label: "List", icon: List }].map((item) => <button key={item.key} type="button" onClick={() => setViewMode(item.key)} className={cls("grid h-8 w-9 place-items-center rounded-md transition", viewMode === item.key ? "bg-[#004B78] text-white" : "text-[#004B78] hover:bg-[#EEF5FA]")} aria-label={`Tampilan ${item.label}`}><item.icon className="h-4 w-4" /></button>)}
             </div>
           </div>
-          {viewMode === "card" ? <div className="mt-4 grid grid-cols-[repeat(auto-fill,200px)] justify-start gap-3">{filteredProducts.map((product) => <ProductCard key={product.title} product={product} onLink={onLink} />)}</div> : <div className="mt-4 space-y-3">{filteredProducts.map((product) => <ProductListItem key={product.title} product={product} onLink={onLink} />)}</div>}
+          {viewMode === "card" ? <div className="mt-4 grid grid-cols-[repeat(auto-fill,200px)] justify-start gap-3">{filteredProducts.map((product) => <ProductCard key={product.title} product={product} />)}</div> : <div className="mt-4 space-y-3">{filteredProducts.map((product) => <ProductListItem key={product.title} product={product} />)}</div>}
         </SectionBox>
       </WorkPanel>
     </div>

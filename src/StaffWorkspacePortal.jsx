@@ -1795,7 +1795,7 @@ export default function StaffWorkspacePortal({
   const content = useMemo(() => {
     if (activeMenu === "dashboard") return <DashboardMenu />;
     if (activeMenu === "tasklist") return <TasklistMenu />;
-    if (activeMenu === "buat-penawaran") return <OfferMenu onLink={setLinkProduct} />;
+    if (activeMenu === "buat-penawaran") return <OfferMenu />;
     if (activeMenu === "add-partner") return <AddPartnerMenu />;
     if (activeMenu === "promotion") return <PromotionMenu />;
     if (activeMenu === "transaksi-polis") return <TransactionsMenu />;

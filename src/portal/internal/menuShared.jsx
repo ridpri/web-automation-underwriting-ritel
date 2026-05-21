@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Building2, Car, CheckCircle2, ChevronDown, ClipboardList, CreditCard, FileText, Gauge, Grid2X2, Headphones, Home, Mail, Search, Shield, SlidersHorizontal, User } from "lucide-react";
+import { Building2, Car, CheckCircle2, ChevronDown, ClipboardList, Copy, CreditCard, Download, FileText, Gauge, Grid2X2, Headphones, Home, Mail, MessageCircle, Search, Shield, SlidersHorizontal, User } from "lucide-react";
 
-import { PRODUCTS, productBaseUrl } from "./menuData.js";
+import { PRODUCTS, productBaseUrl, productTrackedUrl } from "./menuData.js";
 
 export function cls(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -143,29 +143,101 @@ export function ProductCategoryIcon({ category }) {
   return <Icon className="production-product-card__tag-icon" aria-hidden="true" />;
 }
 
-export function ProductCard({ product, onLink }) {
+function productSlug(product) {
+  return product.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function qrImageUrl(product) {
+  return `https://quickchart.io/qr?text=${encodeURIComponent(productTrackedUrl(product))}&size=480&margin=2&format=png`;
+}
+
+async function copyProductLink(product, onDone) {
+  const url = productTrackedUrl(product);
+  try {
+    await navigator.clipboard?.writeText(url);
+    onDone("Tersalin");
+  } catch {
+    onDone("Gagal salin");
+  }
+}
+
+async function downloadProductQr(product) {
+  const fileName = `qr-${productSlug(product)}.png`;
+  try {
+    const response = await fetch(qrImageUrl(product));
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    const link = document.createElement("a");
+    link.href = qrImageUrl(product);
+    link.download = fileName;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+}
+
+function ProductShareActions({ product, compact = false }) {
+  const [copyLabel, setCopyLabel] = useState("Salin Link");
+  const trackedUrl = productTrackedUrl(product);
+  const whatsappText = `Halo, berikut link produk ${product.title} dari Asuransi Jasindo: ${trackedUrl}`;
+  const buttonClass = "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#D9E1EA] bg-white px-2.5 text-[11px] font-bold text-[#004B78] hover:bg-[#EEF5FA]";
+
+  function markCopied(label) {
+    setCopyLabel(label);
+    window.setTimeout(() => setCopyLabel("Salin Link"), 1400);
+  }
+
+  return (
+    <div className={cls("grid gap-2", compact ? "sm:grid-cols-3 md:grid-cols-1" : "grid-cols-1")}>
+      <button type="button" onClick={() => copyProductLink(product, markCopied)} className={buttonClass}>
+        <Copy className="h-3.5 w-3.5" />
+        {copyLabel}
+      </button>
+      <a href={`https://wa.me/?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noopener noreferrer" className={buttonClass}>
+        <MessageCircle className="h-3.5 w-3.5" />
+        WhatsApp
+      </a>
+      <button type="button" onClick={() => downloadProductQr(product)} className={buttonClass}>
+        <Download className="h-3.5 w-3.5" />
+        Unduh QR
+      </button>
+    </div>
+  );
+}
+
+export function ProductCard({ product }) {
   return (
     <div className="w-[200px]">
-      <button type="button" onClick={() => onLink(product)} className="production-product-card block">
+      <div className="production-product-card block">
         <img src={product.image} alt="" width="640" height="720" loading="lazy" decoding="async" className="production-product-card__image" />
         <span className="production-product-card__shade" />
         <span className="production-product-card__tag"><ProductCategoryIcon category={product.category} /><span>{product.category}</span></span>
         <span className="production-product-card__title">{product.title}</span>
-      </button>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+      </div>
+      <div className="mt-2 grid gap-2">
         <a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-3 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buat Penawaran</a>
-        <button type="button" onClick={() => onLink(product)} className="h-9 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">Link Produk</button>
+        <ProductShareActions product={product} />
       </div>
     </div>
   );
 }
 
-export function ProductListItem({ product, onLink }) {
+export function ProductListItem({ product }) {
   return (
-    <div className="grid gap-3 rounded-xl border border-[#D9E1EA] bg-white p-3 transition hover:border-[#004B78]/50 hover:bg-[#F8FAFC] md:grid-cols-[150px_minmax(0,1fr)_260px] md:items-center">
+    <div className="grid gap-3 rounded-xl border border-[#D9E1EA] bg-white p-3 transition hover:border-[#004B78]/50 hover:bg-[#F8FAFC] md:grid-cols-[150px_minmax(0,1fr)_320px] md:items-center">
       <img src={product.image} alt={product.title} className="h-[120px] w-full rounded-lg object-cover md:h-[96px]" loading="lazy" />
       <div><div className="inline-flex items-center gap-1.5 rounded-full bg-[#EEF5FA] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#004B78]"><ProductCategoryIcon category={product.category} />{product.category}</div><div className="mt-2 text-[14px] font-bold leading-5 text-[#041E42] md:text-[15px]">{product.title}</div><div className="mt-1 text-[12px] leading-5 text-[#5F7A99]">{product.desc}</div></div>
-      <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1"><a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-3 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buat Penawaran</a><button type="button" onClick={() => onLink(product)} className="h-9 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">Link Produk</button></div>
+      <div className="grid gap-2"><a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-3 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buat Penawaran</a><ProductShareActions product={product} compact /></div>
     </div>
   );
 }
