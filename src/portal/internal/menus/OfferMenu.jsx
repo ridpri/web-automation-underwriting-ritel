@@ -5,7 +5,7 @@ import { PRODUCTS, productBaseUrl } from "../menuData.js";
 import { cls, ProductCategoryIcon, SectionBox, ToolbarSearch, WorkPanel } from "../menuShared.jsx";
 
 const STAFF_TRACKING_TOKEN = "46xs3";
-const QR_LOGO_URL = "https://web-automation-underwriting-ritel.vercel.app/production-assets/Jasindo_Positive-2.adb9525c.png";
+const QR_LOGO_SRC = "/production-assets/Jasindo_Positive-2.adb9525c.png";
 
 function productSlug(product) {
   return product.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -16,8 +16,76 @@ function productTrackingUrl(product) {
 }
 
 function qrImageUrl(productUrl) {
-  const logo = encodeURIComponent(QR_LOGO_URL);
-  return `https://quickchart.io/qr?text=${encodeURIComponent(productUrl)}&size=480&margin=2&format=png&ecLevel=H&centerImageUrl=${logo}&centerImageSizeRatio=0.22`;
+  return `https://quickchart.io/qr?text=${encodeURIComponent(productUrl)}&size=640&margin=2&format=png&ecLevel=H`;
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+function drawRoundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+async function createStyledQrBlob(productUrl) {
+  const response = await fetch(qrImageUrl(productUrl));
+  const qrObjectUrl = URL.createObjectURL(await response.blob());
+
+  try {
+    const [qrImage, logoImage] = await Promise.all([loadImage(qrObjectUrl), loadImage(QR_LOGO_SRC)]);
+    const size = 720;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = size;
+    canvas.height = size;
+
+    ctx.fillStyle = "#F8FAFC";
+    ctx.fillRect(0, 0, size, size);
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.24)";
+    ctx.shadowBlur = 22;
+    ctx.shadowOffsetY = 8;
+    ctx.fillStyle = "#FFFFFF";
+    drawRoundRect(ctx, 20, 20, 680, 680, 34);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.drawImage(qrImage, 78, 78, 564, 564);
+
+    const gradient = ctx.createLinearGradient(48, 48, 672, 48);
+    gradient.addColorStop(0, "#0072CE");
+    gradient.addColorStop(1, "#F39200");
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 4;
+    drawRoundRect(ctx, 48, 48, 624, 624, 22);
+    ctx.stroke();
+
+    ctx.fillStyle = "#FFFFFF";
+    drawRoundRect(ctx, 284, 284, 152, 152, 76);
+    ctx.fill();
+    ctx.drawImage(logoImage, 0, 0, 340, 380, 304, 292, 112, 112);
+
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("QR export failed"))), "image/png");
+    });
+  } finally {
+    URL.revokeObjectURL(qrObjectUrl);
+  }
 }
 
 function buildWhatsappText(product, linkProduk) {
@@ -68,8 +136,7 @@ function OfferProductRow({ product }) {
   async function downloadQr() {
     const fileName = `qr-${productSlug(product)}.png`;
     try {
-      const response = await fetch(qrImageUrl(trackedProductUrl));
-      const blob = await response.blob();
+      const blob = await createStyledQrBlob(trackedProductUrl);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
