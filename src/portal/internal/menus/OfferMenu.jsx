@@ -75,10 +75,13 @@ async function createStyledQrBlob(productUrl) {
     drawRoundRect(ctx, 48, 48, 624, 624, 22);
     ctx.stroke();
 
+    const logoBadgeSize = 148;
+    const logoBadgeX = (size - logoBadgeSize) / 2;
+    const logoBadgeY = (size - logoBadgeSize) / 2;
     ctx.fillStyle = "#FFFFFF";
-    drawRoundRect(ctx, 284, 284, 152, 152, 76);
+    drawRoundRect(ctx, logoBadgeX, logoBadgeY, logoBadgeSize, logoBadgeSize, logoBadgeSize / 2);
     ctx.fill();
-    ctx.drawImage(logoImage, 0, 0, 340, 380, 304, 292, 112, 112);
+    ctx.drawImage(logoImage, 0, 0, 360, 370, 289, 286, 142, 146);
 
     return await new Promise((resolve, reject) => {
       canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("QR export failed"))), "image/png");
