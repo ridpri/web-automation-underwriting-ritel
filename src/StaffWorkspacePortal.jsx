@@ -9,22 +9,18 @@ import {
   Copy,
   CreditCard,
   Download,
-  ExternalLink,
   FileText,
   Gauge,
   Grid2X2,
   Headphones,
-  List,
   Home,
   Lock,
   Mail,
   MapPin,
-  MessageCircle,
   Package,
   Phone,
   Plane,
   Printer,
-  QrCode,
   Search,
   Settings,
   Shield,
@@ -218,7 +214,6 @@ const DEFAULT_OFFICIAL_CONTACTS = [
   { label: "Telepon kantor", value: "(021) 3924737", helper: "Graha Jasindo", href: "tel:+62213924737", icon: Headphones },
 ];
 
-const TOKEN = "tk8f3x9q2m";
 const BASE_URL = "https://esppa.asuransijasindo.co.id/product";
 const PRODUCTION_ASSETS = {
   danantara: "/production-assets/danantara.57629308.png",
@@ -327,10 +322,6 @@ function productRoute(product) {
 
 function productBaseUrl(product) {
   return `${BASE_URL}/${productRoute(product)}`;
-}
-
-function productTrackedUrl(product) {
-  return `${productBaseUrl(product)}/${TOKEN}`;
 }
 
 function formatRange(start, end) {
@@ -1419,30 +1410,55 @@ function ProductCategoryIcon({ category }) {
   return <Icon className="production-product-card__tag-icon" aria-hidden="true" />;
 }
 
-function ProductCard({ product, onLink }) {
+function productSlug(product) {
+  return product.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function qrImageUrl(product) {
+  return `https://quickchart.io/qr?text=${encodeURIComponent(productBaseUrl(product))}&size=480&margin=2&format=png`;
+}
+
+function buildWhatsappText(product, linkProduk) {
+  const staffName = "Taqwim";
+  return `Halo Bapak/Ibu,
+
+Saya ${staffName} dari Asuransi Jasindo.
+
+Berikut tautan produk ${product.title}:
+
+${linkProduk}
+
+Bapak/Ibu dapat membuka tautan tersebut untuk melihat informasi produk dan melakukan simulasi premi secara mandiri.
+
+Apabila membutuhkan bantuan, silakan hubungi saya kembali melalui WhatsApp ini.
+
+Terima kasih.
+${staffName}
+Asuransi Jasindo`;
+}
+
+function WhatsAppLogo({ className = "h-4 w-4" }) {
   return (
-    <div className="w-[200px]">
-      <button type="button" onClick={() => onLink(product)} className="production-product-card block">
-        <img src={product.image} alt="" width="640" height="720" loading="lazy" decoding="async" className="production-product-card__image" />
-        <span className="production-product-card__shade" />
-        <span className="production-product-card__tag">
-          <ProductCategoryIcon category={product.category} />
-          <span>{product.category}</span>
-        </span>
-        <span className="production-product-card__title">{product.title}</span>
-      </button>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-3 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buat Penawaran</a>
-        <button type="button" onClick={() => onLink(product)} className="h-9 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">Link Produk</button>
-      </div>
-    </div>
+    <svg viewBox="0 0 32 32" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M16.02 3.2A12.72 12.72 0 0 0 5.18 22.6L3.6 28.8l6.36-1.5A12.68 12.68 0 0 0 16.02 29 12.9 12.9 0 0 0 28.9 16.1 12.88 12.88 0 0 0 16.02 3.2Zm0 23.6a10.52 10.52 0 0 1-5.4-1.48l-.38-.23-3.77.9 1-3.66-.25-.4a10.56 10.56 0 1 1 8.8 4.87Zm5.82-7.9c-.32-.16-1.9-.94-2.2-1.05-.3-.1-.52-.16-.74.16-.22.32-.84 1.05-1.03 1.27-.19.22-.38.24-.7.08-.32-.16-1.35-.5-2.57-1.58-.95-.85-1.6-1.9-1.78-2.22-.19-.32-.02-.5.14-.66.14-.14.32-.38.48-.57.16-.19.22-.32.32-.54.1-.22.05-.4-.03-.57-.08-.16-.74-1.78-1.01-2.44-.27-.64-.54-.55-.74-.56h-.63c-.22 0-.57.08-.87.4-.3.32-1.14 1.12-1.14 2.72 0 1.6 1.17 3.15 1.33 3.37.16.22 2.3 3.5 5.57 4.9.78.34 1.39.54 1.86.69.78.25 1.49.21 2.05.13.63-.09 1.9-.78 2.17-1.53.27-.75.27-1.4.19-1.53-.08-.14-.3-.22-.62-.38Z" />
+    </svg>
   );
 }
 
-function ProductListItem({ product, onLink }) {
+function OfferProductRow({ product }) {
+  const [copyLabel, setCopyLabel] = useState("Salin Link");
+  const productUrl = productBaseUrl(product);
+  const whatsappText = buildWhatsappText(product, productUrl);
+
+  async function copyLink() {
+    await navigator.clipboard?.writeText(productUrl);
+    setCopyLabel("Tersalin");
+    window.setTimeout(() => setCopyLabel("Salin Link"), 1400);
+  }
+
   return (
-    <div className="grid gap-3 rounded-xl border border-[#D9E1EA] bg-white p-3 transition hover:border-[#004B78]/50 hover:bg-[#F8FAFC] md:grid-cols-[150px_minmax(0,1fr)_260px] md:items-center">
-      <img src={product.image} alt={product.title} className="h-[120px] w-full rounded-lg object-cover md:h-[96px]" loading="lazy" />
+    <div className="grid gap-3 rounded-xl border border-[#D9E1EA] bg-white p-3 transition hover:border-[#004B78]/50 hover:bg-[#F8FAFC] md:grid-cols-[150px_minmax(0,1fr)_320px] md:items-center">
+      <img src={product.image} alt={product.title} className="h-[120px] w-full rounded-lg object-cover md:h-[96px]" loading="lazy" decoding="async" />
       <div className="min-w-0">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-[#EEF5FA] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#004B78]">
           <ProductCategoryIcon category={product.category} />
@@ -1451,18 +1467,28 @@ function ProductListItem({ product, onLink }) {
         <div className="mt-2 text-[14px] font-bold leading-5 text-[#041E42] md:text-[15px]">{product.title}</div>
         <div className="mt-1 text-[12px] leading-5 text-[#5F7A99]">{product.desc}</div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1">
-        <a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-3 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buat Penawaran</a>
-        <button type="button" onClick={() => onLink(product)} className="h-9 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">Link Produk</button>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <a href={productUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-3 text-[12px] font-bold text-white hover:bg-[#DF9620]">Buat Penawaran</a>
+        <button type="button" onClick={copyLink} className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">
+          <Copy className="h-4 w-4" />
+          {copyLabel}
+        </button>
+        <a href={`https://web.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">
+          <WhatsAppLogo className="h-4 w-4" />
+          WhatsApp
+        </a>
+        <a href={qrImageUrl(product)} download={`qr-${productSlug(product)}.png`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#D9E1EA] bg-white px-3 text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">
+          <Download className="h-4 w-4" />
+          Unduh QR
+        </a>
       </div>
     </div>
   );
 }
 
-function OfferProductsView({ onLink }) {
+function OfferProductsView() {
   const [category, setCategory] = useState("Semua");
   const [query, setQuery] = useState("");
-  const [viewMode, setViewMode] = useState("card");
   const categories = [
     { label: "Semua", icon: Grid2X2 },
     { label: "Kecelakaan Diri", icon: User },
@@ -1502,37 +1528,10 @@ function OfferProductsView({ onLink }) {
                 </button>
               ))}
             </div>
-            <div className="inline-flex w-fit rounded-lg border border-[#D9E1EA] bg-white p-1">
-              {[
-                { key: "card", label: "Card", icon: Grid2X2 },
-                { key: "list", label: "List", icon: List },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setViewMode(item.key)}
-                  className={cls(
-                    "grid h-8 w-9 place-items-center rounded-md transition",
-                    viewMode === item.key ? "bg-[#004B78] text-white" : "text-[#004B78] hover:bg-[#EEF5FA]",
-                  )}
-                  aria-label={`Tampilan ${item.label}`}
-                  aria-pressed={viewMode === item.key}
-                  title={`Tampilan ${item.label}`}
-                >
-                  <item.icon className="h-4 w-4" />
-                </button>
-              ))}
-            </div>
           </div>
-          {viewMode === "card" ? (
-            <div className="mt-4 grid grid-cols-[repeat(auto-fill,200px)] justify-start gap-3">
-              {filteredProducts.map((product) => <ProductCard key={product.title} product={product} onLink={onLink} />)}
-            </div>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {filteredProducts.map((product) => <ProductListItem key={product.title} product={product} onLink={onLink} />)}
-            </div>
-          )}
+          <div className="mt-4 space-y-3">
+            {filteredProducts.map((product) => <OfferProductRow key={product.title} product={product} />)}
+          </div>
         </SectionBox>
       </WorkPanel>
     </div>
@@ -1859,118 +1858,6 @@ function GenericStaffView({ active }) {
   const filteredItems = pageFilter === "Semua" ? items : items.filter((item) => item.value === pageFilter);
   if (["add-partner", "add-user"].includes(active)) return <StaffListView page={page} items={filteredItems} filters={filters} activeFilter={pageFilter} onFilterChange={setPageFilter} />;
   return <StaffCardGrid page={page} items={filteredItems} filters={filters} activeFilter={pageFilter} onFilterChange={setPageFilter} />;
-}
-
-function ProductLinkModal({ product, onClose }) {
-  const [showQr, setShowQr] = useState(false);
-  if (!product) return null;
-  const cells = Array.from({ length: 81 }, (_, index) => index % 2 === 0 || index % 7 === 0 || [10, 16, 28, 35, 52, 64, 70].includes(index));
-  const recipientName = "Rama Pratama";
-  const trackedUrl = productTrackedUrl(product);
-  const shareText = `Halo ${recipientName}, berikut link produk ${product.title} dari Asuransi Jasindo: ${trackedUrl}`;
-  const mailSubject = `Link Produk ${product.title}`;
-  const mailBody = `${shareText}\n\nSilakan buka link tersebut untuk melihat informasi produk dan melanjutkan proses sesuai kebutuhan.`;
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-  const emailUrl = `mailto:?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`;
-
-  function downloadQrImage() {
-    const canvas = document.createElement("canvas");
-    const size = 420;
-    const padding = 42;
-    const cellCount = 9;
-    const cellSize = (size - padding * 2) / cellCount;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    canvas.width = size;
-    canvas.height = size;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, size, size);
-    cells.forEach((cell, index) => {
-      if (!cell) return;
-      const x = padding + (index % cellCount) * cellSize;
-      const y = padding + Math.floor(index / cellCount) * cellSize;
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(x, y, cellSize * 0.82, cellSize * 0.82);
-    });
-    ctx.fillStyle = "#004B7C";
-    ctx.font = "bold 14px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("QR Link Produk", size / 2, size - 18);
-    const slug = product.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = `qr-${slug}-${TOKEN}.png`;
-    link.click();
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-[#041E42]/55 p-3 md:place-items-center">
-      <div className="w-full max-w-[640px] overflow-hidden rounded-[20px] border border-[#D9E1EA] bg-white shadow-2xl">
-        <div className="bg-[#0E669D] px-5 py-5 text-white md:px-6 md:py-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="inline-flex rounded-full bg-white/15 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white/90">Link Produk</div>
-              <div className="mt-4 text-[23px] font-black leading-tight md:text-[28px]">Link produk siap dibagikan</div>
-              <div className="mt-3 max-w-[520px] text-[13px] leading-6 text-white/90">
-                Gunakan menu di bawah untuk membuka link produk atau membagikannya ke calon tertanggung melalui WhatsApp, email, tautan, atau QR.
-              </div>
-            </div>
-            <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/15" aria-label="Tutup modal link produk">
-              <span className="text-[24px] leading-none">×</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="p-5 md:p-6">
-          <div className="flex items-center gap-3 rounded-[16px] border border-[#D9E1EA] bg-[#F8FAFC] p-3.5">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#004B78] text-white">
-              <Shield className="h-6 w-6" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-[14px] font-black leading-5 text-[#041E42]">{product.title}</div>
-              <div className="mt-1 text-[12px] leading-5 text-[#5F7A99]">Penerima: <span className="font-bold text-[#304B68]">{recipientName}</span></div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3">
-            <a href={trackedUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 items-center justify-center gap-3 rounded-xl bg-[#004B78] px-4 text-[14px] font-black text-white hover:bg-[#003F65]">
-              <ExternalLink className="h-5 w-5" />
-              Buka Link Produk
-            </a>
-            <div className="grid gap-3 md:grid-cols-2">
-              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 items-center justify-center gap-3 rounded-xl border border-[#D9E1EA] bg-white px-4 text-[13px] font-bold text-[#304B68] hover:bg-[#F8FAFC]">
-                <MessageCircle className="h-5 w-5" />
-                Kirim via WhatsApp
-              </a>
-              <a href={emailUrl} className="inline-flex h-11 items-center justify-center gap-3 rounded-xl border border-[#D9E1EA] bg-white px-4 text-[13px] font-bold text-[#304B68] hover:bg-[#F8FAFC]">
-                <Mail className="h-5 w-5" />
-                Kirim via Email
-              </a>
-              <button type="button" onClick={() => navigator.clipboard?.writeText(trackedUrl)} className="inline-flex h-11 items-center justify-center gap-3 rounded-xl border border-[#D9E1EA] bg-white px-4 text-[13px] font-bold text-[#304B68] hover:bg-[#F8FAFC]">
-                <Copy className="h-5 w-5" />
-                Salin Tautan
-              </button>
-              <button type="button" onClick={() => setShowQr((current) => !current)} className={cls("inline-flex h-11 items-center justify-center gap-3 rounded-xl border px-4 text-[13px] font-bold hover:bg-[#F8FAFC]", showQr ? "border-[#004B78] bg-[#EEF5FA] text-[#004B78]" : "border-[#D9E1EA] bg-white text-[#304B68]")}>
-                <QrCode className="h-5 w-5" />
-                Lihat Info QR
-              </button>
-            </div>
-          </div>
-
-          {showQr ? (
-            <div className="mt-4 rounded-xl border border-[#D9E1EA] bg-[#F8FAFC] p-4 text-center">
-              <div className="mx-auto grid h-40 w-40 grid-cols-9 gap-1 rounded-xl bg-white p-4 shadow-sm">
-                {cells.map((cell, index) => <span key={index} className={cell ? "rounded-sm bg-slate-900" : "rounded-sm bg-white"} />)}
-              </div>
-              <div className="mt-3 text-[13px] font-bold text-[#004B78]">QR Link Produk</div>
-              <div className="mt-1 text-[11px] text-[#5F7A99]">QR merepresentasikan URL produk dengan token tracking.</div>
-              <button type="button" onClick={downloadQrImage} className="mt-3 h-9 rounded-lg bg-[#F2A62A] px-4 text-[12px] font-bold text-white hover:bg-[#DF9620]">Unduh QR</button>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function HelpView({ contacts }) {
@@ -2499,7 +2386,6 @@ export default function StaffWorkspacePortal({
 }) {
   const staffSessionName = sessionName;
   const [activeMenu, setActiveMenu] = useState(() => readPortalMenu(defaultTab));
-  const [linkProduct, setLinkProduct] = useState(null);
   const availableNavItems = STAFF_NAV_ITEMS;
   const handleMenuChange = useCallback((nextMenu) => {
     const normalizedMenu = normalizePortalMenu(nextMenu);
@@ -2519,7 +2405,7 @@ export default function StaffWorkspacePortal({
 
   const content = useMemo(() => {
     if (activeMenu === "dashboard") return <StaffDashboardView />;
-    if (activeMenu === "buat-penawaran") return <OfferProductsView onLink={setLinkProduct} />;
+    if (activeMenu === "buat-penawaran") return <OfferProductsView />;
     if (activeMenu === "settings") return <StaffSettingsView sessionName={staffSessionName} />;
     return <GenericStaffView active={activeMenu} />;
   }, [activeMenu, staffSessionName]);
@@ -2532,12 +2418,6 @@ export default function StaffWorkspacePortal({
         <WorkspaceFilters activeMenu={activeMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} />
         {content}
       </PageShell>
-      <ProductLinkModal product={linkProduct} onClose={() => setLinkProduct(null)} />
     </div>
   );
 }
-
-
-
-
-
