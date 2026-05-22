@@ -1,4 +1,4 @@
-﻿import { Building2, Car, ChevronDown, Home, LogIn, MapPin, Package, Phone, Plane, Shield } from "lucide-react";
+﻿import { Building2, Car, ChevronDown, Home, MapPin, Package, Phone, Plane, Shield } from "lucide-react";
 import { createElement, Suspense, useEffect, useMemo, useState } from "react";
 import { OPERATING_QUEUE_SEED, buildTimelineEvent, statusTone } from "./operatingLayer.js";
 import { buildPropertyCatalog, buildVehicleCatalog, PERSONAL_PRODUCTS } from "./app/catalogData.js";
@@ -16,6 +16,7 @@ import {
   StaffWorkspacePortal,
 } from "./app/lazyJourneys.js";
 import { resolveSessionName, resolveSessionProfile, SESSION_OPTIONS } from "./app/sessionConfig.js";
+import LoginMenu from "./app/LoginMenu.jsx";
 
 function cls() {
   return Array.from(arguments).filter(Boolean).join(" ");
@@ -314,17 +315,11 @@ function ProductionHeader({
   onOpenJourney,
 }) {
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [roleMenuPrewarm, setRoleMenuPrewarm] = useState(false);
-  const isGuestSession = sessionRole === "guest";
-  const isInternalSession = sessionRole === "internal";
-  const accountPrimaryDestination = isInternalSession ? "internal-workspace" : "self-care-portal";
-  const accountPrimaryLabel = isInternalSession ? "Ruang Kerja Saya" : "Polis Saya";
   const roleMenuVisible = roleMenuOpen || roleMenuPrewarm;
 
   const closeMenus = () => {
     setRoleMenuOpen(false);
-    setAccountMenuOpen(false);
   };
 
   useEffect(() => {
@@ -433,90 +428,13 @@ function ProductionHeader({
             <span className="production-language__flag" aria-hidden="true" />
             <span>ID</span>
           </button>
-          <div className="production-account">
-            {isGuestSession ? (
-              <>
-                <button
-                  type="button"
-                  className="production-login"
-                  aria-expanded={accountMenuOpen}
-                  aria-haspopup="menu"
-                  aria-controls="guest-account-menu"
-                  onClick={() => {
-                    setRoleMenuOpen(false);
-                    setAccountMenuOpen((current) => !current);
-                  }}
-                >
-                  <LogIn size={17} strokeWidth={2.25} aria-hidden="true" />
-                  <span>Masuk</span>
-                </button>
-                <div id="guest-account-menu" role="menu" className="production-menu" hidden={!accountMenuOpen}>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      closeMenus();
-                      onGuestLogin();
-                    }}
-                  >
-                    Login / Buat Akun
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      closeMenus();
-                      onOpenJourney("self-care-lookup");
-                    }}
-                  >
-                    Lanjut tanpa Login
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="production-profile"
-                  aria-expanded={accountMenuOpen}
-                  aria-haspopup="menu"
-                  aria-controls="account-menu"
-                  onClick={() => {
-                    setRoleMenuOpen(false);
-                    setAccountMenuOpen((current) => !current);
-                  }}
-                >
-                  <span className="production-profile__badge">ID</span>
-                  <span>{sessionName}</span>
-                  <ChevronDown size={15} strokeWidth={2.2} aria-hidden="true" />
-                </button>
-                <div id="account-menu" role="menu" className="production-menu" hidden={!accountMenuOpen}>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      closeMenus();
-                      onOpenJourney(accountPrimaryDestination);
-                    }}
-                  >
-                    {accountPrimaryLabel}
-                  </button>
-                  {isInternalSession ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        closeMenus();
-                        onOpenJourney("partner-config");
-                      }}
-                    >
-                      Konfigurasi Partner
-                    </button>
-                  ) : null}
-                </div>
-              </>
-            )}
-          </div>
+          <LoginMenu
+            sessionRole={sessionRole}
+            sessionName={sessionName}
+            onGuestLogin={onGuestLogin}
+            onOpenJourney={onOpenJourney}
+            onBeforeOpen={() => setRoleMenuOpen(false)}
+          />
         </div>
       </div>
     </header>
