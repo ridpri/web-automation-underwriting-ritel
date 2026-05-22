@@ -5,6 +5,7 @@ import { PRODUCTS, productBaseUrl } from "../menuData.js";
 import { cls, ProductCategoryIcon, SectionBox, ToolbarSearch, WorkPanel } from "../menuShared.jsx";
 
 const STAFF_TRACKING_TOKEN = "46xs3";
+const QR_LOGO_URL = "https://web-automation-underwriting-ritel.vercel.app/production-assets/Jasindo_Positive-2.adb9525c.png";
 
 function productSlug(product) {
   return product.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -15,7 +16,8 @@ function productTrackingUrl(product) {
 }
 
 function qrImageUrl(productUrl) {
-  return `https://quickchart.io/qr?text=${encodeURIComponent(productUrl)}&size=480&margin=2&format=png`;
+  const logo = encodeURIComponent(QR_LOGO_URL);
+  return `https://quickchart.io/qr?text=${encodeURIComponent(productUrl)}&size=480&margin=2&format=png&ecLevel=H&centerImageUrl=${logo}&centerImageSizeRatio=0.22`;
 }
 
 function buildWhatsappText(product, linkProduk) {
