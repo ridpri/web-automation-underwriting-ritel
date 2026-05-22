@@ -83,7 +83,7 @@ function OfferProductRow({ product }) {
 
   return (
     <div className="grid gap-3 rounded-xl border border-[#D9E1EA] bg-white p-3 transition hover:border-[#004B78]/50 hover:bg-[#F8FAFC] md:grid-cols-[150px_minmax(0,1fr)_320px] md:items-center">
-      <img src={product.image} alt={product.title} className="h-[120px] w-full rounded-lg object-cover md:h-[96px]" loading="lazy" />
+      <img src={product.image} alt={product.title} className="h-[120px] w-full rounded-lg object-cover md:h-[96px]" loading="lazy" decoding="async" />
       <div>
         <div className="inline-flex items-center gap-1.5 rounded-full bg-[#EEF5FA] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#004B78]">
           <ProductCategoryIcon category={product.category} />
@@ -93,7 +93,7 @@ function OfferProductRow({ product }) {
         <div className="mt-1 text-[12px] leading-5 text-[#5F7A99]">{product.desc}</div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <a href={productBaseUrl(product)} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-2 text-center text-[11px] font-bold leading-4 text-white hover:bg-[#DF9620]">Buat Penawaran</a>
+        <a href={productUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#F2A62A] px-2 text-center text-[11px] font-bold leading-4 text-white hover:bg-[#DF9620]">Buat Penawaran</a>
         <button type="button" onClick={copyLink} className={secondaryButtonClass}>
           <Copy className="h-3.5 w-3.5" />
           {copyLabel}
