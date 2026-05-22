@@ -12,51 +12,24 @@ function qrImageUrl(product) {
   return `https://quickchart.io/qr?text=${encodeURIComponent(productTrackedUrl(product))}&size=480&margin=2&format=png`;
 }
 
-function estimatePremium(product) {
-  const premiumMap = {
-    "Trip Guard": "Rp 250.000",
-    "Edu Protect": "Rp 180.000",
-    "Travel Safe": "Rp 320.000",
-    "Life Guard": "Rp 350.000",
-    "Asuransi Kebakaran": "Rp 1.250.000",
-    "Property All Risk": "Rp 2.400.000",
-    "Asuransi Sepeda Motor - Total Loss": "Rp 450.000",
-    "Asuransi Mobil - Total Loss": "Rp 2.750.000",
-    "Asuransi Mobil - Komprehensif": "Rp 5.250.000",
-  };
-  return premiumMap[product.title] || "Menyesuaikan data risiko";
-}
-
-function buildWhatsappText(product, linkPenawaran) {
+function buildWhatsappText(product, linkProduk) {
   const namaStaff = "Taqwim";
-  const namaCabang = "Kantor Cabang Jakarta";
-  const periodePertanggungan = "1 Tahun";
-  const tanggalBerlakuPenawaran = "7 hari sejak penawaran dikirim";
 
   return `Halo Bapak/Ibu,
 
-Saya ${namaStaff} dari PT Asuransi Jasa Indonesia (Jasindo).
+Saya ${namaStaff} dari Asuransi Jasindo.
 
-Berikut kami sampaikan link penawaran premi untuk produk ${product.title}:
+Berikut tautan produk ${product.title}:
 
-${linkPenawaran}
+${linkProduk}
 
-Ringkasan penawaran:
-Produk: ${product.title}
-Estimasi Premi: ${estimatePremium(product)}
-Periode Pertanggungan: ${periodePertanggungan}
-Masa Berlaku Penawaran: ${tanggalBerlakuPenawaran}
+Bapak/Ibu dapat membuka tautan tersebut untuk melihat informasi produk dan melakukan simulasi premi secara mandiri.
 
-Silakan klik link di atas untuk melihat detail penawaran, melengkapi data, dan melanjutkan proses apabila Bapak/Ibu berkenan.
-
-Catatan:
-Penawaran ini belum merupakan polis atau bukti pertanggungan. Perlindungan asuransi berlaku setelah data terverifikasi, premi dibayarkan, dan polis diterbitkan sesuai ketentuan yang berlaku.
+Apabila membutuhkan bantuan, silakan hubungi saya kembali melalui WhatsApp ini.
 
 Terima kasih.
-
 ${namaStaff}
-${namaCabang}
-PT Asuransi Jasa Indonesia`;
+Asuransi Jasindo`;
 }
 
 function WhatsAppLogo({ className = "h-4 w-4" }) {
