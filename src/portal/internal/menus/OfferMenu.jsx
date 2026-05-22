@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Car, Copy, Download, Grid2X2, Home, ShoppingCart, User } from "lucide-react";
 
-import { PRODUCTS, productBaseUrl, productTrackedUrl } from "../menuData.js";
+import { PRODUCTS, productBaseUrl } from "../menuData.js";
 import { cls, ProductCategoryIcon, SectionBox, ToolbarSearch, WorkPanel } from "../menuShared.jsx";
 
 function productSlug(product) {
@@ -9,7 +9,7 @@ function productSlug(product) {
 }
 
 function qrImageUrl(product) {
-  return `https://quickchart.io/qr?text=${encodeURIComponent(productTrackedUrl(product))}&size=480&margin=2&format=png`;
+  return `https://quickchart.io/qr?text=${encodeURIComponent(productBaseUrl(product))}&size=480&margin=2&format=png`;
 }
 
 function buildWhatsappText(product, linkProduk) {
@@ -42,13 +42,13 @@ function WhatsAppLogo({ className = "h-4 w-4" }) {
 
 function OfferProductRow({ product }) {
   const [copyLabel, setCopyLabel] = useState("Salin Link");
-  const trackedUrl = productTrackedUrl(product);
-  const whatsappText = buildWhatsappText(product, trackedUrl);
+  const productUrl = productBaseUrl(product);
+  const whatsappText = buildWhatsappText(product, productUrl);
   const secondaryButtonClass = "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#D9E1EA] bg-white px-2 text-center text-[11px] font-bold leading-4 text-[#004B78] hover:bg-[#EEF5FA]";
 
   async function copyLink() {
     try {
-      await navigator.clipboard?.writeText(trackedUrl);
+      await navigator.clipboard?.writeText(productUrl);
       setCopyLabel("Tersalin");
     } catch {
       setCopyLabel("Gagal salin");
