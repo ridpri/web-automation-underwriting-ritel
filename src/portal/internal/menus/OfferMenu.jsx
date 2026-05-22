@@ -4,12 +4,18 @@ import { Car, Copy, Download, Grid2X2, Home, ShoppingCart, User } from "lucide-r
 import { PRODUCTS, productBaseUrl } from "../menuData.js";
 import { cls, ProductCategoryIcon, SectionBox, ToolbarSearch, WorkPanel } from "../menuShared.jsx";
 
+const STAFF_TRACKING_TOKEN = "46xs3";
+
 function productSlug(product) {
   return product.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-function qrImageUrl(product) {
-  return `https://quickchart.io/qr?text=${encodeURIComponent(productBaseUrl(product))}&size=480&margin=2&format=png`;
+function productTrackingUrl(product) {
+  return `${productBaseUrl(product)}/${STAFF_TRACKING_TOKEN}`;
+}
+
+function qrImageUrl(productUrl) {
+  return `https://quickchart.io/qr?text=${encodeURIComponent(productUrl)}&size=480&margin=2&format=png`;
 }
 
 function buildWhatsappText(product, linkProduk) {
@@ -43,12 +49,13 @@ function WhatsAppLogo({ className = "h-4 w-4" }) {
 function OfferProductRow({ product }) {
   const [copyLabel, setCopyLabel] = useState("Salin Link");
   const productUrl = productBaseUrl(product);
-  const whatsappText = buildWhatsappText(product, productUrl);
+  const trackedProductUrl = productTrackingUrl(product);
+  const whatsappText = buildWhatsappText(product, trackedProductUrl);
   const secondaryButtonClass = "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#D9E1EA] bg-white px-2 text-center text-[11px] font-bold leading-4 text-[#004B78] hover:bg-[#EEF5FA]";
 
   async function copyLink() {
     try {
-      await navigator.clipboard?.writeText(productUrl);
+      await navigator.clipboard?.writeText(trackedProductUrl);
       setCopyLabel("Tersalin");
     } catch {
       setCopyLabel("Gagal salin");
@@ -59,7 +66,7 @@ function OfferProductRow({ product }) {
   async function downloadQr() {
     const fileName = `qr-${productSlug(product)}.png`;
     try {
-      const response = await fetch(qrImageUrl(product));
+      const response = await fetch(qrImageUrl(trackedProductUrl));
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -71,7 +78,7 @@ function OfferProductRow({ product }) {
       URL.revokeObjectURL(url);
     } catch {
       const link = document.createElement("a");
-      link.href = qrImageUrl(product);
+      link.href = qrImageUrl(trackedProductUrl);
       link.download = fileName;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
