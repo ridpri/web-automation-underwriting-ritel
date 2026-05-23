@@ -79,7 +79,7 @@ async function createStyledQrBlob(productUrl) {
     const logoBadgeX = (size - logoBadgeSize) / 2;
     const logoBadgeY = (size - logoBadgeSize) / 2;
     ctx.fillStyle = "#FFFFFF";
-    drawRoundRect(ctx, logoBadgeX, logoBadgeY, logoBadgeSize, logoBadgeSize, logoBadgeSize / 2);
+    drawRoundRect(ctx, logoBadgeX, logoBadgeY, logoBadgeSize, logoBadgeSize, 20);
     ctx.fill();
     ctx.drawImage(logoImage, 0, 0, 308, 370, 310, 310, 92, 108);
     ctx.drawImage(logoImage, 306, 0, 54, 58, 398, 300, 20, 22);
