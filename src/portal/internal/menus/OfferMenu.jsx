@@ -81,7 +81,8 @@ async function createStyledQrBlob(productUrl) {
     ctx.fillStyle = "#FFFFFF";
     drawRoundRect(ctx, logoBadgeX, logoBadgeY, logoBadgeSize, logoBadgeSize, logoBadgeSize / 2);
     ctx.fill();
-    ctx.drawImage(logoImage, 0, 0, 360, 370, 311, 310, 100, 102);
+    ctx.drawImage(logoImage, 0, 0, 308, 370, 310, 310, 92, 108);
+    ctx.drawImage(logoImage, 306, 0, 54, 58, 398, 300, 20, 22);
 
     return await new Promise((resolve, reject) => {
       canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("QR export failed"))), "image/png");
