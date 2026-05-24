@@ -1,5 +1,5 @@
 ﻿
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Accessibility,
@@ -992,12 +992,7 @@ function getPendingItems(config) {
   const items = [];
   const blueprint = config.data.blueprint;
   const master = config.data.master;
-  const mapping = config.data.mapping;
   const review = config.data.review;
-  const rules = getOperationalFieldRules(config);
-  const partnerFacing = getPartnerFacingFields(config);
-  const missingTargets = getMissingRequiredTargets(config);
-  const sample = parseSamplePayload(config);
 
   if (config.family === "group-pa") {
     if (!config.title) items.push("Nama konfigurasi belum diisi.");
@@ -1059,9 +1054,7 @@ function getReadiness(config) {
   const checks = [];
   const blueprint = config.data.blueprint;
   const master = config.data.master;
-  const mapping = config.data.mapping;
   const review = config.data.review;
-  const rules = getOperationalFieldRules(config);
 
   if (config.family === "group-pa") {
     checks.push(Boolean(config.title));
@@ -1964,7 +1957,6 @@ function PartnerConfigStudio({
   const [travelSafeExpandedCategory, setTravelSafeExpandedCategory] = useState("cat_trv");
   const [partnerClauseExpanded, setPartnerClauseExpanded] = useState("wording:PSAKDI");
   const [lifeGuardClauseSearch, setLifeGuardClauseSearch] = useState("");
-  const [lifeGuardSidebarCollapsed, setLifeGuardSidebarCollapsed] = useState(false);
   const [lifeGuardPendingAction, setLifeGuardPendingAction] = useState("");
   const role = controlledRole || roleState;
 
@@ -1988,6 +1980,13 @@ function PartnerConfigStudio({
           onClick: () => {
             setHeaderAccountMenuOpen(false);
             if (typeof onOpenWorkspace === "function") onOpenWorkspace();
+          },
+        },
+        {
+          label: "Antrean Internal",
+          onClick: () => {
+            setHeaderAccountMenuOpen(false);
+            if (typeof onOpenQueue === "function") onOpenQueue();
           },
         },
         {
@@ -2050,6 +2049,17 @@ function PartnerConfigStudio({
     if (controlledRole == null) setRoleState(nextRole);
   }
 
+  const updateSelected = useCallback((mutator) => {
+    setConfigs((prev) =>
+      prev.map((item) => {
+        if (item.id !== selectedId) return item;
+        const next = mutator(JSON.parse(JSON.stringify(item)));
+        next.updatedAt = nowLabel();
+        return next;
+      })
+    );
+  }, [selectedId]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(
@@ -2109,7 +2119,7 @@ function PartnerConfigStudio({
       };
       return draft;
     });
-  }, [selectedConfig]);
+  }, [selectedConfig, updateSelected]);
 
   const filteredConfigs = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -2257,17 +2267,6 @@ function PartnerConfigStudio({
     return Math.max(stepIndex, Math.min(unlocked, STEP_LIST.length - 1));
   }, [selectedConfig, stepIndex, stepState]);
 
-  function updateSelected(mutator) {
-    setConfigs((prev) =>
-      prev.map((item) => {
-        if (item.id !== selectedId) return item;
-        const next = mutator(JSON.parse(JSON.stringify(item)));
-        next.updatedAt = nowLabel();
-        return next;
-      })
-    );
-  }
-
   function patchRoot(changes) {
     updateSelected((draft) => ({ ...draft, ...changes }));
   }
@@ -2287,15 +2286,6 @@ function PartnerConfigStudio({
       draft.audit = [{ at: nowLabel(), actor, action, note }, ...(draft.audit || [])];
       return draft;
     });
-  }
-
-  function toggleChannel(id) {
-    if (!selectedConfig) return;
-    const channels = selectedConfig.data.blueprint.channels || [];
-    const next = channels.includes(id)
-      ? channels.filter((value) => value !== id)
-      : [...channels, id];
-    patchSection("blueprint", { channels: next });
   }
 
   function toggleClause(label) {
@@ -5496,7 +5486,6 @@ function PartnerConfigStudio({
     const formInputClass =
       "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[13px] font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
     const formInputDisabledClass = "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500";
-    const classicLabelClass = "text-[11px] font-bold uppercase text-[#004d7a]";
     const toggleChecklist = (key, value) =>
       patchSection("review", {
         checklist: { ...review.checklist, [key]: value },
@@ -6377,8 +6366,6 @@ function PartnerConfigStudio({
       : role === "Checker"
       ? "Kirim ke Approval"
       : "Aktifkan";
-  const summaryPrimaryDisabled = selectedConfig ? getPendingItems(selectedConfig).length > 0 : true;
-
   if (!role || portalView === "login") {
     return (
       <div className="min-h-screen bg-[#F3F5F7] text-slate-900">
@@ -7489,8 +7476,9 @@ function PartnerClauseAccordionRow({
   onSelect,
   expanded,
   onToggle,
-  icon: Icon = FileCode2,
+  icon,
 }) {
+  const Icon = icon || FileCode2;
   return (
     <div className="rounded-[14px] border border-[#C9D5E3] bg-[#F8FBFE]">
       <div className="flex items-center gap-2.5 px-3 py-2.5">

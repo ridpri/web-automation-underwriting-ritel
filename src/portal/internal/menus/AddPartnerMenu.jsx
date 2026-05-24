@@ -2,7 +2,8 @@ import React from "react";
 import { Building2, Car, ChevronDown, Shield } from "lucide-react";
 
 import { PRODUCTS } from "../menuData.js";
-import { cls, ProductCategoryIcon } from "../menuShared.jsx";
+import { ProductCategoryIcon } from "../menuShared.jsx";
+import { cls } from "../menuUtils.js";
 
 function AddPartnerProductCard({ product, tag }) {
   return (

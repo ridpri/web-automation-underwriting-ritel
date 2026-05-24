@@ -1,6 +1,10 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createEmptyDocumentCheck, createLocationEvidence, createPhotoEvidence, createTransactionAuthority, summarizeFraudSignals } from "./platform/securityControls.js";
 import { buildPropertyTerms } from "./propertyTerms.js";
+import MultiPropertyFlow from "./property/MultiPropertyFlow.jsx";
+import PropertyFlowModeSwitch from "./property/components/PropertyFlowModeSwitch.jsx";
+import { createMultiPropertyDraft } from "./property/multiPropertyDomain.js";
+import { readPropertyFlowUrlState, replacePropertyFlowUrlState } from "./property/propertyFlowNavigation.js";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -2322,9 +2326,10 @@ export default function PropertyStepOneFrontendCompact({
       })),
     [currentProductVariant],
   );
+  const initialFlowUrlState = useMemo(() => readPropertyFlowUrlState(), []);
   const [screen, setScreen] = useState(embedded ? "property" : "catalog");
-  const [internalStep, setInternalStep] = useState(1);
-  const [externalView, setExternalView] = useState("");
+  const [internalStep, setInternalStep] = useState(initialFlowUrlState.step);
+  const [externalView, setExternalView] = useState(initialFlowUrlState.view);
   const [quoted, setQuoted] = useState(false);
   const [showConstructionGuide, setShowConstructionGuide] = useState(false);
   const [showIndicationModal, setShowIndicationModal] = useState(false);
@@ -2385,7 +2390,39 @@ export default function PropertyStepOneFrontendCompact({
     }));
   }, [currentProductVariant]);
   const today = formatDateInput(new Date());
+  const [propertyFlowMode, setPropertyFlowMode] = useState(initialFlowUrlState.mode);
+  const [multiPolicyForm, setMultiPolicyForm] = useState({
+    identity: "",
+    customerType: "Nasabah Perorangan",
+    phone: "",
+    email: "",
+    idNumber: "",
+    coverageStartDate: today,
+    selectedCustomerCif: "",
+    quoted: false,
+    notice: "",
+    consentApproved: false,
+    paymentMethod: "",
+    paymentStatus: "",
+    selectedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+    expandedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+  });
+  const [multiProperties, setMultiProperties] = useState([createMultiPropertyDraft(0)]);
   const [objectRows, setObjectRows] = useState([{ id: "obj-1", type: "", amount: "", note: "" }]);
+  useEffect(() => {
+    replacePropertyFlowUrlState({ step: internalStep, mode: propertyFlowMode, view: externalView });
+  }, [externalView, internalStep, propertyFlowMode]);
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handlePopState = () => {
+      const nextFlowState = readPropertyFlowUrlState();
+      setInternalStep(nextFlowState.step);
+      setPropertyFlowMode(nextFlowState.mode);
+      setExternalView(nextFlowState.view);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
   const [uwForm, setUwForm] = useState({
     idNumber: "",
     sameAsInsured: true,
@@ -2557,6 +2594,94 @@ export default function PropertyStepOneFrontendCompact({
   const updateObjectRow = (id, patch) => setObjectRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   const addObjectRow = () => setObjectRows((prev) => prev.concat({ id: "obj-" + Date.now(), type: "", amount: "", note: "" }));
   const removeObjectRow = (id) => setObjectRows((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
+  const buildSinglePropertyAsMultiDraft = () =>
+    createMultiPropertyDraft(0, {
+      propertyType: effectivePropertyType,
+      occupancy: form.occupancy,
+      locationSearch: form.locationSearch,
+      constructionClass: form.constructionClass,
+      wallMaterial: form.wallMaterial,
+      structureMaterial: form.structureMaterial,
+      roofMaterial: form.roofMaterial,
+      flammableMaterial: form.flammableMaterial,
+      objectRows: objectRows.map((row) => ({ ...row })),
+      selectedGuarantees: { ...selectedGuarantees },
+      floorCount,
+      uwForm: {
+        picName: uwForm.picName,
+        fireProtectionChoice: uwForm.fireProtectionChoice,
+        fireProtectionItems: Array.isArray(uwForm.fireProtectionItems) ? [...uwForm.fireProtectionItems] : [],
+        claimHistory: uwForm.claimHistory,
+        stockType: uwForm.stockType,
+        surroundingRisk: uwForm.surroundingRisk,
+      },
+      uploads: { ...uploads },
+    });
+  const switchToMultiPropertyFlow = () => {
+    const firstProperty = buildSinglePropertyAsMultiDraft();
+    setMultiPolicyForm((prev) => ({
+      ...prev,
+      identity: form.identity || prev.identity,
+      customerType: form.customerType || prev.customerType,
+      phone: form.phone || prev.phone,
+      email: form.email || prev.email,
+      idNumber: uwForm.idNumber || prev.idNumber,
+      coverageStartDate: uwForm.coverageStartDate || prev.coverageStartDate,
+      selectedCustomerCif: selectedCustomer?.cif || prev.selectedCustomerCif || "",
+      quoted: quoted || prev.quoted,
+      notice: "",
+      paymentStatus: "",
+      selectedGuarantees: { ...(prev.selectedGuarantees || {}), ...selectedGuarantees },
+      expandedGuarantees: {
+        ...(prev.expandedGuarantees || {}),
+        riot: expandedRows.riot,
+        flood: expandedRows.flood,
+        tsfwd: expandedRows.tsfwd,
+        earthquake: expandedRows.earthquake,
+      },
+    }));
+    setMultiProperties((prev) => (prev.length ? [firstProperty, ...prev.slice(1)] : [firstProperty]));
+    setPropertyFlowMode("multi");
+    setExternalView("");
+    setInternalStep((prev) => (prev > 3 ? 1 : prev));
+  };
+  const switchToSinglePropertyFlow = () => {
+    const firstProperty = multiProperties[0] || createMultiPropertyDraft(0);
+    setForm((prev) => ({
+      ...prev,
+      identity: multiPolicyForm.identity || prev.identity,
+      customerType: multiPolicyForm.customerType || prev.customerType,
+      phone: multiPolicyForm.phone || prev.phone,
+      email: multiPolicyForm.email || prev.email,
+      propertyType: firstProperty.propertyType || prev.propertyType,
+      occupancy: firstProperty.occupancy || prev.occupancy,
+      locationSearch: firstProperty.locationSearch || prev.locationSearch,
+      constructionClass: firstProperty.constructionClass || prev.constructionClass,
+      wallMaterial: firstProperty.wallMaterial || prev.wallMaterial,
+      structureMaterial: firstProperty.structureMaterial || prev.structureMaterial,
+      roofMaterial: firstProperty.roofMaterial || prev.roofMaterial,
+      flammableMaterial: firstProperty.flammableMaterial || prev.flammableMaterial,
+    }));
+    if (Array.isArray(firstProperty.objectRows) && firstProperty.objectRows.length) setObjectRows(firstProperty.objectRows.map((row) => ({ ...row })));
+    setSelectedGuarantees((prev) => ({ ...prev, ...(firstProperty.selectedGuarantees || {}), ...(multiPolicyForm.selectedGuarantees || {}) }));
+    if (multiPolicyForm.expandedGuarantees) setExpandedRows((prev) => ({ ...prev, ...multiPolicyForm.expandedGuarantees }));
+    setFloorCount(firstProperty.floorCount || "");
+    setUwForm((prev) => ({
+      ...prev,
+      idNumber: multiPolicyForm.idNumber || prev.idNumber,
+      picName: firstProperty.uwForm?.picName || prev.picName,
+      coverageStartDate: multiPolicyForm.coverageStartDate || firstProperty.uwForm?.coverageStartDate || prev.coverageStartDate,
+      fireProtectionChoice: firstProperty.uwForm?.fireProtectionChoice || prev.fireProtectionChoice,
+      fireProtectionItems: Array.isArray(firstProperty.uwForm?.fireProtectionItems) ? [...firstProperty.uwForm.fireProtectionItems] : prev.fireProtectionItems,
+      claimHistory: firstProperty.uwForm?.claimHistory || prev.claimHistory,
+      stockType: firstProperty.uwForm?.stockType || prev.stockType,
+      surroundingRisk: firstProperty.uwForm?.surroundingRisk || prev.surroundingRisk,
+    }));
+    if (firstProperty.uploads) setUploads((prev) => ({ ...prev, ...firstProperty.uploads }));
+    setQuoted(Boolean(multiPolicyForm.quoted));
+    setPropertyFlowMode("single");
+    setInternalStep((prev) => (prev > 2 ? 2 : prev));
+  };
   const totalValue = useMemo(() => objectRows.reduce((sum, row) => sum + parseNumber(row.amount), 0), [objectRows]);
   const baseRate = effectivePropertyType === "Rumah Tinggal" ? 0.00185 : 0.00265;
   const hasQuoteBasis = Boolean(form.occupancy) && Boolean(form.constructionClass) && totalValue > 0;
@@ -2742,7 +2867,93 @@ export default function PropertyStepOneFrontendCompact({
     });
   };
 
+  const createMultiDemoProperties = () => [
+    createMultiPropertyDraft(0, {
+      propertyType: "Rumah Tinggal",
+      occupancy: "Hunian",
+      locationSearch: "Jl. Sudirman Kav. 44, Jakarta Selatan",
+      constructionClass: "Kelas 1",
+      wallMaterial: WALL_MATERIAL_OPTIONS[0],
+      structureMaterial: STRUCTURE_MATERIAL_OPTIONS[0],
+      roofMaterial: ROOF_MATERIAL_OPTIONS[0],
+      flammableMaterial: FLAMMABLE_MATERIAL_OPTIONS[0],
+      objectRows: [{ id: "obj-1", type: "Bangunan", amount: "350000000", note: "Rumah tinggal utama" }],
+      selectedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+      detailsOpen: true,
+    }),
+    createMultiPropertyDraft(1, {
+      propertyType: "Ruko",
+      occupancy: "Ritel / Toko",
+      locationSearch: "Ruko Blok A3, Jl. Boulevard Raya, Kelapa Gading",
+      constructionClass: "Kelas 2",
+      wallMaterial: WALL_MATERIAL_OPTIONS[1],
+      structureMaterial: STRUCTURE_MATERIAL_OPTIONS[0],
+      roofMaterial: ROOF_MATERIAL_OPTIONS[0],
+      flammableMaterial: FLAMMABLE_MATERIAL_OPTIONS[0],
+      objectRows: [
+        { id: "obj-1", type: "Bangunan", amount: "500000000", note: "Bangunan ruko" },
+        { id: "obj-2", type: "Inventaris / Isi", amount: "125000000", note: "Inventaris toko" },
+      ],
+      selectedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+      detailsOpen: false,
+    }),
+  ];
+
+  const fillMultiStepOneDemoData = () => {
+    const demoCustomer = MOCK_CIF[0];
+    setInternalStep(1);
+    setExternalView("");
+    setMultiPolicyForm((prev) => ({
+      ...prev,
+      identity: `${demoCustomer.name} - ${demoCustomer.cif}`,
+      selectedCustomerCif: demoCustomer.cif,
+      customerType: demoCustomer.type,
+      phone: demoCustomer.phone,
+      email: demoCustomer.email,
+      quoted: false,
+      notice: "",
+      paymentStatus: "",
+      selectedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+      expandedGuarantees: { riot: false, flood: false, tsfwd: false, earthquake: false },
+    }));
+    setMultiProperties(createMultiDemoProperties());
+  };
+
+  const fillMultiStepTwoDemoData = () => {
+    const selectedCoverageDate = formatDateInput(new Date());
+    const hydrateProperty = (property) => ({
+      ...property,
+      uwForm: {
+        ...(property.uwForm || {}),
+        picName: MOCK_CIF[0].name,
+        fireProtectionChoice: "Ada",
+        fireProtectionItems: ["APAR", "Hydrant"],
+        claimHistory: "Tidak Ada",
+        stockType: (property.objectRows || []).some((row) => row.type === "Stok") ? "Sembako" : "",
+        surroundingRisk: "",
+      },
+      uploads: {
+        frontView: `data:demo/${property.id}-front`,
+        sideRightView: `data:demo/${property.id}-right`,
+        sideLeftView: `data:demo/${property.id}-left`,
+      },
+    });
+    setMultiPolicyForm((prev) => ({ ...prev, idNumber: "3173010101010001", coverageStartDate: selectedCoverageDate, notice: "" }));
+    setMultiProperties((prev) => {
+      const source = prev.length ? prev : createMultiDemoProperties();
+      return source.map(hydrateProperty);
+    });
+  };
+
   const fillDemoForCurrentStep = () => {
+    if (propertyFlowMode === "multi") {
+      if (internalStep === 1) {
+        fillMultiStepOneDemoData();
+        return;
+      }
+      fillMultiStepTwoDemoData();
+      return;
+    }
     if (internalStep === 1) {
       fillStepOneDemoData();
       return;
@@ -2756,7 +2967,6 @@ export default function PropertyStepOneFrontendCompact({
     }
     setExternalView("");
   };
-
   if (externalView === "offer-indicative") {
     return (
       <>
@@ -3088,7 +3298,7 @@ export default function PropertyStepOneFrontendCompact({
                   <div className="flex flex-col gap-5 md:flex-row md:gap-5">
                     <StepNode step="Langkah 1" title="Simulasi Premi" subtitle={internalStep === 1 ? "Sedang diisi" : "Selesai"} active={internalStep === 1} done={internalStep > 1} icon={<Wallet className="h-4 w-4" />} onClick={() => { if (internalStep !== 1) setInternalStep(1); }} />
                     <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
-                    <StepNode step="Langkah 2" title="Data Lanjutan" subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={!isInternalMode && internalStep > 2} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted) setInternalStep(2); }} />
+                    <StepNode step="Langkah 2" title="Data Lanjutan" subtitle={internalStep === 2 ? "Sedang diisi" : "Menunggu"} active={internalStep === 2} done={!isInternalMode && internalStep > 2} icon={<FileText className="h-4 w-4" />} onClick={() => { if (quoted || multiPolicyForm.quoted) setInternalStep(2); }} />
                     {!isInternalMode ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
                     {!isInternalMode ? (
                       <StepNode step="Langkah 3" title="Pembayaran" subtitle="Menunggu" active={false} done={false} icon={<Wallet className="h-4 w-4" />} />
@@ -3101,7 +3311,29 @@ export default function PropertyStepOneFrontendCompact({
 
           {rejectionStatus ? <div className="mx-auto mt-6 max-w-[1280px] rounded-2xl border border-[#CFE0F0] bg-[#F8FBFE] px-4 py-3 text-sm text-[#0A4D82]">{rejectionStatus}</div> : null}
           {qrInfoVisible ? <div className="mx-auto mt-4 max-w-[1280px] rounded-2xl border border-[#CFE0F0] bg-white px-4 py-4 text-sm text-slate-700 shadow-sm"><div className="font-semibold text-slate-900">QR Code belum digenerate otomatis.</div><div className="mt-1">Untuk handoff ke IT, tautan yang akan diencode adalah: <span className="break-all text-[#0A4D82]">{shareUrl}</span></div></div> : null}
-          {internalStep === 1 ? (
+          {propertyFlowMode === "multi" ? (
+            <MultiPropertyFlow
+              step={internalStep}
+              setStep={setInternalStep}
+              entryMode={entryMode}
+              productConfig={activeVariant}
+              extensionOptions={activeGuarantees}
+              occupancyOptions={availableOccupancyOptions}
+              constructionOptions={CONSTRUCTION_CLASSES}
+              constructionGuide={CONSTRUCTION_GUIDE}
+              objectTypeOptions={OBJECT_TYPES}
+              customerTypes={CUSTOMER_TYPES}
+              policyForm={multiPolicyForm}
+              setPolicyForm={setMultiPolicyForm}
+              properties={multiProperties}
+              setProperties={setMultiProperties}
+              derivePropertyType={(value) => derivePropertyTypeFromOccupancy(value, availablePropertyTypes)}
+              customerOptions={MOCK_CIF}
+              flowMode={propertyFlowMode}
+              onSingleFlow={switchToSinglePropertyFlow}
+              onMultiFlow={switchToMultiPropertyFlow}
+            />
+          ) : internalStep === 1 ? (
             <div className={cls("mx-auto px-4 md:px-6", showStepOneSummarySidebar ? "max-w-[1280px]" : "max-w-4xl")}>
               <div className={cls("mt-6 grid items-start gap-5", showStepOneSummarySidebar ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "lg:grid-cols-1")}>
                 <div className="space-y-5">
@@ -3176,7 +3408,7 @@ export default function PropertyStepOneFrontendCompact({
                     </div>
                   </SectionCard>
 
-                  <SectionCard title="Informasi Properti">
+                  <SectionCard title="Informasi Properti" action={<PropertyFlowModeSwitch mode={propertyFlowMode} onSingle={switchToSinglePropertyFlow} onMulti={switchToMultiPropertyFlow} />}>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="md:col-span-2 md:max-w-[760px]">
                         <div className={cls("grid gap-3", occupancyCode ? "md:grid-cols-[minmax(0,1fr)_180px]" : "md:grid-cols-1")}>

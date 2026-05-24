@@ -34,6 +34,12 @@ import { SentOffersHistoryModal, UserPillMenu } from "./components/UserPillMenu.
 import { VehicleYearPicker } from "./components/VehicleYearPicker.jsx";
 import { createEmptyDocumentCheck, createPhotoEvidence, createTransactionAuthority, evaluateDocumentRead, summarizeFraudSignals } from "./platform/securityControls.js";
 import { findVehicleSuggestions, getVehicleCatalogItem, getVehicleCatalogItems } from "./vehicleCatalog.js";
+import MultiVehicleFlow from "./vehicle/MultiVehicleFlow.jsx";
+import { createMultiVehicleDraft, isMultiVehicleFlowEnabled } from "./vehicle/multiVehicleDomain.js";
+import { MULTI_VEHICLE_DEMO_DETAILS_BY_FLOW, MULTI_VEHICLE_DEMO_QUOTES_BY_FLOW } from "./vehicle/multiVehicleDemoData.js";
+import { createMultiVehiclePolicyForm } from "./vehicle/multiVehiclePolicyForm.js";
+import VehicleFlowModeSwitch from "./vehicle/components/VehicleFlowModeSwitch.jsx";
+import { readVehicleFlowUrlState, replaceVehicleFlowUrlState } from "./vehicleFlowNavigation.js";
 
 const CURRENT_YEAR = 2026;
 const MIN_YEAR_TLO = CURRENT_YEAR - 20;
@@ -42,6 +48,7 @@ const MIN_YEAR_COMP = CURRENT_YEAR - 15;
 type FlowType = "motor" | "carComp" | "carTlo";
 type DataMode = "scan" | "manual";
 type EntryMode = "internal" | "external";
+type VehicleObjectMode = "single" | "multi";
 
 type ExtensionsState = Record<string, any>;
 type VehicleCatalogItem = {
@@ -1748,9 +1755,10 @@ export default function MotorLatestExact({
   onOperatingSignal?: (signal: any) => void;
   accountMenuItems?: Array<{ label: string; onClick: () => void; primary?: boolean }>;
 }) {
+  const initialFlowUrlState = useMemo(() => readVehicleFlowUrlState(), []);
   const [screen, setScreen] = useState<"catalog" | "flow">("flow");
   const [flowType, setFlowType] = useState<FlowType | null>(initialFlow);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(initialFlowUrlState.step);
   const [openCatalog, setOpenCatalog] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({ main: false });
   const [showPremiumDetails, setShowPremiumDetails] = useState(false);
@@ -1765,10 +1773,21 @@ export default function MotorLatestExact({
   const [viewerMode, setViewerMode] = useState<"internal" | "customer">(entryMode === "internal" ? "internal" : "customer");
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
   const [hasSharedOfferJourney, setHasSharedOfferJourney] = useState(false);
+  const [vehicleObjectMode, setVehicleObjectMode] = useState<VehicleObjectMode>(initialFlowUrlState.mode === "multi" ? "multi" : "single");
   const [flows, setFlows] = useState<Record<FlowType, FlowState>>({
     motor: createFlowState("motor"),
     carComp: createFlowState("carComp"),
     carTlo: createFlowState("carTlo"),
+  });
+  const [multiVehiclePolicyForms, setMultiVehiclePolicyForms] = useState<Record<FlowType, any>>({
+    motor: createMultiVehiclePolicyForm(),
+    carComp: createMultiVehiclePolicyForm(),
+    carTlo: createMultiVehiclePolicyForm(),
+  });
+  const [multiVehicles, setMultiVehicles] = useState<Record<FlowType, any[]>>({
+    motor: [createMultiVehicleDraft("motor", 0)],
+    carComp: [createMultiVehicleDraft("carComp", 0)],
+    carTlo: [createMultiVehicleDraft("carTlo", 0)],
   });
   const [selectedCustomers, setSelectedCustomers] = useState<Record<FlowType, MockCustomer | null>>({
     motor: null,
@@ -1792,6 +1811,21 @@ export default function MotorLatestExact({
   const lastFraudSignalRef = useRef("");
   const lastStageSignalRef = useRef("");
   const lastHydratedShareKeyRef = useRef("");
+
+  useEffect(() => {
+    replaceVehicleFlowUrlState({ step, mode: vehicleObjectMode });
+  }, [step, vehicleObjectMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handlePopState = () => {
+      const nextFlowState = readVehicleFlowUrlState();
+      setStep(nextFlowState.step);
+      setVehicleObjectMode(nextFlowState.mode === "multi" ? "multi" : "single");
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const currentData = flowType ? flows[flowType] : null;
   const selectedCustomer = flowType ? selectedCustomers[flowType] : null;
@@ -2024,8 +2058,91 @@ export default function MotorLatestExact({
 
   };
 
+  const createMultiVehicleDemoDrafts = (type: FlowType, includeAdvancedData = false) => {
+    const demoQuotesByFlow = MULTI_VEHICLE_DEMO_QUOTES_BY_FLOW;
+    const demoDetailsByFlow = MULTI_VEHICLE_DEMO_DETAILS_BY_FLOW;
+    return demoQuotesByFlow[type].map((demoQuote, index) => {
+      const draft = createMultiVehicleDraft(type, index, {
+        id: `vehicle-${index + 1}`,
+        detailsOpen: index === 0,
+        uwDetailsOpen: index === 0,
+      });
+      const catalogItem = getVehicleCatalogItem(type === "motor" ? "motor" : "car", demoQuote.vehicleName);
+      const vehicleDetail = demoDetailsByFlow[type][index] || {};
+      const uploads = includeAdvancedData
+        ? Object.keys(draft.uploads).reduce((acc: Record<string, boolean>, key) => {
+            acc[key] = true;
+            return acc;
+          }, {})
+        : draft.uploads;
+
+      return {
+        ...draft,
+        title: `Kendaraan ${index + 1}`,
+        quote: {
+          ...draft.quote,
+          ...demoQuote,
+          vehicleName: catalogItem?.label || demoQuote.vehicleName,
+          vehicleType: catalogItem?.ojkCategory || "",
+          vehicleFuelType: catalogItem?.fuelType || "",
+          vehicleBodyType: catalogItem?.bodyType || "",
+          extensions: {
+            ...draft.quote.extensions,
+            ...((demoQuote as any).extensions || {}),
+          },
+        },
+        vehicle: includeAdvancedData
+          ? {
+              ...draft.vehicle,
+              ...vehicleDetail,
+              contactOnLocation: VEHICLE_MOCK_CIF_BY_FLOW[type][0].name,
+            }
+          : draft.vehicle,
+        underwriting: includeAdvancedData
+          ? {
+              ...draft.underwriting,
+              claimHistory: "Tidak Ada",
+              existingDamageStatus: type === "carComp" ? "none" : draft.underwriting.existingDamageStatus,
+            }
+          : draft.underwriting,
+        uploads,
+      };
+    });
+  };
+
+  const fillMultiVehicleDemoData = (type: FlowType, includeAdvancedData = false) => {
+    const demoCustomer = VEHICLE_MOCK_CIF_BY_FLOW[type][0];
+    const demoLookupValue = allowCustomerLookup ? `${demoCustomer.name} - ${demoCustomer.cif}` : demoCustomer.name;
+
+    setActiveMultiVehicles(createMultiVehicleDemoDrafts(type, includeAdvancedData));
+    setActiveMultiVehiclePolicyForm((prev: any) => ({
+      ...prev,
+      insuredName: demoLookupValue,
+      customerType: demoCustomer.type,
+      phone: demoCustomer.phone,
+      email: demoCustomer.email,
+      idNumber: includeAdvancedData ? "3173010101010001" : prev.idNumber,
+      address: includeAdvancedData ? "Jl. Kemang Raya No. 18, Jakarta Selatan" : prev.address,
+      coverageStartDate: includeAdvancedData ? "2026-05-01" : prev.coverageStartDate,
+      coverageEndDate: includeAdvancedData ? addOneYear("2026-05-01") : prev.coverageEndDate,
+      selectedCustomerCif: isInternalMode ? demoCustomer.cif : prev.selectedCustomerCif,
+      quoted: includeAdvancedData,
+      paymentStatus: "",
+      notice: "",
+    }));
+    if (isInternalMode) {
+      setSelectedCustomers((prev) => ({ ...prev, [type]: demoCustomer }));
+    }
+    setJourneyStatus("");
+    setCheckoutStatus("");
+  };
+
   const fillDemoForCurrentStep = () => {
     if (!flowType) return;
+    if (supportsMultiVehicleMode && vehicleObjectMode === "multi") {
+      fillMultiVehicleDemoData(flowType, step > 1);
+      return;
+    }
     if (step === 1) {
       fillStepOneDemoData(flowType);
       return;
@@ -2058,6 +2175,88 @@ export default function MotorLatestExact({
   const selected = currentData!;
   const userName = sessionName;
   const isInternalMode = entryMode === "internal";
+  const activeMultiVehiclePolicyForm = flowType ? multiVehiclePolicyForms[flowType] : createMultiVehiclePolicyForm();
+  const activeMultiVehicles = flowType ? multiVehicles[flowType] : [];
+  const supportsMultiVehicleMode = isMultiVehicleFlowEnabled(flowType);
+  const setActiveMultiVehiclePolicyForm = (updater: any) => {
+    if (!flowType) return;
+    setMultiVehiclePolicyForms((prev) => ({
+      ...prev,
+      [flowType]: typeof updater === "function" ? updater(prev[flowType]) : updater,
+    }));
+  };
+  const setActiveMultiVehicles = (updater: any) => {
+    if (!flowType) return;
+    setMultiVehicles((prev) => ({
+      ...prev,
+      [flowType]: typeof updater === "function" ? updater(prev[flowType]) : updater,
+    }));
+  };
+  const buildSingleVehicleAsMultiDraft = (type: FlowType) =>
+    createMultiVehicleDraft(type, 0, {
+      quote: { ...selected.quote },
+      vehicle: { ...selected.vehicle },
+      underwriting: { ...selected.underwriting },
+      uploads: { ...selected.uploads },
+    });
+  const switchToMultiVehicleFlow = () => {
+    if (!flowType || !supportsMultiVehicleMode) return;
+    const firstVehicle = buildSingleVehicleAsMultiDraft(flowType);
+    setActiveMultiVehiclePolicyForm((prev: any) => ({
+      ...prev,
+      insuredName: selected.insured.lookup || selected.insured.fullName || prev.insuredName,
+      customerType: selected.insured.customerType || prev.customerType,
+      phone: selected.insured.phone || prev.phone,
+      email: selected.insured.email || prev.email,
+      idNumber: selected.insured.nik || prev.idNumber,
+      address: selected.insured.address || prev.address,
+      coverageStartDate: selected.quote.coverageStart || prev.coverageStartDate,
+      coverageEndDate: selected.quote.coverageEnd || prev.coverageEndDate,
+      selectedCustomerCif: selectedCustomer?.cif || prev.selectedCustomerCif || "",
+      quoted: showPremiumDetails || prev.quoted,
+      paymentStatus: "",
+      notice: "",
+    }));
+    setActiveMultiVehicles((prev: any[]) => (prev.length ? [firstVehicle, ...prev.slice(1)] : [firstVehicle]));
+    setVehicleObjectMode("multi");
+    setJourneyStatus("");
+    setCheckoutStatus("");
+  };
+  const switchToSingleVehicleFlow = () => {
+    if (!flowType) return;
+    const firstVehicle = activeMultiVehicles[0] || createMultiVehicleDraft(flowType, 0);
+    setFlows((prev) => {
+      const next: any = JSON.parse(JSON.stringify(prev));
+      next[flowType].quote = { ...next[flowType].quote, ...(firstVehicle.quote || {}) };
+      next[flowType].vehicle = { ...next[flowType].vehicle, ...(firstVehicle.vehicle || {}) };
+      next[flowType].underwriting = { ...next[flowType].underwriting, ...(firstVehicle.underwriting || {}) };
+      next[flowType].uploads = { ...next[flowType].uploads, ...(firstVehicle.uploads || {}) };
+      next[flowType].insured = {
+        ...next[flowType].insured,
+        fullName: activeMultiVehiclePolicyForm.insuredName || next[flowType].insured.fullName,
+        lookup: activeMultiVehiclePolicyForm.insuredName || next[flowType].insured.lookup,
+        customerType: activeMultiVehiclePolicyForm.customerType || next[flowType].insured.customerType,
+        phone: activeMultiVehiclePolicyForm.phone || next[flowType].insured.phone,
+        email: activeMultiVehiclePolicyForm.email || next[flowType].insured.email,
+        address: activeMultiVehiclePolicyForm.address || next[flowType].insured.address,
+        nik: activeMultiVehiclePolicyForm.idNumber || next[flowType].insured.nik,
+      };
+      return next;
+    });
+    setShowPremiumDetails(Boolean(activeMultiVehiclePolicyForm.quoted));
+    setVehicleObjectMode("single");
+    setStep((prev) => (isInternalMode && prev > 2 ? 2 : prev));
+    setJourneyStatus("");
+    setCheckoutStatus("");
+  };
+  const handleStepOneClick = () => {
+    setStep(1);
+  };
+  useEffect(() => {
+    if (!supportsMultiVehicleMode && vehicleObjectMode === "multi") {
+      setVehicleObjectMode("single");
+    }
+  }, [supportsMultiVehicleMode, vehicleObjectMode]);
   const authenticatedExternalProfile =
     entryMode === "external" && sessionProfile?.authenticated ? sessionProfile : null;
   const isAuthenticatedExternalJourney = Boolean(authenticatedExternalProfile);
@@ -2210,6 +2409,17 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
   const dataComplete = selected ? !!(selected.insured.customerType && selected.insured.fullName && selected.insured.address && selected.insured.email && selected.insured.phone && selected.vehicle.plateNumber && selected.vehicle.chassisNumber && selected.vehicle.engineNumber) : false;
   const periodComplete = selected ? !!(selected.quote.coverageStart && selected.quote.coverageEnd) : false;
   const readyForNextStage = !!(selected && calc && uploadsComplete && equipmentRequirementMet && stnkPhotoComplete && dataComplete && periodComplete && calc.status !== "Need Review");
+  const isMultiVehicleMode = supportsMultiVehicleMode && vehicleObjectMode === "multi";
+  const canOpenStepTwo = isMultiVehicleMode ? Boolean(activeMultiVehiclePolicyForm.quoted) : showPremiumDetails;
+  const canOpenStepThree = isMultiVehicleMode ? step > 2 : step > 1 && readyForNextStage;
+  const vehicleFlowModeAction = supportsMultiVehicleMode ? (
+    <VehicleFlowModeSwitch
+      mode={vehicleObjectMode}
+      flowType={flowType}
+      onSingle={switchToSingleVehicleFlow}
+      onMulti={switchToMultiVehicleFlow}
+    />
+  ) : null;
   const canIssue = !!(readyForNextStage && selected.agree && selected.paymentMethod);
   const coverageEndDate = selected?.quote?.coverageStart ? addOneYear(selected.quote.coverageStart) : "";
   const coverageStartDisplay = selected?.quote?.coverageStart ? formatDisplayDate(new Date(`${selected.quote.coverageStart}T00:00:00`)) : "-";
@@ -2350,10 +2560,12 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
     const requestedView = view === "payment" ? "payment" : "offer-indicative";
     const nextStep = requestedView === "payment" ? 3 : 1;
     if (!sharedOffer || shareData?.flowType !== flowType) {
+      const directFlowState = readVehicleFlowUrlState();
+      const hasDirectStep = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("step");
       setHasSharedOfferJourney(false);
       setViewerMode("customer");
-      setStep(1);
-      setShowPremiumDetails(false);
+      setStep(hasDirectStep ? directFlowState.step : 1);
+      setShowPremiumDetails(hasDirectStep && directFlowState.step > 1);
       lastHydratedShareKeyRef.current = `${flowType}:self-serve`;
       if (view || viewer || shareData) {
         clearVehicleShareContextFromUrl();
@@ -4130,7 +4342,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
               <div className="mx-auto mt-6 max-w-[860px] rounded-2xl bg-white p-3 shadow-2xl shadow-black/15 md:mt-7 md:max-w-[960px] md:p-5">
                 <div className="rounded-2xl border border-[#D8E1EA] bg-[#F4F7FA] px-3 py-4 md:px-5 md:py-5">
                   <div className="flex flex-col gap-5 md:flex-row md:gap-5">
-                    <StepNode step="Langkah 1" title={stepOneTitle} subtitle={step === 1 ? "Sedang dibuka" : "Selesai"} active={step === 1} done={step > 1} icon={<FileText className="h-4 w-4" />} onClick={() => setStep(1)} />
+                    <StepNode step="Langkah 1" title={stepOneTitle} subtitle={step === 1 ? "Sedang dibuka" : "Selesai"} active={step === 1} done={step > 1} icon={<FileText className="h-4 w-4" />} onClick={handleStepOneClick} />
                     <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" />
                     <StepNode
                       step="Langkah 2"
@@ -4139,7 +4351,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       active={step === 2}
                       done={!isInternalMode && step > 2}
                       icon={<FileText className="h-4 w-4" />}
-                      onClick={showPremiumDetails ? () => setStep(2) : undefined}
+                      onClick={canOpenStepTwo ? () => setStep(2) : undefined}
                     />
                     {!isInternalMode ? <div className="hidden h-px flex-1 self-center bg-slate-300 md:block" /> : null}
                     {!isInternalMode ? (
@@ -4150,7 +4362,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                         active={step === 3}
                         done={false}
                         icon={<Wallet className="h-4 w-4" />}
-                        onClick={step > 1 && readyForNextStage ? () => setStep(3) : undefined}
+                        onClick={canOpenStepThree ? () => setStep(3) : undefined}
                       />
                     ) : null}
                   </div>
@@ -4159,10 +4371,28 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
             </div>
           </div>
 
-          <div className={showSidebar ? "mx-auto max-w-[1280px] px-4 pb-12 md:px-6" : "mx-auto mt-6 max-w-[860px] px-4 pb-12 md:px-6"}>
+          <div className={showSidebar ? "mx-auto max-w-[1280px] px-4 pb-12 md:px-6" : isMultiVehicleMode && step === 3 && !isInternalMode ? "mx-auto mt-6 max-w-[1280px] px-4 pb-12 md:px-6" : "mx-auto mt-6 max-w-[860px] px-4 pb-12 md:px-6"}>
             <div className={showSidebar ? "grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]" : "space-y-5"}>
               <div className="space-y-5">
-                {step === 1 ? (
+                {isMultiVehicleMode ? (
+                  <MultiVehicleFlow
+                    step={step}
+                    setStep={setStep}
+                    isInternalMode={isInternalMode}
+                    flowType={flowType}
+                    productTitle={activeProduct?.title || "Asuransi Kendaraan"}
+                    policyForm={activeMultiVehiclePolicyForm}
+                    setPolicyForm={setActiveMultiVehiclePolicyForm}
+                    vehicles={activeMultiVehicles}
+                    setVehicles={setActiveMultiVehicles}
+                    customerOptions={currentFlowCustomers || []}
+                    flowModeAction={vehicleFlowModeAction}
+                    vehicleMode={vehicleObjectMode}
+                    onSingleVehicleMode={switchToSingleVehicleFlow}
+                    onMultiVehicleMode={switchToMultiVehicleFlow}
+                  />
+                ) : null}
+                {!isMultiVehicleMode && step === 1 ? (
                   <>
                     {isSharedCustomerPreview ? (
                       <>
@@ -4170,12 +4400,22 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                       </>
                     ) : (
                       <>
-                    {isInternalMode ? (
+                    {!hasSharedOfferJourney ? (
+                      <ActionCard>
+                        <div className="text-center">
+                          <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Simulasi Premi</div>
+                          <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
+                            Data simulasi ini disusun sebagai bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada {policySummaryTitle} sebagai dasar simulasi premi dan langkah berikutnya.
+                          </div>
+                        </div>
+                      </ActionCard>
+                    ) : null}
+
                       <ActionCard>
                         <div className="text-[18px] font-bold text-slate-900">Informasi Calon Pemegang Polis</div>
                         <div className="mt-5 grid gap-4 md:grid-cols-2">
                           <div className="md:col-span-2">
-                            <FieldLabel label="Nama Calon Pemegang Polis" />
+                            <FieldLabel label="Nama Calon Pemegang Polis" required />
                             <div className="relative">
                               <TextInput
                                 value={selected.insured.lookup || selected.insured.fullName}
@@ -4231,7 +4471,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                             </div>
                           ) : null}
                           <div>
-                            <FieldLabel label="Nomor Handphone" />
+                            <FieldLabel label="Nomor Handphone" required />
                             <TextInput
                               value={selected.insured.phone}
                               onChange={(value: string) => setAt(flowType, "insured.phone", value)}
@@ -4240,7 +4480,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                             />
                           </div>
                           <div>
-                            <FieldLabel label="Alamat Email" />
+                            <FieldLabel label="Alamat Email" required />
                             <TextInput
                               value={selected.insured.email}
                               onChange={(value: string) => setAt(flowType, "insured.email", value)}
@@ -4251,22 +4491,9 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                           </div>
                         </div>
                       </ActionCard>
-                    ) : null}
 
-                    {!isInternalMode && !hasSharedOfferJourney ? (
-                      <ActionCard>
-                        <div className="text-center">
-                          <div className="text-[26px] font-bold tracking-tight text-slate-900 md:text-[30px]">Simulasi Premi</div>
-                          <div className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500 md:text-[15px]">
-                            Data simulasi ini disusun sebagai bagian awal dari SPAU (Surat Permohonan Asuransi Umum) elektronik yang Anda isi dan lengkapi, serta mengacu pada {policySummaryTitle} sebagai dasar simulasi premi dan langkah berikutnya.
-                          </div>
-                        </div>
-                      </ActionCard>
-                    ) : null}
-
-                    <ActionCard>
-                      <div className="text-[18px] font-bold text-slate-900">Informasi Kendaraan</div>
-                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <SectionCard title="Informasi Kendaraan" action={vehicleFlowModeAction}>
+                      <div className="grid gap-4 md:grid-cols-2">
                         <div>
                           <FieldLabel label={flowType === "motor" ? "Merek / Tipe Motor" : "Merek / Tipe Mobil"} />
                           <VehicleAutocomplete
@@ -4321,7 +4548,7 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                           </div>
                         </div>
                       </div>
-                    </ActionCard>
+                    </SectionCard>
 
                     {showPremiumDetails ? renderInternalCarCompLoadingSetting() : null}
                     {showPremiumDetails ? renderCoverageSummaryCard() : null}
@@ -4337,11 +4564,11 @@ Penggunaan Komersial berarti kendaraan digunakan untuk disewakan atau menerima b
                   </>
                 ) : null}
 
-                {step === 2 ? renderStepTwoContent(true) : null}
-                {isInternalMode && step === 2 ? renderInternalStepTwoActions() : null}
-                {!isInternalMode && step === 2 ? renderExternalStepTwoActions() : null}
+                {!isMultiVehicleMode && step === 2 ? renderStepTwoContent(true) : null}
+                {!isMultiVehicleMode && isInternalMode && step === 2 ? renderInternalStepTwoActions() : null}
+                {!isMultiVehicleMode && !isInternalMode && step === 2 ? renderExternalStepTwoActions() : null}
 
-                {!isInternalMode && step === 3 ? (
+                {!isMultiVehicleMode && !isInternalMode && step === 3 ? (
                   <>
                     <SectionCard
                       title="Ringkasan Sebelum Pembayaran"

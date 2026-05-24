@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 
 import { TASKS } from "../menuData.js";
-import { cls, PageIntro, StaffTaskTable, WorkPanel } from "../menuShared.jsx";
+import { PageIntro, StaffTaskTable, WorkPanel } from "../menuShared.jsx";
+import { cls } from "../menuUtils.js";
 
 export default function TasklistMenu() {
   const [filter, setFilter] = useState("Semua");

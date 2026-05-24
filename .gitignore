@@ -25,6 +25,10 @@ dist-ssr
 *.sw?
 
 .vercel
+output/
+scripts/openclaw-codex-vision-service.mjs
+scripts/openclaw-vision-frontend-server.mjs
+scripts/vision-*.mjs
 test-results
 tmp-*.png
 tmp-*.mjs

@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Car, Copy, Download, Grid2X2, Home, ShoppingCart, User } from "lucide-react";
 
 import { PRODUCTS, productBaseUrl } from "../menuData.js";
-import { cls, ProductCategoryIcon, SectionBox, ToolbarSearch, WorkPanel } from "../menuShared.jsx";
+import { ProductCategoryIcon, SectionBox, ToolbarSearch, WorkPanel } from "../menuShared.jsx";
+import { cls } from "../menuUtils.js";
 
 const STAFF_TRACKING_TOKEN = "46xs3";
 const QR_LOGO_SRC = "/production-assets/Jasindo_Positive-2.adb9525c.png";

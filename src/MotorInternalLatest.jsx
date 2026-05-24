@@ -1,5 +1,5 @@
 import React from "react";
-import MotorLatestExact from "./MotorLatestExact.tsx";
+import InternalVehicleJourney from "./vehicle/InternalVehicleJourney.jsx";
 
 export default function MotorInternalLatest({
   onExit,
@@ -11,28 +11,15 @@ export default function MotorInternalLatest({
   onOpenPartnerConfig = () => {},
 }) {
   return (
-    <MotorLatestExact
-      entryMode="internal"
+    <InternalVehicleJourney
       initialFlow="motor"
       sessionName={sessionName}
       onExit={onExit}
       operatingRecord={operatingRecord}
       onOperatingSignal={onOperatingSignal}
-      accountMenuItems={[
-        {
-          label: "Ruang Kerja Saya",
-          primary: true,
-          onClick: onOpenWorkspace,
-        },
-        {
-          label: "Antrean Internal",
-          onClick: onOpenQueue,
-        },
-        {
-          label: "Konfigurasi Partner",
-          onClick: onOpenPartnerConfig,
-        },
-      ]}
+      onOpenWorkspace={onOpenWorkspace}
+      onOpenQueue={onOpenQueue}
+      onOpenPartnerConfig={onOpenPartnerConfig}
     />
   );
 }

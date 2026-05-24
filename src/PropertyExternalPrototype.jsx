@@ -154,7 +154,6 @@ export default function PropertyExternalPrototype({ onExit, entryMode = "guest",
   const [step, setStep] = useState(1);
   const [quoted, setQuoted] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [promoCode, setPromoCode] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);

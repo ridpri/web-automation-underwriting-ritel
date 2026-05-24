@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Building2, Car, ChevronDown, CreditCard, FileText, Search, Settings, User } from "lucide-react";
 
 import { PROMOS } from "../menuData.js";
-import { cls, PageIntro, PromoProductPicker, StaffBadge, StaffField } from "../menuShared.jsx";
+import { PageIntro, PromoProductPicker, StaffBadge, StaffField } from "../menuShared.jsx";
+import { cls } from "../menuUtils.js";
 
 export default function PromotionMenu() {
   const [modalOpen, setModalOpen] = useState(false);

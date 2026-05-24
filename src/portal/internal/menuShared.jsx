@@ -2,10 +2,7 @@ import React, { useState } from "react";
 import { Building2, Car, CheckCircle2, ChevronDown, ClipboardList, Copy, CreditCard, Download, FileText, Gauge, Grid2X2, Headphones, Home, Mail, Search, Shield, SlidersHorizontal, User } from "lucide-react";
 
 import { PRODUCTS, productBaseUrl, productTrackedUrl } from "./menuData.js";
-
-export function cls(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
+import { cls } from "./menuUtils.js";
 
 function staffStatusTone(value) {
   const normalized = String(value || "").toLowerCase();
