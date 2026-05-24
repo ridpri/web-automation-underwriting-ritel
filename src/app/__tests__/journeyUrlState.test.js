@@ -7,11 +7,7 @@ import {
   readJourneyUrlStateFromUrl,
   writeJourneyUrlStateToUrl,
 } from "../journeyUrlState.js";
-import {
-  clearSharedJourneyParamsFromUrl,
-  normalizeJourneyEntryUrlFromUrl,
-  normalizeProductReferralUrlFromUrl,
-} from "../journeyAccess.js";
+import { clearSharedJourneyParamsFromUrl, normalizeJourneyEntryUrlFromUrl } from "../journeyAccess.js";
 
 test("normalizes journey step inside configured range", () => {
   assert.equal(normalizeJourneyStep("2", { max: 3 }), 2);
@@ -86,26 +82,4 @@ test("normalizes internal workspace entry to dashboard", () => {
   assert.equal(url.searchParams.has("menu"), false);
   assert.equal(url.searchParams.get("journey"), "partner-config");
   assert.equal(url.searchParams.get("role"), "internal");
-});
-
-test("normalizes product referral token path to canonical product url", () => {
-  const result = normalizeProductReferralUrlFromUrl(
-    "https://esppa.asuransijasindo.co.id/product/kecelakaan-diri/728/46xs3?utm=wa#detail",
-  );
-
-  assert.equal(result.changed, true);
-  assert.equal(result.referralToken, "46xs3");
-  assert.equal(result.url.pathname, "/product/kecelakaan-diri/728/");
-  assert.equal(result.url.searchParams.get("utm"), "wa");
-  assert.equal(result.url.hash, "#detail");
-});
-
-test("keeps regular product urls unchanged", () => {
-  const result = normalizeProductReferralUrlFromUrl(
-    "https://esppa.asuransijasindo.co.id/product/kecelakaan-diri/728",
-  );
-
-  assert.equal(result.changed, false);
-  assert.equal(result.referralToken, "");
-  assert.equal(result.url.pathname, "/product/kecelakaan-diri/728");
 });

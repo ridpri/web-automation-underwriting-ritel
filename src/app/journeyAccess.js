@@ -1,10 +1,8 @@
 import { SESSION_OPTIONS } from "./sessionConfig.js";
 
 export const SESSION_ROLE_STORAGE_KEY = "underwriting-demo-session-role";
-export const PRODUCT_REFERRAL_STORAGE_KEY = "underwriting-demo-product-referral";
 
 const PUBLIC_URL_SESSION_ROLES = new Set(["external", "partner", "guest"]);
-const PRODUCT_REFERRAL_TOKEN_PATTERN = /^[a-z0-9]{5}$/i;
 const INTERNAL_ONLY_JOURNEYS = new Set([
   "review-internal",
   "internal-workspace",
@@ -34,36 +32,6 @@ function readStoredSessionRole() {
   if (typeof window === "undefined") return null;
   const storedRole = window.sessionStorage.getItem(SESSION_ROLE_STORAGE_KEY);
   return isValidSessionRole(storedRole) ? storedRole : null;
-}
-
-export function normalizeProductReferralUrlFromUrl(urlInput) {
-  const url = urlInput instanceof URL ? new URL(urlInput.toString()) : new URL(urlInput, "http://localhost/");
-  const pathParts = url.pathname.split("/").filter(Boolean);
-  const token = pathParts.at(-1) || "";
-
-  if (pathParts[0] !== "product" || pathParts.length < 4 || !PRODUCT_REFERRAL_TOKEN_PATTERN.test(token)) {
-    return { changed: false, referralToken: "", url };
-  }
-
-  url.pathname = `/${pathParts.slice(0, -1).join("/")}/`;
-  return { changed: true, referralToken: token, url };
-}
-
-export function normalizeProductReferralUrl() {
-  if (typeof window === "undefined") return null;
-  const result = normalizeProductReferralUrlFromUrl(window.location.href);
-  if (!result.changed) return result;
-
-  window.sessionStorage.setItem(
-    PRODUCT_REFERRAL_STORAGE_KEY,
-    JSON.stringify({
-      token: result.referralToken,
-      productPath: result.url.pathname,
-      capturedAt: new Date().toISOString(),
-    }),
-  );
-  window.history.replaceState({}, "", `${result.url.pathname}${result.url.search}${result.url.hash}`);
-  return result;
 }
 
 export function resolveUrlSessionRole(value) {
@@ -116,8 +84,6 @@ export function resolveInitialNavigationState() {
   if (typeof window === "undefined") {
     return { activeJourney: "", sessionRole: "guest" };
   }
-
-  normalizeProductReferralUrl();
 
   const params = new URLSearchParams(window.location.search);
   const shareJourney = inferJourneyFromShareData(decodeUrlShareToken(params.get("share") || ""));
