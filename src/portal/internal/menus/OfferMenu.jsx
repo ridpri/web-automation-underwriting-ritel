@@ -13,7 +13,9 @@ function productSlug(product) {
 }
 
 function productTrackingUrl(product) {
-  return `${productBaseUrl(product)}/${STAFF_TRACKING_TOKEN}`;
+  const url = new URL(productBaseUrl(product));
+  url.searchParams.set("referral", STAFF_TRACKING_TOKEN);
+  return url.toString();
 }
 
 function qrImageUrl(productUrl) {
