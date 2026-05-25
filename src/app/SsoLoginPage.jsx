@@ -39,7 +39,7 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
   function handleResetPassword(event) {
     event.preventDefault();
     if (!emailReady) {
-      setError("Masukkan email kantor yang valid.");
+      setError("Masukkan email Anda yang valid.");
       return;
     }
     setResetSent(true);
@@ -110,7 +110,7 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
 
               <form className="sso-login-form" onSubmit={handleLogin}>
                 <label className="sso-login-field">
-                  <span>Email</span>
+                  <span>Email Anda</span>
                   <div className="sso-login-input">
                     <Mail size={18} strokeWidth={2.15} aria-hidden="true" />
                     <input
@@ -120,7 +120,7 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
                         setEmail(event.target.value);
                         setError("");
                       }}
-                      placeholder="nama@asuransijasindo.co.id"
+                      placeholder="Masukkan email Anda"
                       autoComplete="email"
                     />
                   </div>
@@ -173,13 +173,13 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
                 </div>
                 <div>
                   <h1>Reset Password</h1>
-                  <p>Masukkan email kantor untuk menerima tautan pengaturan ulang password.</p>
+                  <p>Masukkan email Anda untuk menerima tautan pengaturan ulang password.</p>
                 </div>
               </div>
 
               <form className="sso-login-form" onSubmit={handleResetPassword}>
                 <label className="sso-login-field">
-                  <span>Email</span>
+                  <span>Email Anda</span>
                   <div className="sso-login-input">
                     <Mail size={18} strokeWidth={2.15} aria-hidden="true" />
                     <input
@@ -190,7 +190,7 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
                         setResetSent(false);
                         setError("");
                       }}
-                      placeholder="nama@asuransijasindo.co.id"
+                      placeholder="Masukkan email Anda"
                       autoComplete="email"
                     />
                   </div>
