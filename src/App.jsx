@@ -32,6 +32,7 @@ export default function App() {
   const [activeJourney, setActiveJourney] = useState(initialNavigationState.activeJourney);
   const [sessionRole, setSessionRole] = useState(initialSsoSession?.sessionRole || initialNavigationState.sessionRole);
   const [ssoSession, setSsoSession] = useState(initialSsoSession);
+  const [showSsoLogin, setShowSsoLogin] = useState(false);
   const [partnerConfigRole, setPartnerConfigRole] = useState("Maker");
   const allowSharedOfferJourney = useMemo(() => hasMatchingShareContext(activeJourney), [activeJourney]);
   const resolvedActiveJourney = useMemo(
@@ -97,12 +98,14 @@ export default function App() {
     },
   ];
 
-  if (!ssoSession) {
+  if (showSsoLogin) {
     return (
       <SsoLoginPage
+        onBack={() => setShowSsoLogin(false)}
         onAuthenticated={(session) => {
           setSsoSession(session);
           setSessionRole(session.sessionRole);
+          setShowSsoLogin(false);
         }}
       />
     );
@@ -130,7 +133,7 @@ export default function App() {
           sessionName={activeSessionName}
           onOpenJourney={handleOpenJourney}
           onSelectRole={setSessionRole}
-          onGuestLogin={() => setSessionRole("external")}
+          onGuestLogin={() => setShowSsoLogin(true)}
         />
       }
     />

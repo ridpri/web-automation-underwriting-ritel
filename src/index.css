@@ -317,6 +317,22 @@ video {
   padding: 42px 38px;
 }
 
+.sso-login-back {
+  width: max-content;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #004b78;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
 .sso-login-panel__intro {
   display: flex;
   align-items: center;

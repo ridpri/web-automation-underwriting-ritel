@@ -1,4 +1,4 @@
-import { ArrowRight, KeyRound, Mail, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, KeyRound, Mail, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PRODUCTION_ASSETS } from "./productionAssets.js";
 
@@ -15,7 +15,7 @@ function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
-export default function SsoLoginPage({ onAuthenticated }) {
+export default function SsoLoginPage({ onAuthenticated, onBack }) {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -55,6 +55,10 @@ export default function SsoLoginPage({ onAuthenticated }) {
           <img src={PRODUCTION_ASSETS.jasindoWhite} alt="Asuransi Jasindo" />
         </div>
         <div className="sso-login-panel">
+          <button type="button" className="sso-login-back" onClick={onBack}>
+            <ArrowLeft size={16} strokeWidth={2.3} aria-hidden="true" />
+            <span>Kembali</span>
+          </button>
           <div className="sso-login-panel__intro">
             <div className="sso-login-panel__icon" aria-hidden="true">
               <ShieldCheck size={26} strokeWidth={2.2} />
