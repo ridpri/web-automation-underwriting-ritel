@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, KeyRound, Mail, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckSquare, Home, KeyRound, LogIn, Mail, Package, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PRODUCTION_ASSETS } from "./productionAssets.js";
 
@@ -49,17 +49,43 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
 
   return (
     <main className="sso-login-page">
-      <section className="sso-login-shell" aria-label="Login SSO">
-        <div className="sso-login-brand">
+      <header className="sso-login-header">
+        <div className="sso-login-header__brand">
           <img src={PRODUCTION_ASSETS.danantara} alt="Danantara Indonesia" />
           <img src={PRODUCTION_ASSETS.jasindoWhite} alt="Asuransi Jasindo" />
         </div>
-        <div className="sso-login-panel">
-          <button type="button" className="sso-login-back" onClick={onBack}>
-            <ArrowLeft size={16} strokeWidth={2.3} aria-hidden="true" />
-            <span>Kembali</span>
+        <nav className="sso-login-nav" aria-label="Navigasi login">
+          <button type="button" onClick={onBack}>
+            <Home size={16} strokeWidth={2.2} aria-hidden="true" />
+            <span>Beranda</span>
           </button>
+          <button type="button" onClick={onBack}>
+            <Package size={16} strokeWidth={2.2} aria-hidden="true" />
+            <span>Produk</span>
+          </button>
+        </nav>
+        <div className="sso-login-header__actions">
+          <div className="sso-login-language" aria-label="Bahasa Indonesia">
+            <span className="sso-login-language__flag" aria-hidden="true" />
+            <span>ID</span>
+          </div>
+          <button type="button" className="sso-login-header__signin">
+            <LogIn size={17} strokeWidth={2.25} aria-hidden="true" />
+            <span>Masuk</span>
+          </button>
+        </div>
+      </header>
+
+      <section className="sso-login-shell" aria-label="Login SSO">
+        <div className="sso-login-visual">
+          <div className="sso-login-visual__copy">
+            <h2>Perlindungan Aman, Akses Cepat</h2>
+            <p>Masuk untuk mengelola polis, klaim, dan layanan asuransimu kapan pun, di mana pun.</p>
+          </div>
+        </div>
+        <div className="sso-login-panel">
           <div className="sso-login-panel__intro">
+            <img src={PRODUCTION_ASSETS.jasindoPositive} alt="Asuransi Jasindo" className="sso-login-panel__logo" />
             <div className="sso-login-panel__icon" aria-hidden="true">
               <ShieldCheck size={26} strokeWidth={2.2} />
             </div>
@@ -86,6 +112,12 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
                 />
               </div>
             </label>
+
+            <div className="sso-login-captcha" aria-label="Verifikasi keamanan">
+              <span className="sso-login-captcha__box" aria-hidden="true" />
+              <span>I'm not a robot</span>
+              <CheckSquare size={28} strokeWidth={1.8} aria-hidden="true" />
+            </div>
 
             <button type="button" className="sso-login-secondary" disabled={!emailReady} onClick={handleSendOtp}>
               Kirim OTP
@@ -116,6 +148,10 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
             <button type="submit" className="sso-login-primary" disabled={!emailReady || !otpSent || !otpReady}>
               <span>Masuk</span>
               <ArrowRight size={18} strokeWidth={2.3} aria-hidden="true" />
+            </button>
+            <button type="button" className="sso-login-back" onClick={onBack}>
+              <ArrowLeft size={16} strokeWidth={2.3} aria-hidden="true" />
+              <span>Kembali ke beranda</span>
             </button>
           </form>
         </div>
