@@ -46,7 +46,7 @@ const PRODUCTION_ASSETS = {
 const STAFF_NAV_ITEMS = [
   { key: "dashboard", slug: "dashboard", label: "Dashboard", icon: Gauge },
   { key: "tasklist", slug: "tasklist", label: "Tasklist", icon: ClipboardList, badge: 5 },
-  { key: "buat-penawaran", slug: "buat-penawaran", label: "Buat Penawaran", icon: ShoppingCart },
+  { key: "buat-penawaran", slug: "buat-penawaran", label: "Penawaran", icon: ShoppingCart },
   { key: "add-partner", slug: "add-partner", label: "Add Partner", icon: User },
   { key: "promotion", slug: "promotion", label: "Promosi", icon: CreditCard },
   { key: "transaksi-polis", slug: "transaksi-polis", label: "Transaksi Polis", icon: Shield },
