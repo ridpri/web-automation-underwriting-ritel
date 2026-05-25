@@ -79,8 +79,8 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
       <section className="sso-login-shell" aria-label="Login SSO">
         <div className="sso-login-visual">
           <div className="sso-login-visual__copy">
-            <h2>Perlindungan Aman, Akses Cepat</h2>
-            <p>Masuk untuk mengelola polis, klaim, dan layanan asuransimu kapan pun, di mana pun.</p>
+            <h2>Dukung Kinerja, Perkuat Layanan</h2>
+            <p>Masuk untuk menunjang aktivitas kerja, kolaborasi tim, dan layanan perusahaan.</p>
           </div>
         </div>
         <div className="sso-login-panel">
