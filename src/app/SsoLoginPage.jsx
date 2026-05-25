@@ -64,8 +64,8 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
               <ShieldCheck size={26} strokeWidth={2.2} />
             </div>
             <div>
-              <h1>Login SSO</h1>
-              <p>Masuk dengan email terdaftar dan OTP.</p>
+              <h1>Masuk Menggunakan OTP</h1>
+              <p>Kami akan mengirikan email yang berisikan OTP untuk authentikasi</p>
             </div>
           </div>
 
