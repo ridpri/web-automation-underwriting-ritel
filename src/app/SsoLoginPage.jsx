@@ -1,8 +1,6 @@
-import { ArrowLeft, ArrowRight, CheckSquare, Home, KeyRound, LogIn, Mail, Package, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, CheckSquare, Home, KeyRound, LogIn, Mail, Package, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PRODUCTION_ASSETS } from "./productionAssets.js";
-
-const DEMO_OTP = "246810";
 
 function resolveSsoRole(email) {
   const normalized = String(email || "").trim().toLowerCase();
@@ -16,35 +14,48 @@ function isValidEmail(value) {
 }
 
 export default function SsoLoginPage({ onAuthenticated, onBack }) {
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [resetSent, setResetSent] = useState(false);
   const [error, setError] = useState("");
   const emailReady = isValidEmail(email);
-  const otpReady = otp.trim().length >= 6;
+  const passwordReady = password.trim().length >= 6;
   const resolvedRole = useMemo(() => resolveSsoRole(email), [email]);
 
-  function handleSendOtp(event) {
+  function handleLogin(event) {
     event.preventDefault();
     if (!emailReady) {
       setError("Masukkan email yang valid.");
       return;
     }
-    setOtpSent(true);
-    setError("");
-  }
-
-  function handleVerifyOtp(event) {
-    event.preventDefault();
-    if (!otpSent) {
-      handleSendOtp(event);
-      return;
-    }
-    if (otp.trim() !== DEMO_OTP) {
-      setError("OTP tidak sesuai.");
+    if (!passwordReady) {
+      setError("Masukkan password minimal 6 karakter.");
       return;
     }
     onAuthenticated({ email: email.trim(), sessionRole: resolvedRole });
+  }
+
+  function handleResetPassword(event) {
+    event.preventDefault();
+    if (!emailReady) {
+      setError("Masukkan email kantor yang valid.");
+      return;
+    }
+    setResetSent(true);
+    setError("");
+  }
+
+  function showResetPassword() {
+    setMode("reset-password");
+    setResetSent(false);
+    setError("");
+  }
+
+  function showLogin() {
+    setMode("login");
+    setResetSent(false);
+    setError("");
   }
 
   return (
@@ -84,76 +95,132 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
           </div>
         </div>
         <div className="sso-login-panel">
-          <div className="sso-login-panel__intro">
-            <img src={PRODUCTION_ASSETS.jasindoPositive} alt="Asuransi Jasindo" className="sso-login-panel__logo" />
-            <div className="sso-login-panel__icon" aria-hidden="true">
-              <ShieldCheck size={26} strokeWidth={2.2} />
-            </div>
-            <div>
-              <h1>Masuk Menggunakan OTP</h1>
-              <p>Kami akan mengirikan email yang berisikan OTP untuk authentikasi</p>
-            </div>
-          </div>
-
-          <form className="sso-login-form" onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}>
-            <label className="sso-login-field">
-              <span>Email</span>
-              <div className="sso-login-input">
-                <Mail size={18} strokeWidth={2.15} aria-hidden="true" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => {
-                    setEmail(event.target.value);
-                    setError("");
-                  }}
-                  placeholder="nama@asuransijasindo.co.id"
-                  autoComplete="email"
-                />
+          {mode === "login" ? (
+            <>
+              <div className="sso-login-panel__intro">
+                <img src={PRODUCTION_ASSETS.jasindoPositive} alt="Asuransi Jasindo" className="sso-login-panel__logo" />
+                <div className="sso-login-panel__icon" aria-hidden="true">
+                  <ShieldCheck size={26} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <h1>Masuk Menggunakan Password</h1>
+                  <p>Gunakan email dan password akun internal untuk mengakses layanan perusahaan.</p>
+                </div>
               </div>
-            </label>
 
-            <div className="sso-login-captcha" aria-label="Verifikasi keamanan">
-              <span className="sso-login-captcha__box" aria-hidden="true" />
-              <span>I'm not a robot</span>
-              <CheckSquare size={28} strokeWidth={1.8} aria-hidden="true" />
-            </div>
+              <form className="sso-login-form" onSubmit={handleLogin}>
+                <label className="sso-login-field">
+                  <span>Email</span>
+                  <div className="sso-login-input">
+                    <Mail size={18} strokeWidth={2.15} aria-hidden="true" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        setError("");
+                      }}
+                      placeholder="nama@asuransijasindo.co.id"
+                      autoComplete="email"
+                    />
+                  </div>
+                </label>
 
-            <button type="button" className="sso-login-secondary" disabled={!emailReady} onClick={handleSendOtp}>
-              Kirim OTP
-            </button>
+                <label className="sso-login-field">
+                  <span>Password</span>
+                  <div className="sso-login-input">
+                    <KeyRound size={18} strokeWidth={2.15} aria-hidden="true" />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        setError("");
+                      }}
+                      placeholder="Masukkan password"
+                      autoComplete="current-password"
+                    />
+                  </div>
+                </label>
 
-            <label className="sso-login-field">
-              <span>OTP</span>
-              <div className="sso-login-input">
-                <KeyRound size={18} strokeWidth={2.15} aria-hidden="true" />
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={otp}
-                  onChange={(event) => {
-                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 6));
-                    setError("");
-                  }}
-                  placeholder="6 digit OTP"
-                  autoComplete="one-time-code"
-                  disabled={!otpSent}
-                />
+                <div className="sso-login-captcha" aria-label="Verifikasi keamanan">
+                  <span className="sso-login-captcha__box" aria-hidden="true" />
+                  <span>I'm not a robot</span>
+                  <CheckSquare size={28} strokeWidth={1.8} aria-hidden="true" />
+                </div>
+
+                {error ? <div className="sso-login-error">{error}</div> : null}
+
+                <button type="submit" className="sso-login-primary" disabled={!emailReady || !passwordReady}>
+                  <span>Masuk</span>
+                  <ArrowRight size={18} strokeWidth={2.3} aria-hidden="true" />
+                </button>
+                <button type="button" className="sso-login-secondary" onClick={showResetPassword}>
+                  Lupa Password
+                </button>
+                <button type="button" className="sso-login-back" onClick={onBack}>
+                  <ArrowLeft size={16} strokeWidth={2.3} aria-hidden="true" />
+                  <span>Kembali ke beranda</span>
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <div className="sso-login-panel__intro">
+                <img src={PRODUCTION_ASSETS.jasindoPositive} alt="Asuransi Jasindo" className="sso-login-panel__logo" />
+                <div className="sso-login-panel__icon" aria-hidden="true">
+                  <KeyRound size={26} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <h1>Reset Password</h1>
+                  <p>Masukkan email kantor untuk menerima tautan pengaturan ulang password.</p>
+                </div>
               </div>
-            </label>
 
-            {otpSent ? <div className="sso-login-otp">OTP demo: {DEMO_OTP}</div> : null}
-            {error ? <div className="sso-login-error">{error}</div> : null}
+              <form className="sso-login-form" onSubmit={handleResetPassword}>
+                <label className="sso-login-field">
+                  <span>Email</span>
+                  <div className="sso-login-input">
+                    <Mail size={18} strokeWidth={2.15} aria-hidden="true" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        setResetSent(false);
+                        setError("");
+                      }}
+                      placeholder="nama@asuransijasindo.co.id"
+                      autoComplete="email"
+                    />
+                  </div>
+                </label>
 
-            <button type="submit" className="sso-login-primary" disabled={!emailReady || !otpSent || !otpReady}>
-              <span>Masuk</span>
-              <ArrowRight size={18} strokeWidth={2.3} aria-hidden="true" />
-            </button>
-            <button type="button" className="sso-login-back" onClick={onBack}>
-              <ArrowLeft size={16} strokeWidth={2.3} aria-hidden="true" />
-              <span>Kembali ke beranda</span>
-            </button>
-          </form>
+                <div className="sso-login-captcha" aria-label="Verifikasi keamanan">
+                  <span className="sso-login-captcha__box" aria-hidden="true" />
+                  <span>I'm not a robot</span>
+                  <CheckSquare size={28} strokeWidth={1.8} aria-hidden="true" />
+                </div>
+
+                {resetSent ? (
+                  <div className="sso-login-notice">
+                    <CheckCircle2 size={18} strokeWidth={2.4} aria-hidden="true" />
+                    <span>Tautan reset password telah dikirim ke email terdaftar.</span>
+                  </div>
+                ) : null}
+                {error ? <div className="sso-login-error">{error}</div> : null}
+
+                <button type="submit" className="sso-login-primary" disabled={!emailReady}>
+                  <span>Kirim Link Reset</span>
+                  <ArrowRight size={18} strokeWidth={2.3} aria-hidden="true" />
+                </button>
+                <button type="button" className="sso-login-back" onClick={showLogin}>
+                  <ArrowLeft size={16} strokeWidth={2.3} aria-hidden="true" />
+                  <span>Kembali ke login</span>
+                </button>
+              </form>
+            </>
+          )}
         </div>
       </section>
     </main>

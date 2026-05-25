@@ -595,16 +595,24 @@ video {
   color: #ffffff;
 }
 
+.sso-login-notice,
 .sso-login-otp {
   min-height: 36px;
   display: flex;
   align-items: center;
+  gap: 8px;
   border-radius: 6px;
   background: #eef5fa;
   padding: 0 12px;
   color: #004b78;
   font-size: 13px;
   font-weight: 900;
+}
+
+.sso-login-notice {
+  min-height: 44px;
+  background: #ecfdf5;
+  color: #047857;
 }
 
 .sso-login-error {
