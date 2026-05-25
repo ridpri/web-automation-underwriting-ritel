@@ -105,6 +105,7 @@ export default function App() {
         onAuthenticated={(session) => {
           setSsoSession(session);
           setSessionRole(session.sessionRole);
+          setActiveJourney(session.sessionRole === "internal" ? "internal-workspace" : "");
           setShowSsoLogin(false);
         }}
       />
