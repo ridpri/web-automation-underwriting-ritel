@@ -103,8 +103,8 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
                   <ShieldCheck size={26} strokeWidth={2.2} />
                 </div>
                 <div>
-                  <h1>Masuk Menggunakan Password</h1>
-                  <p>Gunakan email dan password akun internal untuk mengakses layanan perusahaan.</p>
+                  <h1>Selamat Datang, Insan Jasindo</h1>
+                  <p>Masuk dengan email Anda untuk mengakses layanan kerja internal.</p>
                 </div>
               </div>
 
