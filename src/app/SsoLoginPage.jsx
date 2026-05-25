@@ -2,6 +2,11 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CheckSquare, Home, KeyRound, LogIn
 import { useMemo, useState } from "react";
 import { PRODUCTION_ASSETS } from "./productionAssets.js";
 
+const DUMMY_INTERNAL_CREDENTIALS = {
+  email: "taqwim@asuransijasindo.co.id",
+  password: "taqwim123",
+};
+
 function resolveSsoRole(email) {
   const normalized = String(email || "").trim().toLowerCase();
   if (normalized.includes("partner")) return "partner";
@@ -31,6 +36,10 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
     }
     if (!passwordReady) {
       setError("Masukkan password minimal 6 karakter.");
+      return;
+    }
+    if (email.trim().toLowerCase() !== DUMMY_INTERNAL_CREDENTIALS.email || password.trim() !== DUMMY_INTERNAL_CREDENTIALS.password) {
+      setError("Email atau password tidak sesuai akun dummy.");
       return;
     }
     onAuthenticated({ email: email.trim(), sessionRole: resolvedRole });
