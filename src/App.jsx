@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import JourneyRouter from "./app/JourneyRouter.jsx";
 import ProductionHome from "./app/ProductionHome.jsx";
+import SsoLoginPage from "./app/SsoLoginPage.jsx";
 import { useOperatingRecords } from "./app/useOperatingRecords.js";
 import {
   SESSION_ROLE_STORAGE_KEY,
@@ -14,10 +15,23 @@ import {
 } from "./app/journeyAccess.js";
 import { resolveSessionName, resolveSessionProfile } from "./app/sessionConfig.js";
 
+const SSO_SESSION_STORAGE_KEY = "underwriting-demo-sso-session";
+
+function readSsoSession() {
+  if (typeof window === "undefined") return null;
+  try {
+    return JSON.parse(window.sessionStorage.getItem(SSO_SESSION_STORAGE_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const initialNavigationState = useMemo(() => resolveInitialNavigationState(), []);
+  const initialSsoSession = useMemo(() => readSsoSession(), []);
   const [activeJourney, setActiveJourney] = useState(initialNavigationState.activeJourney);
-  const [sessionRole, setSessionRole] = useState(initialNavigationState.sessionRole);
+  const [sessionRole, setSessionRole] = useState(initialSsoSession?.sessionRole || initialNavigationState.sessionRole);
+  const [ssoSession, setSsoSession] = useState(initialSsoSession);
   const [partnerConfigRole, setPartnerConfigRole] = useState("Maker");
   const allowSharedOfferJourney = useMemo(() => hasMatchingShareContext(activeJourney), [activeJourney]);
   const resolvedActiveJourney = useMemo(
@@ -39,6 +53,13 @@ export default function App() {
     if (sessionRole) win.sessionStorage.setItem(SESSION_ROLE_STORAGE_KEY, sessionRole);
     else win.sessionStorage.removeItem(SESSION_ROLE_STORAGE_KEY);
   }, [sessionRole]);
+
+  useEffect(() => {
+    const win = typeof window !== "undefined" ? window : null;
+    if (!win) return;
+    if (ssoSession) win.sessionStorage.setItem(SSO_SESSION_STORAGE_KEY, JSON.stringify(ssoSession));
+    else win.sessionStorage.removeItem(SSO_SESSION_STORAGE_KEY);
+  }, [ssoSession]);
 
   useEffect(() => {
     const win = typeof window !== "undefined" ? window : null;
@@ -75,6 +96,17 @@ export default function App() {
       onClick: () => handleOpenJourney("self-care-portal"),
     },
   ];
+
+  if (!ssoSession) {
+    return (
+      <SsoLoginPage
+        onAuthenticated={(session) => {
+          setSsoSession(session);
+          setSessionRole(session.sessionRole);
+        }}
+      />
+    );
+  }
 
   return (
     <JourneyRouter
