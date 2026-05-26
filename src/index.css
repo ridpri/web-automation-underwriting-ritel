@@ -538,6 +538,25 @@ video {
   color: #94a3b8;
 }
 
+.sso-login-password-toggle {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #004b78;
+  cursor: pointer;
+}
+
+.sso-login-password-toggle:hover,
+.sso-login-password-toggle:focus-visible {
+  background: #eef5fa;
+}
+
 .sso-login-captcha {
   width: min(100%, 360px);
   min-height: 92px;

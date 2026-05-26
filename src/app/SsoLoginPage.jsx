@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CheckCircle2, CheckSquare, Home, KeyRound, LogIn, Mail, Package, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, CheckSquare, Eye, EyeOff, Home, KeyRound, LogIn, Mail, Package, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PRODUCTION_ASSETS } from "./productionAssets.js";
 
@@ -29,6 +29,7 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [error, setError] = useState("");
   const emailReady = isValidEmail(email);
@@ -148,7 +149,7 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
                   <div className="sso-login-input">
                     <KeyRound size={18} strokeWidth={2.15} aria-hidden="true" />
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(event) => {
                         setPassword(event.target.value);
@@ -157,6 +158,15 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
                       placeholder="Masukkan password"
                       autoComplete="current-password"
                     />
+                    <button
+                      type="button"
+                      className="sso-login-password-toggle"
+                      onClick={() => setShowPassword((current) => !current)}
+                      aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                      title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    >
+                      {showPassword ? <EyeOff size={18} strokeWidth={2.15} aria-hidden="true" /> : <Eye size={18} strokeWidth={2.15} aria-hidden="true" />}
+                    </button>
                   </div>
                 </label>
 
