@@ -31,7 +31,7 @@ const ROLE_VIEWS = {
   checker: {
     label: "Checker",
     role: "Staff Underwriting",
-    tone: "purple",
+    tone: "blue",
     description: "Menerima submission dari Maker, melakukan review data dan dokumen, validasi parameter underwriting, lalu memutuskan revisi atau eskalasi.",
     stats: [
       { label: "Masuk Review", value: 4, note: "Submission baru dari Maker" },
@@ -54,7 +54,7 @@ const ROLE_VIEWS = {
   approver: {
     label: "Approver",
     role: "HO Underwriting",
-    tone: "orange",
+    tone: "blue",
     description: "Menerima eskalasi dari Checker, meninjau kasus, lalu memberi keputusan final approve, reject, atau return for revision.",
     stats: [
       { label: "Eskalasi Masuk", value: 3, note: "Menunggu keputusan final" },
@@ -197,7 +197,7 @@ function RoleTaskTable({ rows, title, tone }) {
                 <td className="px-3 py-3"><StaffBadge>{row.owner}</StaffBadge></td>
                 <td className="px-3 py-3 font-bold text-rose-600">{row.sla}</td>
                 <td className="px-3 py-3">
-                  <button type="button" className={cls("rounded-md px-3 py-1.5 text-[11px] font-bold", tone === "orange" ? "bg-orange-500 text-white" : tone === "purple" ? "bg-violet-700 text-white" : "bg-[#F2A62A] text-white")}>
+                  <button type="button" className="rounded-md bg-[#F2A62A] px-3 py-1.5 text-[11px] font-bold text-white">
                     {row.action}
                   </button>
                 </td>
