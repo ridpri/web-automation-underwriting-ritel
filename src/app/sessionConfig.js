@@ -39,6 +39,7 @@ export function resolveSessionProfile(sessionRole) {
       customerType: "Nasabah Perorangan",
       phone: "081277700011",
       email: "taqwim@asuransijasindo.co.id",
+      staffRole: "Maker",
     };
   }
 

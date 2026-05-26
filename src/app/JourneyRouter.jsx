@@ -31,6 +31,7 @@ export default function JourneyRouter({
   setPartnerConfigRole,
   exitSharedJourneyToProducts,
   externalAccountMenuItems,
+  onLogout,
   fallback = null,
 }) {
   const buildShell = (journeyKey, nodeFactory) => {
@@ -110,8 +111,9 @@ export default function JourneyRouter({
       <Suspense fallback={<JourneyFallback />}>
         <StaffWorkspacePortal
           sessionName={activeSessionName}
+          sessionProfile={activeSessionProfile}
           onGoHome={returnToProducts}
-          onExit={returnToProducts}
+          onExit={onLogout || returnToProducts}
         />
       </Suspense>
     );

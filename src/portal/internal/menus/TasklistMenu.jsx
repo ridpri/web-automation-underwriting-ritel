@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowUpRight, CheckCircle2, ClipboardCheck, FileCheck2, FileSearch, RotateCcw, Send, ShieldCheck, UserRoundCheck, XCircle } from "lucide-react";
 
 import { PageIntro, StaffBadge, WorkPanel } from "../menuShared.jsx";
@@ -78,6 +78,13 @@ const ROLE_VIEWS = {
 
 const ROLE_KEYS = Object.keys(ROLE_VIEWS);
 
+function normalizeStaffRole(staffRole) {
+  const normalized = String(staffRole || "").trim().toLowerCase();
+  if (normalized === "checker") return "checker";
+  if (normalized === "approver") return "approver";
+  return "maker";
+}
+
 function roleClasses(tone, active = false) {
   const tones = {
     blue: active ? "border-[#004B78] bg-[#004B78] text-white" : "border-blue-100 bg-blue-50 text-[#004B78]",
@@ -87,9 +94,12 @@ function roleClasses(tone, active = false) {
   return tones[tone] || tones.blue;
 }
 
-export default function TasklistMenu() {
-  const [activeRole, setActiveRole] = useState("maker");
+export default function TasklistMenu({ staffRole = "Maker" }) {
+  const [activeRole, setActiveRole] = useState(() => normalizeStaffRole(staffRole));
   const roleView = ROLE_VIEWS[activeRole];
+  useEffect(() => {
+    setActiveRole(normalizeStaffRole(staffRole));
+  }, [staffRole]);
   return (
     <div className="space-y-3">
       <PageIntro title="Tasklist" description="Daftar pekerjaan operasional berdasarkan kewenangan Maker, Checker, dan Approver." />

@@ -39,8 +39,17 @@ export default function App() {
     () => sanitizeJourneyForRole(activeJourney, sessionRole, { allowSharedOfferJourney }),
     [activeJourney, allowSharedOfferJourney, sessionRole],
   );
-  const activeSessionName = resolveSessionName(sessionRole);
-  const activeSessionProfile = resolveSessionProfile(sessionRole);
+  const activeSessionName = sessionRole === "internal" && ssoSession?.name ? `${ssoSession.name} (Internal)` : resolveSessionName(sessionRole);
+  const activeSessionProfile = useMemo(() => {
+    const baseProfile = resolveSessionProfile(sessionRole);
+    if (sessionRole !== "internal" || !ssoSession) return baseProfile;
+    return {
+      ...baseProfile,
+      name: ssoSession.name || baseProfile.name,
+      email: ssoSession.email || baseProfile.email,
+      staffRole: ssoSession.staffRole || baseProfile.staffRole,
+    };
+  }, [sessionRole, ssoSession]);
   const isAuthenticatedCustomerSession = sessionRole === "external" || sessionRole === "partner";
   const {
     operatingRecords,
@@ -90,6 +99,12 @@ export default function App() {
     clearSharedJourneyParams();
     setActiveJourney("");
   };
+  const handleLogout = () => {
+    clearSharedJourneyParams();
+    setSsoSession(null);
+    setSessionRole("guest");
+    setActiveJourney("");
+  };
   const externalAccountMenuItems = [
     {
       label: "Polis Saya",
@@ -128,6 +143,7 @@ export default function App() {
       setPartnerConfigRole={setPartnerConfigRole}
       exitSharedJourneyToProducts={exitSharedJourneyToProducts}
       externalAccountMenuItems={externalAccountMenuItems}
+      onLogout={handleLogout}
       fallback={
         <ProductionHome
           sessionRole={sessionRole}

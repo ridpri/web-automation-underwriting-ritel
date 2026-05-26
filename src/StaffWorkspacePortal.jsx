@@ -26,11 +26,13 @@ import TasklistView from "./staff-workspace/views/TasklistView";
 
 export default function StaffWorkspacePortal({
   sessionName = "Budi Santoso",
+  sessionProfile,
   onGoHome,
   onExit,
   defaultTab = "dashboard",
 }) {
   const staffSessionName = sessionName;
+  const staffRole = sessionProfile?.staffRole || "Maker";
   const [activeMenu, setActiveMenu] = useState(() => readPortalMenu(defaultTab));
   const availableNavItems = STAFF_NAV_ITEMS;
   const handleMenuChange = useCallback((nextMenu) => {
@@ -51,7 +53,7 @@ export default function StaffWorkspacePortal({
 
   const content = useMemo(() => {
     if (activeMenu === "dashboard") return <DashboardView />;
-    if (activeMenu === "tasklist") return <TasklistView />;
+    if (activeMenu === "tasklist") return <TasklistView staffRole={staffRole} />;
     if (activeMenu === "buat-penawaran") return <OfferProductsView />;
     if (activeMenu === "add-partner") return <AddPartnerView />;
     if (activeMenu === "promotion") return <PromotionView />;
@@ -61,12 +63,12 @@ export default function StaffWorkspacePortal({
     if (activeMenu === "master-data") return <MasterDataView />;
     if (activeMenu === "settings") return <StaffSettingsView sessionName={staffSessionName} />;
     return <DashboardView />;
-  }, [activeMenu, staffSessionName]);
+  }, [activeMenu, staffRole, staffSessionName]);
 
   return (
     <div className="min-h-screen bg-white text-[#041E42]" style={{ fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>
       <TopBar sessionName={staffSessionName} onGoHome={onGoHome} onExit={onExit} />
-      <Sidebar activeMenu={activeMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} />
+      <Sidebar activeMenu={activeMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} sessionName={sessionProfile?.name || staffSessionName} staffRole={staffRole} onLogout={onExit} />
       <PageShell>
         <WorkspaceFilters activeMenu={activeMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} />
         {content}

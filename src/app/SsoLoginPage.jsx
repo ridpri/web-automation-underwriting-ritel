@@ -2,10 +2,17 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CheckSquare, Home, KeyRound, LogIn
 import { useMemo, useState } from "react";
 import { PRODUCTION_ASSETS } from "./productionAssets.js";
 
-const DUMMY_INTERNAL_CREDENTIALS = {
-  email: "taqwim@asuransijasindo.co.id",
-  password: "taqwim123",
-};
+const DUMMY_INTERNAL_USERS = [
+  { name: "Taqwim", staffRole: "Maker", email: "taqwim@asuransijasindo.co.id", password: "taqwim123" },
+  { name: "Resdy", staffRole: "Checker", email: "resdy@asuransijasindo.co.id", password: "resdy123" },
+  { name: "Ridho", staffRole: "Approver", email: "ridho@asuransijasindo.co.id", password: "ridho123" },
+];
+
+function findDummyInternalUser(email, password) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedPassword = String(password || "").trim();
+  return DUMMY_INTERNAL_USERS.find((user) => user.email === normalizedEmail && user.password === normalizedPassword);
+}
 
 function resolveSsoRole(email) {
   const normalized = String(email || "").trim().toLowerCase();
@@ -38,11 +45,12 @@ export default function SsoLoginPage({ onAuthenticated, onBack }) {
       setError("Masukkan password minimal 6 karakter.");
       return;
     }
-    if (email.trim().toLowerCase() !== DUMMY_INTERNAL_CREDENTIALS.email || password.trim() !== DUMMY_INTERNAL_CREDENTIALS.password) {
+    const dummyUser = findDummyInternalUser(email, password);
+    if (!dummyUser) {
       setError("Email atau password tidak sesuai akun dummy.");
       return;
     }
-    onAuthenticated({ email: email.trim(), sessionRole: resolvedRole });
+    onAuthenticated({ email: dummyUser.email, name: dummyUser.name, staffRole: dummyUser.staffRole, sessionRole: resolvedRole });
   }
 
   function handleResetPassword(event) {
