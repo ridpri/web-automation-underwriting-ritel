@@ -76,8 +76,6 @@ const ROLE_VIEWS = {
   },
 };
 
-const ROLE_KEYS = Object.keys(ROLE_VIEWS);
-
 function normalizeStaffRole(staffRole) {
   const normalized = String(staffRole || "").trim().toLowerCase();
   if (normalized === "checker") return "checker";
@@ -104,17 +102,10 @@ export default function TasklistMenu({ staffRole = "Maker" }) {
     <div className="space-y-3">
       <PageIntro title="Tasklist" description="Daftar pekerjaan operasional berdasarkan kewenangan Maker, Checker, dan Approver." />
       <WorkPanel>
-        <div className="grid gap-2 md:grid-cols-3">
-          {ROLE_KEYS.map((key) => {
-            const item = ROLE_VIEWS[key];
-            return (
-              <button key={key} type="button" onClick={() => setActiveRole(key)} className={cls("min-h-[92px] rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm", roleClasses(item.tone, activeRole === key))}>
-                <div className="text-[15px] font-black">{item.label}</div>
-                <div className={cls("mt-1 text-[12px] font-bold", activeRole === key ? "text-white/85" : "text-current/80")}>{item.role}</div>
-                <div className={cls("mt-2 text-[11px] leading-4", activeRole === key ? "text-white/75" : "text-[#5F7A99]")}>{item.description}</div>
-              </button>
-            );
-          })}
+        <div className={cls("rounded-xl border p-3", roleClasses(roleView.tone, true))}>
+          <div className="text-[15px] font-black">{roleView.label}</div>
+          <div className="mt-1 text-[12px] font-bold text-white/85">{roleView.role}</div>
+          <div className="mt-2 max-w-3xl text-[11px] leading-4 text-white/75">{roleView.description}</div>
         </div>
 
         <div className="mt-4 rounded-xl border border-[#D9E1EA] bg-white p-3">
