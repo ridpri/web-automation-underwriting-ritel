@@ -33,14 +33,20 @@ export default function StaffWorkspacePortal({
 }) {
   const staffSessionName = sessionName;
   const staffRole = sessionProfile?.staffRole || "Maker";
+  const canManageUsers = ["checker", "approver"].includes(String(staffRole).toLowerCase());
   const [activeMenu, setActiveMenu] = useState(() => readPortalMenu(defaultTab));
-  const availableNavItems = STAFF_NAV_ITEMS;
+  const availableNavItems = useMemo(
+    () => STAFF_NAV_ITEMS.filter((item) => item.key !== "add-user" || canManageUsers),
+    [canManageUsers],
+  );
+  const effectiveActiveMenu = availableNavItems.some((item) => item.key === activeMenu) ? activeMenu : "dashboard";
   const handleMenuChange = useCallback((nextMenu) => {
     const normalizedMenu = normalizePortalMenu(nextMenu);
+    if (!availableNavItems.some((item) => item.key === normalizedMenu)) return;
     setActiveMenu(normalizedMenu);
     writePortalMenu(normalizedMenu);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  }, [availableNavItems]);
 
   useEffect(() => {
     replacePortalMenu(readPortalMenu(defaultTab));
@@ -52,25 +58,25 @@ export default function StaffWorkspacePortal({
   }, [defaultTab]);
 
   const content = useMemo(() => {
-    if (activeMenu === "dashboard") return <DashboardView />;
-    if (activeMenu === "tasklist") return <TasklistView staffRole={staffRole} />;
-    if (activeMenu === "buat-penawaran") return <OfferProductsView />;
-    if (activeMenu === "add-partner") return <AddPartnerView />;
-    if (activeMenu === "promotion") return <PromotionView />;
-    if (activeMenu === "transaksi-polis") return <PolicyTransactionsView />;
-    if (activeMenu === "riwayat-klaim") return <ClaimHistoryView />;
-    if (activeMenu === "add-user") return <AddUserView />;
-    if (activeMenu === "master-data") return <MasterDataView />;
-    if (activeMenu === "settings") return <StaffSettingsView sessionName={staffSessionName} />;
+    if (effectiveActiveMenu === "dashboard") return <DashboardView />;
+    if (effectiveActiveMenu === "tasklist") return <TasklistView staffRole={staffRole} />;
+    if (effectiveActiveMenu === "buat-penawaran") return <OfferProductsView />;
+    if (effectiveActiveMenu === "add-partner") return <AddPartnerView />;
+    if (effectiveActiveMenu === "promotion") return <PromotionView />;
+    if (effectiveActiveMenu === "transaksi-polis") return <PolicyTransactionsView />;
+    if (effectiveActiveMenu === "riwayat-klaim") return <ClaimHistoryView />;
+    if (effectiveActiveMenu === "add-user" && canManageUsers) return <AddUserView />;
+    if (effectiveActiveMenu === "master-data") return <MasterDataView />;
+    if (effectiveActiveMenu === "settings") return <StaffSettingsView sessionName={staffSessionName} />;
     return <DashboardView />;
-  }, [activeMenu, staffRole, staffSessionName]);
+  }, [canManageUsers, effectiveActiveMenu, staffRole, staffSessionName]);
 
   return (
     <div className="min-h-screen bg-white text-[#041E42]" style={{ fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>
       <TopBar sessionName={staffSessionName} onGoHome={onGoHome} onExit={onExit} />
-      <Sidebar activeMenu={activeMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} sessionName={sessionProfile?.name || staffSessionName} staffRole={staffRole} onLogout={onExit} />
+      <Sidebar activeMenu={effectiveActiveMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} sessionName={sessionProfile?.name || staffSessionName} staffRole={staffRole} onLogout={onExit} />
       <PageShell>
-        <WorkspaceFilters activeMenu={activeMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} />
+        <WorkspaceFilters activeMenu={effectiveActiveMenu} setActiveMenu={handleMenuChange} navItems={availableNavItems} />
         {content}
       </PageShell>
     </div>

@@ -148,7 +148,7 @@ export default function AddUserMenu() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h2 className="text-[18px] font-black text-[#004B78]">Daftar User Internal</h2>
-              <p className="mt-1 text-[13px] leading-5 text-[#5F7A99]">User login menggunakan SSO. Halaman ini hanya mengatur profil, role, cabang, dan status akses portal.</p>
+              <p className="mt-1 text-[13px] leading-5 text-[#5F7A99]">Halaman ini mengatur profil, role, cabang, dan status akses portal.</p>
             </div>
             <label className="flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#D9E1EA] bg-white px-3 lg:w-[380px]">
               <Search className="h-4 w-4 text-[#9AAAC0]" />
