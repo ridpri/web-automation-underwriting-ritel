@@ -16,6 +16,7 @@ import {
   Grid2X2,
   Headphones,
   List,
+  LogOut,
   Home,
   Lock,
   Mail,
@@ -46,7 +47,7 @@ const PRODUCTION_ASSETS = {
 const STAFF_NAV_ITEMS = [
   { key: "dashboard", slug: "dashboard", label: "Dashboard", icon: Gauge },
   { key: "tasklist", slug: "tasklist", label: "Tasklist", icon: ClipboardList, badge: 5 },
-  { key: "buat-penawaran", slug: "buat-penawaran", label: "Buat Penawaran", icon: ShoppingCart },
+  { key: "buat-penawaran", slug: "buat-penawaran", label: "Penawaran", icon: ShoppingCart },
   { key: "add-partner", slug: "add-partner", label: "Add Partner", icon: User },
   { key: "promotion", slug: "promotion", label: "Promosi", icon: CreditCard },
   { key: "transaksi-polis", slug: "transaksi-polis", label: "Transaksi Polis", icon: Shield },
@@ -257,10 +258,10 @@ function TopBar({ sessionName, onGoHome, onExit }) {
   );
 }
 
-function Sidebar({ activeMenu, setActiveMenu, navItems }) {
+function Sidebar({ activeMenu, setActiveMenu, navItems, sessionName, staffRole, onLogout }) {
   return (
     <aside className="fixed bottom-0 left-0 top-[58px] z-20 hidden w-[270px] border-r border-[#D9E1EA] bg-white md:flex md:flex-col">
-      <nav className="space-y-2 px-3 py-5">
+      <nav className="flex-1 space-y-2 px-3 py-5">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = activeMenu === item.key;
@@ -281,6 +282,21 @@ function Sidebar({ activeMenu, setActiveMenu, navItems }) {
           );
         })}
       </nav>
+      <div className="border-t border-[#D9E1EA] p-3">
+        <div className="rounded-xl border border-[#D9E1EA] bg-[#F8FAFC] p-3">
+          <div className="flex items-start gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#004B78] text-[12px] font-black text-white">{getInitials(sessionName)}</div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13px] font-black text-[#041E42]">{sessionName}</div>
+              <div className="mt-0.5 text-[12px] font-bold text-[#5F7A99]">({staffRole})</div>
+              <button type="button" onClick={onLogout} className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#D9E1EA] bg-white text-[12px] font-bold text-[#004B78] hover:bg-[#EEF5FA]">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </aside>
   );
 }

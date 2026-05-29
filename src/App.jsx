@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import JourneyRouter from "./app/JourneyRouter.jsx";
 import ProductionHome from "./app/ProductionHome.jsx";
+import SsoLoginPage from "./app/SsoLoginPage.jsx";
 import { useOperatingRecords } from "./app/useOperatingRecords.js";
 import {
   SESSION_ROLE_STORAGE_KEY,
@@ -14,18 +15,41 @@ import {
 } from "./app/journeyAccess.js";
 import { resolveSessionName, resolveSessionProfile } from "./app/sessionConfig.js";
 
+const SSO_SESSION_STORAGE_KEY = "underwriting-demo-sso-session";
+
+function readSsoSession() {
+  if (typeof window === "undefined") return null;
+  try {
+    return JSON.parse(window.sessionStorage.getItem(SSO_SESSION_STORAGE_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const initialNavigationState = useMemo(() => resolveInitialNavigationState(), []);
+  const initialSsoSession = useMemo(() => readSsoSession(), []);
   const [activeJourney, setActiveJourney] = useState(initialNavigationState.activeJourney);
-  const [sessionRole, setSessionRole] = useState(initialNavigationState.sessionRole);
+  const [sessionRole, setSessionRole] = useState(initialSsoSession?.sessionRole || initialNavigationState.sessionRole);
+  const [ssoSession, setSsoSession] = useState(initialSsoSession);
+  const [showSsoLogin, setShowSsoLogin] = useState(false);
   const [partnerConfigRole, setPartnerConfigRole] = useState("Maker");
   const allowSharedOfferJourney = useMemo(() => hasMatchingShareContext(activeJourney), [activeJourney]);
   const resolvedActiveJourney = useMemo(
     () => sanitizeJourneyForRole(activeJourney, sessionRole, { allowSharedOfferJourney }),
     [activeJourney, allowSharedOfferJourney, sessionRole],
   );
-  const activeSessionName = resolveSessionName(sessionRole);
-  const activeSessionProfile = resolveSessionProfile(sessionRole);
+  const activeSessionName = sessionRole === "internal" && ssoSession?.name ? `${ssoSession.name} (Internal)` : resolveSessionName(sessionRole);
+  const activeSessionProfile = useMemo(() => {
+    const baseProfile = resolveSessionProfile(sessionRole);
+    if (sessionRole !== "internal" || !ssoSession) return baseProfile;
+    return {
+      ...baseProfile,
+      name: ssoSession.name || baseProfile.name,
+      email: ssoSession.email || baseProfile.email,
+      staffRole: ssoSession.staffRole || baseProfile.staffRole,
+    };
+  }, [sessionRole, ssoSession]);
   const isAuthenticatedCustomerSession = sessionRole === "external" || sessionRole === "partner";
   const {
     operatingRecords,
@@ -39,6 +63,13 @@ export default function App() {
     if (sessionRole) win.sessionStorage.setItem(SESSION_ROLE_STORAGE_KEY, sessionRole);
     else win.sessionStorage.removeItem(SESSION_ROLE_STORAGE_KEY);
   }, [sessionRole]);
+
+  useEffect(() => {
+    const win = typeof window !== "undefined" ? window : null;
+    if (!win) return;
+    if (ssoSession) win.sessionStorage.setItem(SSO_SESSION_STORAGE_KEY, JSON.stringify(ssoSession));
+    else win.sessionStorage.removeItem(SSO_SESSION_STORAGE_KEY);
+  }, [ssoSession]);
 
   useEffect(() => {
     const win = typeof window !== "undefined" ? window : null;
@@ -68,6 +99,12 @@ export default function App() {
     clearSharedJourneyParams();
     setActiveJourney("");
   };
+  const handleLogout = () => {
+    clearSharedJourneyParams();
+    setSsoSession(null);
+    setSessionRole("guest");
+    setActiveJourney("");
+  };
   const externalAccountMenuItems = [
     {
       label: "Polis Saya",
@@ -75,6 +112,20 @@ export default function App() {
       onClick: () => handleOpenJourney("self-care-portal"),
     },
   ];
+
+  if (showSsoLogin) {
+    return (
+      <SsoLoginPage
+        onBack={() => setShowSsoLogin(false)}
+        onAuthenticated={(session) => {
+          setSsoSession(session);
+          setSessionRole(session.sessionRole);
+          setActiveJourney(session.sessionRole === "internal" ? "internal-workspace" : "");
+          setShowSsoLogin(false);
+        }}
+      />
+    );
+  }
 
   return (
     <JourneyRouter
@@ -92,13 +143,14 @@ export default function App() {
       setPartnerConfigRole={setPartnerConfigRole}
       exitSharedJourneyToProducts={exitSharedJourneyToProducts}
       externalAccountMenuItems={externalAccountMenuItems}
+      onLogout={handleLogout}
       fallback={
         <ProductionHome
           sessionRole={sessionRole}
           sessionName={activeSessionName}
           onOpenJourney={handleOpenJourney}
           onSelectRole={setSessionRole}
-          onGuestLogin={() => setSessionRole("external")}
+          onGuestLogin={() => setShowSsoLogin(true)}
         />
       }
     />
