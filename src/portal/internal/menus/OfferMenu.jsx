@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Car, Copy, Download, Grid2X2, Home, ShoppingCart, User } from "lucide-react";
+import { Car, Copy, Download, Grid2X2, Home, QrCode, ShoppingCart, User, X } from "lucide-react";
 
 import { PRODUCTS, productBaseUrl } from "../menuData.js";
 import { ProductCategoryIcon, SectionBox, ToolbarSearch, WorkPanel } from "../menuShared.jsx";
@@ -123,6 +123,7 @@ function WhatsAppLogo({ className = "h-4 w-4" }) {
 
 function OfferProductRow({ product }) {
   const [copyLabel, setCopyLabel] = useState("Salin Link");
+  const [qrOpen, setQrOpen] = useState(false);
   const productUrl = productBaseUrl(product);
   const trackedProductUrl = productTrackingUrl(product);
   const whatsappText = buildWhatsappText(product, trackedProductUrl);
@@ -183,11 +184,35 @@ function OfferProductRow({ product }) {
           <WhatsAppLogo className="h-4 w-4" />
           WhatsApp
         </a>
-        <button type="button" onClick={downloadQr} className={secondaryButtonClass}>
-          <Download className="h-3.5 w-3.5" />
-          Unduh QR
+        <button type="button" onClick={() => setQrOpen(true)} className={secondaryButtonClass}>
+          <QrCode className="h-3.5 w-3.5" />
+          QR
         </button>
       </div>
+      {qrOpen ? (
+        <div className="fixed inset-0 z-50 grid place-items-end bg-[#041E42]/40 p-3 md:place-items-center">
+          <button type="button" aria-label="Tutup QR" onClick={() => setQrOpen(false)} className="absolute inset-0" />
+          <div className="relative w-full max-w-[420px] rounded-xl border border-[#D9E1EA] bg-white p-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-[15px] font-bold text-[#041E42]">QR {product.title}</div>
+                <div className="mt-1 text-[12px] leading-5 text-[#5F7A99]">QR merepresentasikan URL produk dengan token tracking.</div>
+              </div>
+              <button type="button" onClick={() => setQrOpen(false)} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#D9E1EA] bg-white text-[#5F7A99] hover:bg-[#F8FAFC]" aria-label="Tutup modal QR">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-4 rounded-xl border border-[#E7EDF4] bg-[#F8FAFC] p-4">
+              <img src={qrImageUrl(trackedProductUrl)} alt={`QR ${product.title}`} className="mx-auto h-64 w-64 rounded-lg bg-white object-contain p-2 shadow-sm" loading="lazy" decoding="async" />
+              <div className="mt-3 truncate rounded-lg bg-white px-3 py-2 text-center text-[11px] font-semibold text-[#5F7A99]">{trackedProductUrl}</div>
+            </div>
+            <button type="button" onClick={downloadQr} className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#F2A62A] px-4 text-[12px] font-bold text-white hover:bg-[#DF9620]">
+              <Download className="h-4 w-4" />
+              Unduh QR
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

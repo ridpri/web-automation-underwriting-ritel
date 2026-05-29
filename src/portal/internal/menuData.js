@@ -40,11 +40,27 @@ export const PROMOS = [
   { code: "JAS26FIR6", products: "Asuransi Kebakaran", category: "Properti", discount: "15%", quota: 10, period: "23-04-2026 - 24-04-2026", status: "Berakhir" },
 ];
 
+export const PRODUCT_POLICY_CODES = {
+  "Life Guard": "705",
+  "Edu Protect": "705",
+  "Trip Guard": "728",
+  "Travel Safe": "794",
+  "Asuransi Kebakaran": "201",
+  "Asuransi Gempa Bumi": "203",
+  "Asuransi Property All Risk": "297",
+  "Asuransi Mobil TLO": "601",
+  "Asuransi Sepeda Motor TLO": "605",
+};
+
 export const TRANSACTIONS = [
-  { title: "Budi Santoso", sub: "Asuransi Mobil - TLO", value: "Rp 5.250.000", status: "Terbit" },
-  { title: "Siti Rahmawati", sub: "Travel Safe", value: "Rp 245.000", status: "Terbit" },
-  { title: "PT Maju Bersama", sub: "Property All Risk", value: "Rp 12.000.000", status: "Terbit" },
-  { title: "Andi Wijaya", sub: "Life Guard", value: "Rp 350.000", status: "Menunggu Bayar" },
+  { customer: "Andi Wijaya", product: "Life Guard", object: "Perlindungan diri individu", premium: "Rp 350.000", status: "Menunggu Bayar", stage: "Link pembayaran terkirim", issuedAt: "-", sequence: "00041" },
+  { customer: "Nadia Putri", product: "Edu Protect", object: "Proteksi pelajar", premium: "Rp 180.000", status: "Draft Polis", stage: "Menunggu validasi data", issuedAt: "-", sequence: "00042" },
+  { customer: "Rafi Mahendra", product: "Trip Guard", object: "Perjalanan domestik", premium: "Rp 125.000", status: "Terbit", stage: "E-polis tersedia", issuedAt: "28-05-2026", sequence: "00043" },
+  { customer: "Siti Rahmawati", product: "Travel Safe", object: "Perjalanan internasional", premium: "Rp 245.000", status: "Terbit", stage: "E-polis tersedia", issuedAt: "28-05-2026", sequence: "00044" },
+  { customer: "Fajar Nugroho", product: "Asuransi Kebakaran", object: "Rumah tinggal Bandung", premium: "Rp 2.850.000", status: "Review Checker", stage: "Cek okupasi dan nilai bangunan", issuedAt: "-", sequence: "00045" },
+  { customer: "PT Maju Bersama", product: "Asuransi Property All Risk", object: "Gudang dan stok barang", premium: "Rp 12.000.000", status: "Terbit", stage: "E-polis tersedia", issuedAt: "27-05-2026", sequence: "00046" },
+  { customer: "Budi Santoso", product: "Asuransi Mobil TLO", object: "Toyota Avanza 2024", premium: "Rp 5.250.000", status: "Terbit", stage: "E-polis tersedia", issuedAt: "27-05-2026", sequence: "00047" },
+  { customer: "Ayu Lestari", product: "Asuransi Sepeda Motor TLO", object: "Honda Vario 2025", premium: "Rp 620.000", status: "Menunggu Bayar", stage: "Link pembayaran terkirim", issuedAt: "-", sequence: "00048" },
 ];
 
 export const STAFF_CLAIMS = [
